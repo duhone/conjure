@@ -1,0 +1,2 @@
+# conjure
+A Game Engine focused on 2D games. Aimed at lowest possible latency. Uses my variant of data oriented design.
