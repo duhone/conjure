@@ -4,6 +4,8 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 #library
 ###############################################
 set(INTERFACE_FILES
+    ${root}/interface/Algorithm.ixx
+    ${root}/interface/FileHandle.ixx
     ${root}/interface/TypeTraits.ixx
 )
 
