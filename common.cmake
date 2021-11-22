@@ -50,9 +50,9 @@ endfunction()
 function(settings3rdParty target)	
 	addCommon(${target})
 	
-	source_group("Public Interface" FILES ${PUBLIC_INTERFACE})
-	source_group("Source" FILES ${SRCS})
-	source_group("Build" FILES ${BUILD})
+	source_group("Interface" FILES ${INTERFACE_FILES})
+	source_group("Source" FILES ${SOURCE_FILES})
+	source_group("Build" FILES ${BUILD_FILES})
 	
 	target_compile_options(${target} PRIVATE /W0)
 	target_compile_options(${target} PRIVATE /WX-)
@@ -63,27 +63,25 @@ endfunction()
 function(settingsCR target)	
 	addCommon(${target})
 	
-	source_group(TREE ${root} FILES ${PUBLIC_INTERFACE})
-	source_group(TREE ${root} FILES ${SRCS})
-	source_group(TREE ${root} FILES ${BUILD})
+	source_group(TREE ${root} FILES ${INTERFACE_FILES})
+	source_group(TREE ${root} FILES ${SOURCE_FILES})
+	source_group(TREE ${root} FILES ${BUILD_FILES})
 		
 	target_compile_options(${target} PRIVATE /W4)
 	target_compile_options(${target} PRIVATE /WX)
 	
-	target_include_directories(${target} PRIVATE "${CMAKE_CURRENT_LIST_DIR}/../../3rdParty/include")
-	
 	# disable unit tests in profile and final builds
 	# target_compile_definitions(${target} PRIVATE $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<OR:$<CONFIG:Profile>,$<CONFIG:Final>>>:DOCTEST_CONFIG_DISABLE>)
 	
-	set_target_properties(${target} PROPERTIES
-		VS_GLOBAL_RunCodeAnalysis false
+	#set_target_properties(${target} PROPERTIES
+		#VS_GLOBAL_RunCodeAnalysis false
 
 		# Use visual studio core guidelines
-		VS_GLOBAL_EnableMicrosoftCodeAnalysis false
+		# VS_GLOBAL_EnableMicrosoftCodeAnalysis false
 
 		# Use clangtidy
-		VS_GLOBAL_EnableClangTidyCodeAnalysis true
-		VS_GLOBAL_ClangTidyChecks "-checks=-*,modernize-*, -modernize-avoid-c-arrays, -modernize-use-trailing-return-type, \
-bugprone-*, -bugprone-bool-pointer-implicit-conversion, cppcoreguidelines-*, -cppcoreguidelines-avoid-c-arrays, -cppcoreguidelines-pro-bounds-constant-array-index, misc-*, performance-*, readability-*, -readability-uppercase-literal-suffix"
-	)
+		# VS_GLOBAL_EnableClangTidyCodeAnalysis true
+		# VS_GLOBAL_ClangTidyChecks "-checks=-*,modernize-*, -modernize-avoid-c-arrays, -modernize-use-trailing-return-type, \
+#bugprone-*, -bugprone-bool-pointer-implicit-conversion, cppcoreguidelines-*, -cppcoreguidelines-avoid-c-arrays, -cppcoreguidelines-pro-bounds-constant-array-index, misc-*, performance-*, readability-*, -readability-uppercase-literal-suffix"
+	#)
 endfunction()
