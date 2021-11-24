@@ -5,6 +5,7 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 ###############################################
 set(INTERFACE_FILES
     ${root}/interface/Algorithm.ixx
+    ${root}/interface/BinaryStream.ixx
     ${root}/interface/FileHandle.ixx
     ${root}/interface/TypeTraits.ixx
 )
@@ -32,6 +33,8 @@ set_property(TARGET core APPEND PROPERTY FOLDER Engine)
 #unit tests
 ###############################################
 set(SOURCE_FILES
+	${root}/tests/BinaryStream.cpp
+	${root}/tests/main.cpp
 	${root}/tests/TypeTraits.cpp
 )
 
@@ -42,7 +45,7 @@ add_executable(core_tests
 settingsCR(core_tests)
 	
 target_link_libraries(core_tests 
-	catch
+	doctest
 	core
 )		
 
