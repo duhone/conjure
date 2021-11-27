@@ -8,10 +8,13 @@ set(INTERFACE_FILES
     ${root}/interface/BinaryStream.ixx
     ${root}/interface/FileHandle.ixx
     ${root}/interface/Function.ixx
+    ${root}/interface/Guid.ixx
+    ${root}/interface/Hash.ixx
     ${root}/interface/TypeTraits.ixx
 )
 
 set(SOURCE_FILES
+    ${root}/source/Hash.cpp
 )
 
 set(BUILD_FILES
@@ -38,6 +41,7 @@ set_property(TARGET core APPEND PROPERTY FOLDER Engine)
 set(SOURCE_FILES
 	${root}/tests/BinaryStream.cpp
 	${root}/tests/Function.cpp
+	${root}/tests/Guid.cpp
 	${root}/tests/main.cpp
 	${root}/tests/TypeTraits.cpp
 )
