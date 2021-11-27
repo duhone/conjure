@@ -7,6 +7,7 @@ set(INTERFACE_FILES
     ${root}/interface/Algorithm.ixx
     ${root}/interface/BinaryStream.ixx
     ${root}/interface/FileHandle.ixx
+    ${root}/interface/Function.ixx
     ${root}/interface/TypeTraits.ixx
 )
 
@@ -25,7 +26,9 @@ add_library(core
 
 settingsCR(core)
 
-target_link_libraries(core PUBLIC)
+target_link_libraries(core PUBLIC
+	function2
+)
 
 set_property(TARGET core APPEND PROPERTY FOLDER Engine)
 	
@@ -34,6 +37,7 @@ set_property(TARGET core APPEND PROPERTY FOLDER Engine)
 ###############################################
 set(SOURCE_FILES
 	${root}/tests/BinaryStream.cpp
+	${root}/tests/Function.cpp
 	${root}/tests/main.cpp
 	${root}/tests/TypeTraits.cpp
 )
@@ -47,6 +51,7 @@ settingsCR(core_tests)
 target_link_libraries(core_tests 
 	doctest
 	core
+	function2
 )		
 
 set_property(TARGET core_tests APPEND PROPERTY FOLDER Engine/Tests)
