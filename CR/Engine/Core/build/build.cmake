@@ -10,6 +10,9 @@ set(INTERFACE_FILES
     ${root}/interface/Function.ixx
     ${root}/interface/Guid.ixx
     ${root}/interface/Hash.ixx
+    ${root}/interface/Literals.ixx
+    ${root}/interface/Locked.ixx
+    ${root}/interface/ScopeExit.ixx
     ${root}/interface/TypeTraits.ixx
 )
 
@@ -42,6 +45,7 @@ set(SOURCE_FILES
 	${root}/tests/BinaryStream.cpp
 	${root}/tests/Function.cpp
 	${root}/tests/Guid.cpp
+	${root}/tests/Locked.cpp
 	${root}/tests/main.cpp
 	${root}/tests/TypeTraits.cpp
 )
