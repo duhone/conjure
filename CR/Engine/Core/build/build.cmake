@@ -12,12 +12,14 @@ set(INTERFACE_FILES
     ${root}/interface/Hash.ixx
     ${root}/interface/Literals.ixx
     ${root}/interface/Locked.ixx
+    ${root}/interface/Random.ixx
     ${root}/interface/ScopeExit.ixx
     ${root}/interface/TypeTraits.ixx
 )
 
 set(SOURCE_FILES
     ${root}/source/Hash.cpp
+    ${root}/source/Random.cpp
 )
 
 set(BUILD_FILES
