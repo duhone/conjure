@@ -1,7 +1,7 @@
 ﻿import CR.Engine.Core.Function;
 
-#include <function2/function2.hpp>
 #include <doctest/doctest.h>
+#include <function2/function2.hpp>
 
 TEST_CASE("function") {
 	CR::Engine::Core::MultiFunction<void(int, int)> multiFunc;
@@ -11,7 +11,7 @@ TEST_CASE("function") {
 	multiFunc += [&](int arg1, int arg2) { test2 = arg1 * arg2; };
 	bool checkMulti = static_cast<bool>(multiFunc);
 	REQUIRE(checkMulti == true);
-	//CHECK_EQ(static_cast<bool>(multiFunc), true);
+	// CHECK_EQ(static_cast<bool>(multiFunc), true);
 	multiFunc(2, 3);
 	CHECK(test1 == 5);
 	CHECK(test2 == 6);

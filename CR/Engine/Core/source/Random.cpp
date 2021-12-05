@@ -1,8 +1,6 @@
-module;
-
-#include <random>
-
 module CR.Engine.Core.Random;
+
+import<random>;
 
 namespace {
 	struct RandomInt32 {

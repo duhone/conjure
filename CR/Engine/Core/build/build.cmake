@@ -35,6 +35,7 @@ add_library(core
 settingsCR(core)
 
 target_link_libraries(core PUBLIC
+	headerUnits
 	function2
 )
 
@@ -59,6 +60,7 @@ add_executable(core_tests
 settingsCR(core_tests)
 	
 target_link_libraries(core_tests 
+	headerUnits
 	doctest
 	core
 	function2

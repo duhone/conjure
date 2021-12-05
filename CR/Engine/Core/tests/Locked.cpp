@@ -2,15 +2,15 @@
 
 import CR.Engine.Core.Algorithm;
 
-#include <doctest/doctest.h>
+import<algorithm>;
+import<future>;
+import<list>;
+import<numeric>;
+import<ranges>;
+import<set>;
+import<vector>;
 
-#include <algorithm>
-#include <future>
-#include <list>
-#include <numeric>
-#include <ranges>
-#include <set>
-#include <vector>
+#include <doctest/doctest.h>
 
 using namespace std;
 using namespace CR::Engine::Core;
@@ -34,7 +34,7 @@ TEST_CASE("Locked") {
 
 	const auto& cdata = data;
 
-	auto task3 = async(std::launch::async, [&]() {
+	auto task3  = async(std::launch::async, [&]() {
         return cdata([](const vector<int>& a_data) { return accumulate(begin(a_data), end(a_data), 0); });
     });
 	int result1 = task3.get();
@@ -138,7 +138,7 @@ TEST_CASE("Locked try") {
 
 	const auto& cdata = data;
 
-	auto task3 = async(std::launch::async, [&]() {
+	auto task3  = async(std::launch::async, [&]() {
         return cdata([](const vector<int>& a_data) { return accumulate(begin(a_data), end(a_data), 0); });
     });
 	int result1 = task3.get();
@@ -167,7 +167,7 @@ TEST_CASE("Locked try wait") {
 
 	const auto& cdata = data;
 
-	auto task3 = async(std::launch::async, [&]() {
+	auto task3  = async(std::launch::async, [&]() {
         return cdata([](const vector<int>& a_data) { return accumulate(begin(a_data), end(a_data), 0); });
     });
 	int result1 = task3.get();

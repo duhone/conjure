@@ -2,7 +2,7 @@
 
 #include <doctest/doctest.h>
 
-#include <cstdint>
+import<cstdint>;
 import<vector>;
 
 using namespace std;

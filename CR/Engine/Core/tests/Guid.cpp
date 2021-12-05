@@ -1,8 +1,8 @@
 ﻿import CR.Engine.Core.Guid;
 
-#include <set>
-#include <sstream>
-#include <unordered_set>
+import<set>;
+import<sstream>;
+import<unordered_set>;
 
 #include <doctest/doctest.h>
 

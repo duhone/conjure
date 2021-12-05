@@ -8,5 +8,6 @@ project (Conjure)
 include (${CMAKE_CURRENT_SOURCE_DIR}/common.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/doctest/build/build.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/function2/build/build.cmake)
+include (${CMAKE_CURRENT_SOURCE_DIR}/HeaderUnits/build/build.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/CR/Engine/Core/build/build.cmake)
 	
