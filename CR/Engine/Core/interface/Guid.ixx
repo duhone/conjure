@@ -62,7 +62,7 @@ export namespace CR::Engine::Core {
 				}
 				iterator++;
 			}
-			//Log::Assert(count == 32,
+			// Log::Assert(count == 32,
 			//            "guids must have 32 chars that are 0-9, a-f, or A-F, other chars are allowed but ignored");
 		}
 
@@ -127,22 +127,21 @@ export namespace CR::Engine::Core {
 
 		uint32_t m_data[4];
 	};
-}    // namespace CR::Core
+}    // namespace CR::Engine::Core
 
-export template<typename CharT, typename Traits>
-inline std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& a_strm,
-                                                     const CR::Engine::Core::Guid& a_guid) {
-	a_strm << static_cast<std::basic_string<CharT, Traits>>(a_guid);
-	return a_strm;
-}
+export {
+	template<typename CharT, typename Traits>
+	inline std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& a_strm,
+	                                                     const CR::Engine::Core::Guid& a_guid) {
+		a_strm << static_cast<std::basic_string<CharT, Traits>>(a_guid);
+		return a_strm;
+	}
 
-namespace std {
-	export template<>
-	class hash<CR::Engine::Core::Guid> {
-	  public:
-		size_t operator()(const CR::Engine::Core::Guid& a_guid) const {
-			return hash<unsigned int>()(a_guid.Data1()) ^ hash<unsigned int>()(a_guid.Data2()) ^
-			       hash<unsigned int>()(a_guid.Data3()) ^ hash<unsigned int>()(a_guid.Data4());
+	template<>
+	struct std::hash<CR::Engine::Core::Guid> {
+		std::size_t operator()(const CR::Engine::Core::Guid& a_guid) const {
+			return std::hash<unsigned int>()(a_guid.Data1()) ^ std::hash<unsigned int>()(a_guid.Data2()) ^
+			       std::hash<unsigned int>()(a_guid.Data3()) ^ std::hash<unsigned int>()(a_guid.Data4());
 		}
 	};
-};    // namespace std
+}

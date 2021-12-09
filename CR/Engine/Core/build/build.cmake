@@ -14,12 +14,14 @@ set(INTERFACE_FILES
     ${root}/interface/Locked.ixx
     ${root}/interface/Random.ixx
     ${root}/interface/ScopeExit.ixx
+    ${root}/interface/Timer.ixx
     ${root}/interface/TypeTraits.ixx
 )
 
 set(SOURCE_FILES
     ${root}/source/Hash.cpp
     ${root}/source/Random.cpp
+    ${root}/source/Timer.cpp
 )
 
 set(BUILD_FILES
@@ -36,6 +38,7 @@ settingsCR(core)
 
 target_link_libraries(core PUBLIC
 	headerUnits
+  fmt
 	function2
 )
 
