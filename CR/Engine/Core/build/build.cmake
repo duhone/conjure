@@ -12,6 +12,7 @@ set(INTERFACE_FILES
     ${root}/interface/Hash.ixx
     ${root}/interface/Literals.ixx
     ${root}/interface/Locked.ixx
+    ${root}/interface/Log.ixx
     ${root}/interface/Random.ixx
     ${root}/interface/ScopeExit.ixx
     ${root}/interface/Timer.ixx
@@ -20,6 +21,7 @@ set(INTERFACE_FILES
 
 set(SOURCE_FILES
     ${root}/source/Hash.cpp
+    ${root}/source/Log.cpp
     ${root}/source/Random.cpp
     ${root}/source/Timer.cpp
 )
@@ -38,8 +40,9 @@ settingsCR(core)
 
 target_link_libraries(core PUBLIC
 	headerUnits
-  fmt
+	fmt
 	function2
+	spdlog
 )
 
 set_property(TARGET core APPEND PROPERTY FOLDER Engine)
@@ -52,6 +55,7 @@ set(SOURCE_FILES
 	${root}/tests/Function.cpp
 	${root}/tests/Guid.cpp
 	${root}/tests/Locked.cpp
+  ${root}/tests/Log.cpp
 	${root}/tests/main.cpp
 	${root}/tests/TypeTraits.cpp
 )
