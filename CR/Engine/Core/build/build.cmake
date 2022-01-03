@@ -16,6 +16,7 @@ set(INTERFACE_FILES
     ${root}/interface/Log.ixx
     ${root}/interface/Random.ixx
     ${root}/interface/ScopeExit.ixx
+    ${root}/interface/Table.ixx
     ${root}/interface/Timer.ixx
     ${root}/interface/TypeTraits.ixx
 )
@@ -58,8 +59,9 @@ set(SOURCE_FILES
 	${root}/tests/Function.cpp
 	${root}/tests/Guid.cpp
 	${root}/tests/Locked.cpp
-  ${root}/tests/Log.cpp
+    ${root}/tests/Log.cpp
 	${root}/tests/main.cpp
+	${root}/tests/Table.cpp
 	${root}/tests/TypeTraits.cpp
 )
 
