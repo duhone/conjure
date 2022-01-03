@@ -4,6 +4,7 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 #library
 ###############################################
 set(INTERFACE_FILES
+    ${root}/interface/core/Log.h
     ${root}/interface/Algorithm.ixx
     ${root}/interface/BinaryStream.ixx
     ${root}/interface/FileHandle.ixx
@@ -44,6 +45,8 @@ target_link_libraries(core PUBLIC
 	function2
 	spdlog
 )
+
+target_include_directories(core SYSTEM PUBLIC "${root}/interface")
 
 set_property(TARGET core APPEND PROPERTY FOLDER Engine)
 	
