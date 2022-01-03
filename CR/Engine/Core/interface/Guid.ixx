@@ -1,4 +1,8 @@
-﻿export module CR.Engine.Core.Guid;
+﻿module;
+
+#include <core/Log.h>
+
+export module CR.Engine.Core.Guid;
 
 import CR.Engine.Core.Algorithm;
 
@@ -62,8 +66,8 @@ export namespace CR::Engine::Core {
 				}
 				iterator++;
 			}
-			// Log::Assert(count == 32,
-			//            "guids must have 32 chars that are 0-9, a-f, or A-F, other chars are allowed but ignored");
+			CR_ASSERT_AUDIT(count == 32,
+			                "guids must have 32 chars that are 0-9, a-f, or A-F, other chars are allowed but ignored");
 		}
 
 		[[nodiscard]] uint32_t Data1() const { return m_data[0]; }
