@@ -1,6 +1,7 @@
 ﻿import CR.Engine.Core.Table;
 
 import<type_traits>;
+import<utility>;
 
 #include <doctest/doctest.h>
 
@@ -57,9 +58,9 @@ TEST_CASE("table_simple") {
 	REQUIRE(preDestructed == PlayerHealth::numDestructed);
 
 	// first one damaged
-	auto& row  = table.GetColumn<PlayerHealth>(index1);
-	row.Health = 2;
-	row.Armor  = 100;
+	PlayerHealth* row = &table.GetColumn<PlayerHealth>(index1);
+	row->Health       = 2;
+	row->Armor        = 100;
 
 	// add a second one
 	[[maybe_unused]] uint16_t index2 = table.insert(1);
@@ -68,19 +69,42 @@ TEST_CASE("table_simple") {
 	// reduce armor for all
 	auto columnSet = table.GetView<PlayerHealth>();
 
+	// by value, so should not change the source data
 	for(auto [health] : columnSet) { health.Armor = 50; }
 
-	// still holding ref to first row, check it has expected values
-	REQUIRE(row.Health == 2);
-	REQUIRE(row.Armor == 50);
+	// check it has expected values
+	row = &table.GetColumn<PlayerHealth>(index1);
+	REQUIRE(row->Health == 2);
+	REQUIRE(row->Armor == 100);
 
 	// now check second row
-	row = table.GetColumn<PlayerHealth>(index2);
-	REQUIRE(row.Health == 100);
-	REQUIRE(row.Armor == 50);
+	row = &table.GetColumn<PlayerHealth>(index2);
+	REQUIRE(row->Health == 100);
+	REQUIRE(row->Armor == 100);
+
+	// by reference, so should change the source data
+	for(auto& [health] : columnSet) { health.Armor = 50; }
+
+	// check it has expected values
+	row = &table.GetColumn<PlayerHealth>(index1);
+	REQUIRE(row->Health == 2);
+	REQUIRE(row->Armor == 50);
+
+	// now check second row
+	row = &table.GetColumn<PlayerHealth>(index2);
+	REQUIRE(row->Health == 100);
+	REQUIRE(row->Armor == 50);
 
 	table.erase(index1);
 	table.erase(index2);
+
+	// test out const access too
+	auto constColumnSet = std::as_const(table).GetView<PlayerHealth>();
+	for(auto& [health] : constColumnSet) {
+		REQUIRE(health.Armor == 50);
+		// shouldnt compile
+		// health.Armor = 20;
+	}
 
 	// should have never created or destroyed any.
 	REQUIRE(preConstructed == PlayerHealth::numConstructed);
@@ -93,13 +117,16 @@ TEST_CASE("table_multiple") {
 
 	REQUIRE(table.GetIndex("knight") == t_Table::c_unused);
 
-	int preConstructed = PlayerHealth::numConstructed + PlayerMoney::numConstructed + PlayerStats::numConstructed;
-	int preDestructed  = PlayerHealth::numDestructed + PlayerMoney::numDestructed + PlayerStats::numDestructed;
+	int preConstructed =
+	    PlayerHealth::numConstructed + PlayerMoney::numConstructed + PlayerStats::numConstructed;
+	int preDestructed = PlayerHealth::numDestructed + PlayerMoney::numDestructed + PlayerStats::numDestructed;
 
 	uint16_t knightIndex = table.insert("knight");
 	REQUIRE(table.GetIndex("knight") != t_Table::c_unused);
-	REQUIRE(preConstructed == PlayerHealth::numConstructed + PlayerMoney::numConstructed + PlayerStats::numConstructed);
-	REQUIRE(preDestructed == PlayerHealth::numDestructed + PlayerMoney::numDestructed + PlayerStats::numDestructed);
+	REQUIRE(preConstructed ==
+	        PlayerHealth::numConstructed + PlayerMoney::numConstructed + PlayerStats::numConstructed);
+	REQUIRE(preDestructed ==
+	        PlayerHealth::numDestructed + PlayerMoney::numDestructed + PlayerStats::numDestructed);
 
 	// add a second one
 	uint16_t wizardIndex = table.insert("wizard");
@@ -134,6 +161,8 @@ TEST_CASE("table_multiple") {
 	table.erase(wizardIndex);
 
 	// should have never created or destroyed any.
-	REQUIRE(preConstructed == PlayerHealth::numConstructed + PlayerMoney::numConstructed + PlayerStats::numConstructed);
-	REQUIRE(preDestructed == PlayerHealth::numDestructed + PlayerMoney::numDestructed + PlayerStats::numDestructed);
+	REQUIRE(preConstructed ==
+	        PlayerHealth::numConstructed + PlayerMoney::numConstructed + PlayerStats::numConstructed);
+	REQUIRE(preDestructed ==
+	        PlayerHealth::numDestructed + PlayerMoney::numDestructed + PlayerStats::numDestructed);
 }

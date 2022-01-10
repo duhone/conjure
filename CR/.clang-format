@@ -18,7 +18,7 @@ BreakBeforeBraces: Attach
 BreakBeforeTernaryOperators: false
 BreakConstructorInitializers: AfterColon
 #BreakInheritanceList: AfterColon
-ColumnLimit: 120
+ColumnLimit: 110
 CompactNamespaces: true
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 Cpp11BracedListStyle: true
