@@ -58,7 +58,7 @@ TEST_CASE("table_simple") {
 	REQUIRE(preDestructed == PlayerHealth::numDestructed);
 
 	// first one damaged
-	PlayerHealth* row = &table.GetColumn<PlayerHealth>(index1);
+	PlayerHealth* row = &table.GetValue<PlayerHealth>(index1);
 	row->Health       = 2;
 	row->Armor        = 100;
 
@@ -67,31 +67,31 @@ TEST_CASE("table_simple") {
 	REQUIRE(table.GetIndex(1) != t_Table::c_unused);
 
 	// reduce armor for all
-	auto columnSet = table.GetView<PlayerHealth>();
+	auto view = table.GetView<PlayerHealth>();
 
 	// by value, so should not change the source data
-	for(auto [health] : columnSet) { health.Armor = 50; }
+	for(auto [health] : view) { health.Armor = 50; }
 
 	// check it has expected values
-	row = &table.GetColumn<PlayerHealth>(index1);
+	row = &table.GetValue<PlayerHealth>(index1);
 	REQUIRE(row->Health == 2);
 	REQUIRE(row->Armor == 100);
 
 	// now check second row
-	row = &table.GetColumn<PlayerHealth>(index2);
+	row = &table.GetValue<PlayerHealth>(index2);
 	REQUIRE(row->Health == 100);
 	REQUIRE(row->Armor == 100);
 
 	// by reference, so should change the source data
-	for(auto& [health] : columnSet) { health.Armor = 50; }
+	for(auto& [health] : view) { health.Armor = 50; }
 
 	// check it has expected values
-	row = &table.GetColumn<PlayerHealth>(index1);
+	row = &table.GetValue<PlayerHealth>(index1);
 	REQUIRE(row->Health == 2);
 	REQUIRE(row->Armor == 50);
 
 	// now check second row
-	row = &table.GetColumn<PlayerHealth>(index2);
+	row = &table.GetValue<PlayerHealth>(index2);
 	REQUIRE(row->Health == 100);
 	REQUIRE(row->Armor == 50);
 
@@ -133,20 +133,20 @@ TEST_CASE("table_multiple") {
 	REQUIRE(table.GetIndex("wizard") != t_Table::c_unused);
 
 	// change some values for 2 columns
-	auto columnSet = table.GetView<PlayerHealth, PlayerMoney>();
+	auto view = table.GetView<PlayerHealth, PlayerMoney>();
 
-	for(auto&& [health, money] : columnSet) {
+	for(auto&& [health, money] : view) {
 		health.Armor = 50;
 		money.Gold   = 100;
 	}
 
 	// now check second row
 	{
-		auto& row = table.GetColumn<PlayerHealth>(wizardIndex);
+		auto& row = table.GetValue<PlayerHealth>(wizardIndex);
 		REQUIRE(row.Armor == 50);
 	}
 	{
-		auto& row = table.GetColumn<PlayerMoney>(wizardIndex);
+		auto& row = table.GetValue<PlayerMoney>(wizardIndex);
 		REQUIRE(row.Gold == 100);
 	}
 
