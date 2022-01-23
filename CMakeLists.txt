@@ -12,4 +12,5 @@ include (${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/function2/build/build.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/spdlog/build/build.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/HeaderUnits/build/build.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/CR/Engine/Core/build/build.cmake)
+include (${CMAKE_CURRENT_SOURCE_DIR}/CR/Engine/Platform/build/build.cmake)
 	
