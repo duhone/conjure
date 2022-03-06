@@ -1,10 +1,7 @@
 ﻿module;
 
-#pragma warning(push, 0)
-#include <windows.h>
-#pragma pop(0)
-
 #include "core/Log.h"
+#include <platform/windows/CRWindows.h>
 
 module CR.Engine.Platform.MemoryMappedFile;
 

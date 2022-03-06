@@ -5,18 +5,15 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 ###############################################
 set(INTERFACE_FILES
     ${root}/interface/Guid.ixx
-    ${root}/interface/PathUtils.ixx
     ${root}/interface/MemoryMappedFile.ixx
+    ${root}/interface/PathUtils.ixx
+    ${root}/interface/platform/windows/CRWindows.h
 )
 
 set(SOURCE_FILES
     ${root}/source/windows/Guid.cpp
-    ${root}/source/windows/GuidImpl.h
-    ${root}/source/windows/GuidImpl.cpp
-    ${root}/source/windows/PathUtils.cpp
-    ${root}/source/windows/PathUtilsImpl.h
-    ${root}/source/windows/PathUtilsImpl.cpp
     ${root}/source/windows/MemoryMappedFile.cpp
+    ${root}/source/windows/PathUtils.cpp
 )
 
 set(BUILD_FILES
@@ -35,6 +32,8 @@ target_link_libraries(platform PUBLIC
 	headerUnits
 	core
 )
+
+target_include_directories(platform SYSTEM PUBLIC "${root}/interface")
 
 set_property(TARGET platform APPEND PROPERTY FOLDER Engine)
 	
