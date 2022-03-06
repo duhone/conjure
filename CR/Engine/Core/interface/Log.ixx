@@ -11,28 +11,26 @@ import<memory>;
 import<source_location>;
 import<thread>;
 
-namespace {
-	// max size of user format string plus anything we add to the output.
-	// Final output can be larger once the users arguments are added in.
-	constexpr uint32_t c_maxFmtStringSize = 256;
+// max size of user format string plus anything we add to the output.
+// Final output can be larger once the users arguments are added in.
+constexpr uint32_t c_maxFmtStringSize = 256;
 
-	void PreFormat(char* output, const char* fmt, const std::source_location& a_location) {
-		// print a condensed path, starting just below CR/
-		const char* start = strstr(a_location.file_name(), "CR");
-		assert(start != nullptr);
-		if(start == nullptr) {
-			// couldnt find CR, shouldnt be possible. files should never exists outside this folder.
-			start = a_location.file_name();
-		} else {
-			// skip past CR/
-			start += 3;
-		}
-		auto result = fmt::format_to_n(output, c_maxFmtStringSize - 1, FMT_STRING("[{}:{}] - {}"), start,
-		                               a_location.line(), fmt);
-		// fmt doesnt append a null terminator for some reason.
-		*result.out = '\0';
+void PreFormat(char* output, const char* fmt, const std::source_location& a_location) {
+	// print a condensed path, starting just below CR/
+	const char* start = strstr(a_location.file_name(), "CR");
+	assert(start != nullptr);
+	if(start == nullptr) {
+		// couldnt find CR, shouldnt be possible. files should never exists outside this folder.
+		start = a_location.file_name();
+	} else {
+		// skip past CR/
+		start += 3;
 	}
-}    // namespace
+	auto result = fmt::format_to_n(output, c_maxFmtStringSize - 1, FMT_STRING("[{}:{}] - {}"), start,
+	                               a_location.line(), fmt);
+	// fmt doesnt append a null terminator for some reason.
+	*result.out = '\0';
+}
 
 namespace CR::Engine::Core {
 	export class LogSystem final {

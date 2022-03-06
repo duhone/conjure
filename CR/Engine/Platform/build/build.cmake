@@ -6,6 +6,7 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 set(INTERFACE_FILES
     ${root}/interface/Guid.ixx
     ${root}/interface/PathUtils.ixx
+    ${root}/interface/MemoryMappedFile.ixx
 )
 
 set(SOURCE_FILES
@@ -15,6 +16,7 @@ set(SOURCE_FILES
     ${root}/source/windows/PathUtils.cpp
     ${root}/source/windows/PathUtilsImpl.h
     ${root}/source/windows/PathUtilsImpl.cpp
+    ${root}/source/windows/MemoryMappedFile.cpp
 )
 
 set(BUILD_FILES
@@ -41,6 +43,7 @@ set_property(TARGET platform APPEND PROPERTY FOLDER Engine)
 ###############################################
 set(SOURCE_FILES
 	${root}/tests/main.cpp
+	${root}/tests/MemoryMappedFile.cpp
 )
 
 add_executable(platform_tests 
@@ -56,3 +59,13 @@ target_link_libraries(platform_tests
 )		
 
 set_property(TARGET platform_tests APPEND PROPERTY FOLDER Engine/Tests)
+
+set(TEST_DATA 
+	"${root}/tests/content/testdll.dll"
+	"${root}/tests/content/test.txt"
+)
+
+add_custom_command(TARGET platform_tests POST_BUILD        
+COMMAND ${CMAKE_COMMAND} -E copy_if_different  
+	${TEST_DATA}
+	$<TARGET_FILE_DIR:platform_tests>)
