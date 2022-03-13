@@ -8,6 +8,7 @@ set(INTERFACE_FILES
     ${root}/interface/MemoryMappedFile.ixx
     ${root}/interface/PathUtils.ixx
     ${root}/interface/Process.ixx
+    ${root}/interface/SharedLibrary.ixx
     ${root}/interface/SharedMemory.ixx
     ${root}/interface/platform/windows/CRWindows.h
 )
@@ -17,6 +18,7 @@ set(SOURCE_FILES
     ${root}/source/windows/MemoryMappedFile.cpp
     ${root}/source/windows/PathUtils.cpp
     ${root}/source/windows/Process.cpp
+    ${root}/source/windows/SharedLibrary.cpp
     ${root}/source/windows/SharedMemory.cpp
 )
 
@@ -47,6 +49,7 @@ set_property(TARGET platform APPEND PROPERTY FOLDER Engine)
 set(SOURCE_FILES
 	${root}/tests/main.cpp
 	${root}/tests/MemoryMappedFile.cpp
+	${root}/tests/SharedLibrary.cpp
 )
 
 add_executable(platform_tests 
