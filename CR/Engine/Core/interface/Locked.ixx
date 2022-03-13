@@ -66,14 +66,12 @@ export namespace CR::Engine::Core {
 			return a_arg1.m_instances < a_arg2.m_instances;
 		}
 
-		template<std::invocable<const T&...> OperationType>
-		auto operator()(OperationType a_operation) const {
+		auto operator()(std::invocable<const T&...> auto a_operation) const {
 			std::shared_lock lock(m_mutex);
 			return std::apply(a_operation, m_instances);
 		}
 
-		template<std::invocable<T&...> OperationType>
-		auto operator()(OperationType a_operation) {
+		auto operator()(std::invocable<T&...> auto a_operation) {
 			std::unique_lock lock(m_mutex);
 			return std::apply(a_operation, m_instances);
 		}
@@ -228,4 +226,4 @@ export namespace CR::Engine::Core {
 	MultiLock<T...> MakeMultiLock(Locked<T>&... a_arg) {
 		return MultiLock<T...>{a_arg...};
 	}
-}    // namespace CR::Core
+}    // namespace CR::Engine::Core

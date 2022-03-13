@@ -10,6 +10,7 @@ set(INTERFACE_FILES
     ${root}/interface/Process.ixx
     ${root}/interface/SharedLibrary.ixx
     ${root}/interface/SharedMemory.ixx
+    ${root}/interface/Window.ixx
     ${root}/interface/platform/windows/CRWindows.h
 )
 
@@ -20,6 +21,7 @@ set(SOURCE_FILES
     ${root}/source/windows/Process.cpp
     ${root}/source/windows/SharedLibrary.cpp
     ${root}/source/windows/SharedMemory.cpp
+    ${root}/source/windows/Window.cpp
 )
 
 set(BUILD_FILES
