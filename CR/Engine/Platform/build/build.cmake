@@ -15,6 +15,7 @@ set(INTERFACE_FILES
 )
 
 set(SOURCE_FILES
+    ${root}/source/windows/IOCP.ixx
     ${root}/source/windows/Guid.cpp
     ${root}/source/windows/MemoryMappedFile.cpp
     ${root}/source/windows/PathUtils.cpp
