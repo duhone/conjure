@@ -7,6 +7,8 @@ set(INTERFACE_FILES
     ${root}/interface/Guid.ixx
     ${root}/interface/MemoryMappedFile.ixx
     ${root}/interface/PathUtils.ixx
+    ${root}/interface/PipeClient.ixx
+    ${root}/interface/PipeServer.ixx
     ${root}/interface/Process.ixx
     ${root}/interface/SharedLibrary.ixx
     ${root}/interface/SharedMemory.ixx
@@ -19,6 +21,8 @@ set(SOURCE_FILES
     ${root}/source/windows/Guid.cpp
     ${root}/source/windows/MemoryMappedFile.cpp
     ${root}/source/windows/PathUtils.cpp
+    ${root}/source/windows/PipeClient.cpp
+    ${root}/source/windows/PipeServer.cpp
     ${root}/source/windows/Process.cpp
     ${root}/source/windows/SharedLibrary.cpp
     ${root}/source/windows/SharedMemory.cpp
