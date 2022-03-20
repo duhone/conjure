@@ -7,6 +7,7 @@ set(INTERFACE_FILES
     ${root}/interface/core/Log.h
     ${root}/interface/Algorithm.ixx
     ${root}/interface/BinaryStream.ixx
+    ${root}/interface/Core.ixx
     ${root}/interface/FileHandle.ixx
     ${root}/interface/Function.ixx
     ${root}/interface/Guid.ixx

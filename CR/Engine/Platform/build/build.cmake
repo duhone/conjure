@@ -9,6 +9,7 @@ set(INTERFACE_FILES
     ${root}/interface/PathUtils.ixx
     ${root}/interface/PipeClient.ixx
     ${root}/interface/PipeServer.ixx
+    ${root}/interface/Platform.ixx
     ${root}/interface/Process.ixx
     ${root}/interface/SharedLibrary.ixx
     ${root}/interface/SharedMemory.ixx
