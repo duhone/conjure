@@ -17,6 +17,7 @@ set(INTERFACE_FILES
     ${root}/interface/Log.ixx
     ${root}/interface/Random.ixx
     ${root}/interface/ScopeExit.ixx
+    ${root}/interface/StorageBuffer.ixx
     ${root}/interface/Table.ixx
     ${root}/interface/Timer.ixx
     ${root}/interface/TypeTraits.ixx

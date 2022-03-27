@@ -1,0 +1,166 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<data>
+  <compiler-settings>
+    <output-path path="..\BumbleTales\Resources\data.edf" />
+    <asset-path path="..\BumbleTales\Classes\NewAssetList.h" />
+    <asset-section section="sounds" />
+    <asset-section section="music" />
+  </compiler-settings>
+  <buffers>
+	<buffer id="BF8DEDE1-33BC-4c3e-8930-C5117C887EB6" name="arcadehigh1a" filename="Audio\sfx\arcadehigh1a.wav"/>
+	<buffer id="A26179EE-81E0-4ef1-B7A5-E384D934397A" name="arcadeover1a" filename="Audio\sfx\arcadeover1a.wav"/>
+	<buffer id="A2BEF2DF-2F88-45b0-9460-7D5FFDE8B16F" name="ArcadeReady" filename="Audio\sfx\ArcadeReady.wav"/>
+	<buffer id="48F2D64A-EFEB-4bf0-9E96-238D60DB129B" name="brick1" filename="Audio\sfx\brick1.wav"/>
+	<buffer id="38B041A5-F924-4cc5-A5DE-D032DE276D7C" name="brick2" filename="Audio\sfx\brick2.wav"/>
+	<buffer id="992C0ACA-610D-4d62-8655-75F37C47F7CF" name="building_notcharged_1a" filename="Audio\sfx\building_notcharged_1a.wav"/>
+	<buffer id="1C8F0A2E-843F-43b3-974A-EFAA91179135" name="building_readied_1" filename="Audio\sfx\building_readied_1.wav"/>
+	<buffer id="B614037D-A2E6-4248-B9BF-6517BCAF09DD" name="char1_chain2_1" filename="Audio\sfx\char1_chain2_1.wav"/>
+	<buffer id="D561EA0C-E0B3-4b1b-AFFE-0D5985A93C0C" name="char1_chain2_2" filename="Audio\sfx\char1_chain2_2.wav"/>
+	<buffer id="536E58CE-BC5C-4451-90DA-5771AD9D4B1D" name="char1_chain2_3" filename="Audio\sfx\char1_chain2_3.wav"/>
+	<buffer id="9B7EC7AE-A9DD-46cf-A479-7A19D494DF14" name="char1_chain3_2" filename="Audio\sfx\char1_chain3_2.wav"/>
+	<buffer id="C5E6CCC3-0210-446f-BD94-8EF8C20A8AA4" name="char1_chain3_3" filename="Audio\sfx\char1_chain3_3.wav"/>
+	<buffer id="2D267F34-59CD-430e-BF4A-6DA0FA3D8861" name="char1_chain4_2" filename="Audio\sfx\char1_chain4_2.wav"/>
+	<buffer id="6860372A-6C4B-468a-9EB4-5D25C2FFC16F" name="char1_chain4_3" filename="Audio\sfx\char1_chain4_3.wav"/>
+	<buffer id="7103F971-A081-4547-A702-9093105F9DC6" name="char1_chain5_1" filename="Audio\sfx\char1_chain5_1.wav"/>
+	<buffer id="DCBD3A0C-D506-4054-9637-E1A8A8E03721" name="char1_chain5_2" filename="Audio\sfx\char1_chain5_2.wav"/>
+	<buffer id="1B11FEF4-2307-4977-BB71-820F333681F2" name="char1_chain5_3" filename="Audio\sfx\char1_chain5_3.wav"/>
+	<buffer id="127EDFCE-13E5-47eb-A42B-7DBD87F7761E" name="char1_chain6_1" filename="Audio\sfx\char1_chain6_1.wav"/>
+	<buffer id="B2CAEFB5-8CC5-408a-8A67-4963CC2A7462" name="char1_chain6_2" filename="Audio\sfx\char1_chain6_2.wav"/>
+	<buffer id="A343B3C1-C63F-4b59-AE53-2A6983CA220D" name="char1_chain7_1" filename="Audio\sfx\char1_chain7_1.wav"/>
+	<buffer id="169A0020-EA5F-4170-AD6D-DBA2A5C03311" name="char1_chain7_2" filename="Audio\sfx\char1_chain7_2.wav"/>
+	<buffer id="3EF438C4-FACA-40a0-B66B-22F02D812421" name="char1_chain7_3" filename="Audio\sfx\char1_chain7_3.wav"/>
+	<buffer id="25D1AAA9-AB7E-4088-93E0-9AD934BDE907" name="char1_chain8_2" filename="Audio\sfx\char1_chain8_2.wav"/>
+	<buffer id="4A6B77B3-9266-4921-A7C2-CAE1DA2BBFBE" name="char1_chain8_4" filename="Audio\sfx\char1_chain8_4.wav"/>
+	<buffer id="3837CDF0-35FD-4000-B4C9-03C348FE058F" name="char1_chain9_1" filename="Audio\sfx\char1_chain9_1.wav"/>
+	<buffer id="6F780804-D659-44b9-B9D9-F9BFD6DA3C8E" name="char1_chain9_3" filename="Audio\sfx\char1_chain9_3.wav"/>
+	<buffer id="9C057BFA-F073-46d9-A08D-3A2BB0BA24FC" name="char1_chain10_2" filename="Audio\sfx\char1_chain10_2.wav"/>
+	<buffer id="344AAAE9-B73D-4131-BCE9-6A465B75CEC6" name="char1_chain10_3" filename="Audio\sfx\char1_chain10_3.wav"/>
+	<buffer id="38D3F896-84DD-4e6e-9E80-17DE0517F3A2" name="char1_invalid_3" filename="Audio\sfx\char1_invalid_3.wav"/>
+	<buffer id="6DA44746-37BA-46fa-8BD7-10AB30CEC44A" name="char1_invalid_8" filename="Audio\sfx\char1_invalid_8.wav"/>
+	<buffer id="11A5C044-83CF-4673-8977-AC154F9B1FA2" name="char1_invalidmove_1" filename="Audio\sfx\char1_invalidmove_1.wav"/>
+	<buffer id="238E54BA-7CA7-48d5-9F53-746C4D48E2E8" name="char1_invalidmove_2" filename="Audio\sfx\char1_invalidmove_2.wav"/>
+	<buffer id="B29A4551-CBA2-4ec0-94F2-2CE0D0A9225C" name="char1_invalidmove_3" filename="Audio\sfx\char1_invalidmove_3.wav"/>
+	<buffer id="DAEC09D8-A7FB-497c-B8AC-DA7D7785AAF4" name="char1_invalidmove_4" filename="Audio\sfx\char1_invalidmove_4.wav"/>
+	<buffer id="962C456E-FCB8-4bec-8658-EC29A365C4E5" name="char1_invalidmove_5" filename="Audio\sfx\char1_invalidmove_5.wav"/>
+	<buffer id="6822D4FF-119C-4b94-ACF9-D724A51B7BC5" name="char1_invalidmove_6" filename="Audio\sfx\char1_invalidmove_6.wav"/>
+	<buffer id="C3775CCA-E4ED-4624-B542-85A4ECE6F140" name="char1_invalidmove_7" filename="Audio\sfx\char1_invalidmove_7.wav"/>
+	<buffer id="7D6FE04A-4D92-427b-9A97-719503F161B7" name="char1_levelup_1" filename="Audio\sfx\char1_levelup_1.wav"/>
+	<buffer id="B1704D2E-B0A5-4e75-87C2-12D3FBA276EB" name="char1_levelup_2" filename="Audio\sfx\char1_levelup_2.wav"/>
+	<buffer id="D540C428-35D4-450e-9B8A-1F7F0E6A3D40" name="char1_levelup_3" filename="Audio\sfx\char1_levelup_3.wav"/>
+	<buffer id="27853CB8-133A-4e10-985F-F4F0B02B6458" name="char1_leveup_3" filename="Audio\sfx\char1_leveup_3.wav"/>
+	<buffer id="E9404AF6-572E-4d63-B86A-4A84ADDB8133" name="char1_motivational_2" filename="Audio\sfx\char1_motivational_2.wav"/>
+	<buffer id="A34383F3-E71B-4939-926A-E14D7ECE694A" name="char1_motivational_3" filename="Audio\sfx\char1_motivational_3.wav"/>
+	<buffer id="4C1B6AEE-B739-4795-9B1F-458D63037F11" name="char1_motivational_4" filename="Audio\sfx\char1_motivational_4.wav"/>
+	<buffer id="785007A4-6118-43c0-87AA-91222AACB816" name="char1_motivational_5" filename="Audio\sfx\char1_motivational_5.wav"/>
+	<buffer id="FA61FA52-518C-48cf-9309-F15241328393" name="char1_motivational_6" filename="Audio\sfx\char1_motivational_6.wav"/>
+	<buffer id="C970B6E1-5E1F-46b4-AEC4-20A7FC089D6E" name="char1_motivational_7" filename="Audio\sfx\char1_motivational_7.wav"/>
+	<buffer id="C81B1455-4AC7-4482-A5A3-1F4900FF93B0" name="char1_motivational_9" filename="Audio\sfx\char1_motivational_9.wav"/>
+	<buffer id="888DF35C-B917-4ab9-88E1-3D0667FBF1A1" name="crystal1" filename="Audio\sfx\crystal1.wav"/>
+	<buffer id="4157B31B-7EC5-4fad-9BD2-8B1EE9D3EAC5" name="crystal2" filename="Audio\sfx\crystal2.wav"/>
+	<buffer id="4D0F99D5-F288-4a12-A0C1-02E6A6DA6D65" name="gold1" filename="Audio\sfx\gold1.wav"/>
+	<buffer id="E0942728-44FF-4e9c-96F2-00D11665DDB7" name="gold2" filename="Audio\sfx\gold2.wav"/>
+	<buffer id="80A8733C-EA78-4db3-9DA0-72BF3226550E" name="invalidpiece1b" filename="Audio\sfx\invalidpiece1b.wav"/>
+	<buffer id="2BAED4A2-2800-4af8-AF2B-AE499B888BFF" name="invalidpiece2b" filename="Audio\sfx\invalidpiece2b.wav"/>
+	<!--<buffer id="7644EF89-2D2A-461e-9B73-2BD58BABABB9" name="invalidshop1b" filename="Audio\sfx\invalidshop1b.wav"/>-->
+	<buffer id="C48A55A2-D187-48f9-9BAD-739FB06AFB04" name="leaves1" filename="Audio\sfx\leaves1.wav"/>
+	<buffer id="178F50D4-9FD0-432b-819E-6480F793AD70" name="leaves2" filename="Audio\sfx\leaves2.wav"/>
+	<buffer id="FA746C30-0118-4da1-9D5D-924C4D9A67E5" name="levelupfanfare" filename="Audio\sfx\levelupfanfare.wav"/>
+	<buffer id="392E7F8C-2ED4-42d3-9276-F922DCB3E3E3" name="mpiece" filename="Audio\sfx\mpiece.wav"/>
+	<buffer id="36CAE000-EFDC-4eb8-ABAC-9003074F9180" name="nomoves" filename="Audio\sfx\nomoves.wav"/>
+	<buffer id="B70C42E0-EC2A-4509-985B-33F7EE98D16E" name="powerused1c" filename="Audio\sfx\powerused1c.wav"/>
+	<buffer id="72ECAEE2-5A13-4906-80CB-ACF388B2F2AF" name="purchase1" filename="Audio\sfx\purchase1.wav"/>
+	<buffer id="F6DBDE03-5CD8-42b8-857F-79C30CE40716" name="purchase2" filename="Audio\sfx\purchase2.wav"/>
+	<buffer id="72648AAC-14E4-4a88-8D0F-E9CD5997745F" name="scrapbookopen" filename="Audio\sfx\scrapbookopen.wav"/>
+	<buffer id="9A9A3873-37DC-4d91-B97B-BAEEB6A997C0" name="scrapbookpageturn1" filename="Audio\sfx\scrapbookpageturn1.wav"/>
+	<!--<buffer id="68C63270-75B7-4969-8023-B9F14C268FDA" name="scrapbookpageturn2" filename="Audio\sfx\scrapbookpageturn2.wav"/>-->
+	<buffer id="64692053-A718-4468-BB61-2A779C66A5DD" name="shopopen" filename="Audio\sfx\shopopen.wav"/>
+	<buffer id="A8FEE7CE-C80D-4103-89E7-2F8E7A041BE2" name="slide1b" filename="Audio\sfx\slide1b.wav"/>
+	<buffer id="8F27BFCB-2F7D-403b-A8E8-0D48DCD6D013" name="slide2b" filename="Audio\sfx\slide2b.wav"/>
+	<buffer id="A56ABEED-85FD-4e79-85C5-74D1F17478C1" name="slide3b" filename="Audio\sfx\slide3b.wav"/>
+	<buffer id="958F58EB-54A6-4f5a-8FE1-1E298303E3AB" name="tanlogo" filename="Audio\sfx\tanlogo.wav"/>
+	<buffer id="0CF08594-09B4-4ee4-A8E0-9B74152BA0D3" name="wood" filename="Audio\sfx\wood.wav"/>
+  </buffers>  
+  <sounds>
+	<sound id="87DBDBEE-8D4D-4057-8062-36EFD8262F4F" name="arcadehigh1a" buffer="BF8DEDE1-33BC-4c3e-8930-C5117C887EB6"/>
+	<sound id="72149305-46C0-45e9-AAA6-5434E007ABF6" name="arcadeover1a" buffer="A26179EE-81E0-4ef1-B7A5-E384D934397A"/>
+	<sound id="2874AC6F-5CF4-455f-AA26-2DFDFFD02086" name="ArcadeReady" buffer="A2BEF2DF-2F88-45b0-9460-7D5FFDE8B16F"/>
+	<sound id="713E0573-04B8-4100-B6C5-73EC9015642C" name="brick1" buffer="48F2D64A-EFEB-4bf0-9E96-238D60DB129B"/>
+	<sound id="51F0463F-36C7-4e23-98B5-E40DA53E311E" name="brick2" buffer="38B041A5-F924-4cc5-A5DE-D032DE276D7C"/>
+	<sound id="EED8C2B7-07B9-4f69-972E-BFE2FEF31C11" name="building_notcharged_1a" buffer="992C0ACA-610D-4d62-8655-75F37C47F7CF"/>
+	<sound id="671F93FB-FFAE-4645-A72E-DE0D0F3DCB21" name="building_readied_1" buffer="1C8F0A2E-843F-43b3-974A-EFAA91179135"/>
+	<sound id="32B9C159-414C-4acd-8399-FA27A4ACA0F7" name="char1_chain2_1" buffer="B614037D-A2E6-4248-B9BF-6517BCAF09DD"/>
+	<sound id="29EF3902-A285-4fbf-9C06-82E5D34B9462" name="char1_chain2_2" buffer="D561EA0C-E0B3-4b1b-AFFE-0D5985A93C0C"/>
+	<sound id="444276E5-DE91-492b-A630-339998D9ED9B" name="char1_chain2_3" buffer="536E58CE-BC5C-4451-90DA-5771AD9D4B1D"/>
+	<sound id="04606365-D990-4410-B538-53251BCA578E" name="char1_chain3_2" buffer="9B7EC7AE-A9DD-46cf-A479-7A19D494DF14"/>
+	<sound id="9DD37DC6-6B10-47e7-A542-EEE2EA2BE994" name="char1_chain3_3" buffer="C5E6CCC3-0210-446f-BD94-8EF8C20A8AA4"/>
+	<sound id="2FFD8F2C-5FC8-46f4-9215-ED1FAFBC4AF3" name="char1_chain4_2" buffer="2D267F34-59CD-430e-BF4A-6DA0FA3D8861"/>
+	<sound id="69816FB5-44D5-460e-853A-71065FF5312F" name="char1_chain4_3" buffer="6860372A-6C4B-468a-9EB4-5D25C2FFC16F"/>
+	<sound id="14A6CFD5-027F-4370-BD2A-86C99A0B03F0" name="char1_chain5_1" buffer="7103F971-A081-4547-A702-9093105F9DC6"/>
+	<sound id="62B61EA7-D881-4214-AD46-F5567A380004" name="char1_chain5_2" buffer="DCBD3A0C-D506-4054-9637-E1A8A8E03721"/>
+	<sound id="DA970366-9938-4a34-84CC-4F95150387E2" name="char1_chain5_3" buffer="1B11FEF4-2307-4977-BB71-820F333681F2"/>
+	<sound id="9E972461-EDBA-4961-8D45-4A01467A9145" name="char1_chain6_1" buffer="127EDFCE-13E5-47eb-A42B-7DBD87F7761E"/>
+	<sound id="A37A97AF-826B-426e-80C5-300285B5DFF8" name="char1_chain6_2" buffer="B2CAEFB5-8CC5-408a-8A67-4963CC2A7462"/>
+	<sound id="B56DB5ED-3EAE-40f0-8096-5A1D6D1715A7" name="char1_chain7_1" buffer="A343B3C1-C63F-4b59-AE53-2A6983CA220D"/>
+	<sound id="16D39150-B31A-43fb-8D7C-556AB6D3F34E" name="char1_chain7_2" buffer="169A0020-EA5F-4170-AD6D-DBA2A5C03311"/>
+	<sound id="29421E2E-834C-4096-8638-6E509FFE3F57" name="char1_chain7_3" buffer="3EF438C4-FACA-40a0-B66B-22F02D812421"/>
+	<sound id="43AE65D9-585A-43d1-B6FB-B2F61DEDE962" name="char1_chain8_2" buffer="25D1AAA9-AB7E-4088-93E0-9AD934BDE907"/>
+	<sound id="2162C418-90B5-4f64-A2C8-2E32F61198E7" name="char1_chain8_4" buffer="4A6B77B3-9266-4921-A7C2-CAE1DA2BBFBE"/>
+	<sound id="8B264182-7574-4853-ADCF-C44488004F10" name="char1_chain9_1" buffer="3837CDF0-35FD-4000-B4C9-03C348FE058F"/>
+	<sound id="8FED0138-B0D6-4eb0-979C-DAA62327CA50" name="char1_chain9_3" buffer="6F780804-D659-44b9-B9D9-F9BFD6DA3C8E"/>
+	<sound id="14A800CD-7176-41c8-8C47-5F2CBF77A82D" name="char1_chain10_2" buffer="9C057BFA-F073-46d9-A08D-3A2BB0BA24FC"/>
+	<sound id="ED678F52-461B-42ee-B34F-C20C5561A97F" name="char1_chain10_3" buffer="344AAAE9-B73D-4131-BCE9-6A465B75CEC6"/>
+	<sound id="1D7711CA-C8CE-4f03-A42D-2F27A1D7D5DF" name="char1_invalid_3" buffer="38D3F896-84DD-4e6e-9E80-17DE0517F3A2"/>
+	<sound id="CC1C004C-85B0-4af3-ACDB-9953FE2D5013" name="char1_invalid_8" buffer="6DA44746-37BA-46fa-8BD7-10AB30CEC44A"/>
+	<sound id="2EEB388B-202A-45a7-9E22-E2722E7B5426" name="char1_invalidmove_1" buffer="11A5C044-83CF-4673-8977-AC154F9B1FA2"/>
+	<sound id="AD18B622-2E3A-4524-9B75-519A2BDD0DA3" name="char1_invalidmove_2" buffer="238E54BA-7CA7-48d5-9F53-746C4D48E2E8"/>
+	<sound id="59830CF1-BBA6-4922-A5BB-E1FFFF5290AE" name="char1_invalidmove_3" buffer="B29A4551-CBA2-4ec0-94F2-2CE0D0A9225C"/>
+	<sound id="A5ABC729-F500-4853-B408-7978CCCBF472" name="char1_invalidmove_4" buffer="DAEC09D8-A7FB-497c-B8AC-DA7D7785AAF4"/>
+	<sound id="27D0591B-A3D8-4d54-8AD6-C77E2C32B174" name="char1_invalidmove_5" buffer="962C456E-FCB8-4bec-8658-EC29A365C4E5"/>
+	<sound id="B54A613E-5FE3-45a7-AA81-F19DCA17C2D0" name="char1_invalidmove_6" buffer="6822D4FF-119C-4b94-ACF9-D724A51B7BC5"/>
+	<sound id="322E8D6F-D1B4-4c22-AF1B-C4A31734D352" name="char1_invalidmove_7" buffer="C3775CCA-E4ED-4624-B542-85A4ECE6F140"/>
+	<sound id="00A2D063-A416-4edb-88E4-EAC05C775D0E" name="char1_levelup_1" buffer="7D6FE04A-4D92-427b-9A97-719503F161B7"/>
+	<sound id="63BF449B-9213-4cb7-8745-00916FB151C9" name="char1_levelup_2" buffer="B1704D2E-B0A5-4e75-87C2-12D3FBA276EB"/>
+	<sound id="16914998-D038-480e-89F8-C5162B53692B" name="char1_levelup_3" buffer="D540C428-35D4-450e-9B8A-1F7F0E6A3D40"/>
+	<sound id="77BDD5AC-E204-4157-BB11-E059E2A352CB" name="char1_leveup_3" buffer="27853CB8-133A-4e10-985F-F4F0B02B6458"/>
+	<sound id="018F7D55-2E41-4c91-B9CF-5C56CF99F275" name="char1_motivational_2" buffer="E9404AF6-572E-4d63-B86A-4A84ADDB8133"/>
+	<sound id="8050D09D-22FB-4655-AC38-55B8CD3D37C1" name="char1_motivational_3" buffer="A34383F3-E71B-4939-926A-E14D7ECE694A"/>
+	<sound id="DB646333-2646-4c48-B836-2DCB1D5EB2EA" name="char1_motivational_4" buffer="4C1B6AEE-B739-4795-9B1F-458D63037F11"/>
+	<sound id="D1EECDB6-4ABD-4eca-B078-A0D5FA4E7663" name="char1_motivational_5" buffer="785007A4-6118-43c0-87AA-91222AACB816"/>
+	<sound id="01A98043-C807-470e-A906-1CF1777ADE89" name="char1_motivational_6" buffer="FA61FA52-518C-48cf-9309-F15241328393"/>
+	<sound id="DEF54354-9640-4805-9680-4C33DDACAB8D" name="char1_motivational_7" buffer="C970B6E1-5E1F-46b4-AEC4-20A7FC089D6E"/>
+	<sound id="D6FD9CCA-C634-4ae8-BE4D-79519A9179B0" name="char1_motivational_9" buffer="C81B1455-4AC7-4482-A5A3-1F4900FF93B0"/>
+	<sound id="13230733-9AEA-43e9-8081-04BF7BFC8A35" name="crystal1" buffer="888DF35C-B917-4ab9-88E1-3D0667FBF1A1"/>
+	<sound id="2EB17B09-6C5F-44cf-A627-546C7D947754" name="crystal2" buffer="4157B31B-7EC5-4fad-9BD2-8B1EE9D3EAC5"/>
+	<sound id="117659FA-AD90-41e1-A0BF-A82DD5B7CA26" name="gold1" buffer="4D0F99D5-F288-4a12-A0C1-02E6A6DA6D65"/>
+	<sound id="F02686BF-AA77-4c4f-8287-4049469C8994" name="gold2" buffer="E0942728-44FF-4e9c-96F2-00D11665DDB7"/>
+	<sound id="0FB7CEDE-0CCA-443c-A7B4-45A197529687" name="invalidpiece1b" buffer="80A8733C-EA78-4db3-9DA0-72BF3226550E"/>
+	<sound id="2AE094D6-BD8A-41f0-8BE4-28F230619813" name="invalidpiece2b" buffer="2BAED4A2-2800-4af8-AF2B-AE499B888BFF"/>
+	<!--<sound id="BCD8DBF7-7562-4837-A14D-D264DDE37699" name="invalidshop1b" buffer="7644EF89-2D2A-461e-9B73-2BD58BABABB9"/>-->
+	<sound id="1F1B33A5-448D-450c-8291-32A81BE1CB73" name="leaves1" buffer="C48A55A2-D187-48f9-9BAD-739FB06AFB04"/>
+	<sound id="F2C29AA2-9E7B-4eb4-A48C-1447285E91E1" name="leaves2" buffer="178F50D4-9FD0-432b-819E-6480F793AD70"/>
+	<sound id="DA0E9974-E6A0-43df-B16B-C5178FCF12F6" name="levelupfanfare" buffer="FA746C30-0118-4da1-9D5D-924C4D9A67E5"/>
+	<sound id="CECA3130-244C-4f58-B69F-365B8D75848B" name="mpiece" buffer="392E7F8C-2ED4-42d3-9276-F922DCB3E3E3"/>
+	<sound id="7732C90E-6C3E-4c2b-B5A6-C93A956179DC" name="nomoves" buffer="36CAE000-EFDC-4eb8-ABAC-9003074F9180"/>
+	<sound id="F6B6A803-69BC-4d83-92CF-BEBE18ED9334" name="powerused1c" buffer="B70C42E0-EC2A-4509-985B-33F7EE98D16E"/>
+	<sound id="1D519F17-209B-4aea-A671-2855E944BAAA" name="purchase1" buffer="72ECAEE2-5A13-4906-80CB-ACF388B2F2AF"/>
+	<sound id="F803B407-2FEF-4fae-A986-F2BDFE463602" name="purchase2" buffer="F6DBDE03-5CD8-42b8-857F-79C30CE40716"/>
+	<sound id="C3A0FC82-9061-48db-9546-310C91026493" name="scrapbookopen" buffer="72648AAC-14E4-4a88-8D0F-E9CD5997745F"/>
+	<sound id="1521EDC0-8A73-44e6-BF0A-E25397B0D11D" name="scrapbookpageturn1" buffer="9A9A3873-37DC-4d91-B97B-BAEEB6A997C0"/>
+	<!--<sound id="E32850D8-9568-48d5-A12A-577BCB436F05" name="scrapbookpageturn2" buffer="68C63270-75B7-4969-8023-B9F14C268FDA"/>-->
+	<sound id="7947E1B4-D301-40c0-A3D7-B602199B434F" name="shopopen" buffer="64692053-A718-4468-BB61-2A779C66A5DD"/>
+	<sound id="995E949A-146C-4139-83F4-5ADAC00B3F2F" name="slide1b" buffer="A8FEE7CE-C80D-4103-89E7-2F8E7A041BE2"/>
+	<sound id="EE58A2CC-BBE7-4cd1-83A3-888660503563" name="slide2b" buffer="8F27BFCB-2F7D-403b-A8E8-0D48DCD6D013"/>
+	<sound id="88B749A7-4624-48f5-89AE-754BB1B62438" name="slide3b" buffer="A56ABEED-85FD-4e79-85C5-74D1F17478C1"/>
+	<sound id="CDBCED50-6BAF-42bc-B22B-3886BDE4F02E" name="tanlogo" buffer="958F58EB-54A6-4f5a-8FE1-1E298303E3AB"/>
+	<sound id="5EBF41BB-2C44-4d71-BDBD-129E90DB5A8C" name="wood" buffer="0CF08594-09B4-4ee4-A8E0-9B74152BA0D3"/>
+  </sounds>  
+  <music>
+	<song id="A97897F8-856F-4066-9F62-67CA2817A286" name="BGMMenu" filename="Audio\bgm\BGM_Menu.wav" quality="3"/>
+	<song id="B57AD815-03FC-4b1d-968E-411570ECBFC2" name="BGMStory1" filename="Audio\bgm\BGM_Story1.wav" quality="3"/>
+	<song id="DFAB502A-C725-4c30-BE11-D64A1F54A6F9" name="BGMStory2" filename="Audio\bgm\BGM_Story2.wav" quality="3"/>
+	<song id="62A0D394-2532-42de-922F-11A30015F954" name="BGMStory3" filename="Audio\bgm\BGM_Story3.wav" quality="3"/>
+	<song id="D0D82FB9-5D33-4826-BC19-07D549C36723" name="BGMStory4" filename="Audio\bgm\BGM_Story4.wav" quality="3"/>
+	<song id="21071B09-2B2F-493f-86F7-B181CCE67559" name="BGMArcade" filename="Audio\bgm\BGM_Arcade.wav" quality="3"/>
+	<song id="1AFD1DCF-15AB-43e7-AD00-2DF032DEFC99" name="BGMScrapbook" filename="Audio\bgm\BGM_Scrapbook.wav" quality="3"/>
+  </music>  
+</data>
