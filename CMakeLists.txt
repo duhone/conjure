@@ -17,4 +17,5 @@ include (${CMAKE_CURRENT_SOURCE_DIR}/HeaderUnits/build/build.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/CR/Engine/Core/build/build.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/CR/Engine/DataCompression/build/build.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/CR/Engine/Platform/build/build.cmake)
+include (${CMAKE_CURRENT_SOURCE_DIR}/CR/Tools/embed/build/build.cmake)
 	
