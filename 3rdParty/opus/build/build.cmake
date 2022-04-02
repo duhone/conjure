@@ -217,7 +217,7 @@ settings3rdParty(opus)
 
 target_compile_definitions(opus PRIVATE HAVE_CONFIG_H=1)
 
-target_include_directories(opus PRIVATE "${root}/opus/include")
+target_include_directories(opus PUBLIC "${root}/opus/include")
 target_include_directories(opus PRIVATE "${root}/opus/celt")
 target_include_directories(opus PRIVATE "${root}/opus/silk")
 target_include_directories(opus PRIVATE "${root}/opus/silk/float")
