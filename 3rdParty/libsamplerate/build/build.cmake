@@ -26,4 +26,6 @@ add_library(samplerate OBJECT
 )
 settings3rdParty(samplerate)
 
+target_compile_definitions(samplerate PRIVATE HAVE_CONFIG_H=1)
+
 target_include_directories(samplerate SYSTEM PUBLIC "${root}/libsamplerate/include")
