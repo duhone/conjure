@@ -10,6 +10,9 @@ set(SOURCE_FILES
     ${root}/source/AudioDevice.ixx
     ${root}/source/ChannelWeights.ixx
     ${root}/source/Constants.ixx
+    ${root}/source/Sample.ixx
+    ${root}/source/TestTone.ixx
+    ${root}/source/TestTone.cpp
     ${root}/source/Windows/AudioDevice.cpp
 )
 
