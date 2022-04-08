@@ -4,6 +4,7 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 #library
 ###############################################
 set(INTERFACE_FILES
+    ${root}/interface/MixerHandle.ixx
 )
 
 set(SOURCE_FILES
@@ -11,6 +12,7 @@ set(SOURCE_FILES
     ${root}/source/ChannelWeights.ixx
     ${root}/source/Constants.ixx
     ${root}/source/Mixer.ixx
+    ${root}/source/MixerSystem.ixx
     ${root}/source/OutputConversion.ixx
     ${root}/source/Sample.ixx
     ${root}/source/TestTone.ixx
