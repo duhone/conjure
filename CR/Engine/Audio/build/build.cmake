@@ -4,11 +4,13 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 #library
 ###############################################
 set(INTERFACE_FILES
+    ${root}/interface/AudioEngine.ixx
     ${root}/interface/MixerHandle.ixx
 )
 
 set(SOURCE_FILES
     ${root}/source/AudioDevice.ixx
+    ${root}/source/AudioEngine.cpp
     ${root}/source/ChannelWeights.ixx
     ${root}/source/Constants.ixx
     ${root}/source/Mixer.ixx
