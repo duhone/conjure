@@ -4,6 +4,7 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 #library
 ###############################################
 set(INTERFACE_FILES
+    ${root}/interface/Audio.ixx
     ${root}/interface/AudioEngine.ixx
     ${root}/interface/MixerHandle.ixx
 )
