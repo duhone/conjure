@@ -18,7 +18,7 @@ namespace CR::Engine::Platform {
 		void RunMsgLoop();
 
 		HWND m_HWND{nullptr};
-		std::thread m_thread;
+		std::jthread m_thread;
 		Window::OnDestroy_t m_onDestroy;
 	};
 }    // namespace CR::Engine::Platform
@@ -48,18 +48,21 @@ namespace {
 
 cep::Window::Window(std::string_view a_windowTitle, uint32_t a_width, uint32_t a_height,
                     OnDestroy_t a_onDestroy) {
+	m_data              = std::make_unique<WindowData>();
 	m_data->m_onDestroy = std::move(a_onDestroy);
-	m_data->m_thread    = std::thread([this, windowTitle = std::string{a_windowTitle}, a_width, a_height]() {
+	m_data->m_thread    = std::jthread([this, windowTitle = std::string{a_windowTitle}, a_width, a_height]() {
         this->m_data->MyCreateWindow(windowTitle.c_str(), a_width, a_height, this);
         this->m_data->RunMsgLoop();
 	   });
+
+	ShowWindow(GetConsoleWindow(), SW_HIDE);
 }
 
 cep::Window::~Window() {
 	if(!m_data) { return; }
 	g_windowLookup([this](WindowLookup_t& winLookup) { winLookup.erase(m_data->m_HWND); });
 	Destroy();
-	if(m_data->m_thread.joinable()) { m_data->m_thread.join(); }
+	ShowWindow(GetConsoleWindow(), SW_SHOW);
 }
 
 cep::Window::Window(Window&& a_other) noexcept {
