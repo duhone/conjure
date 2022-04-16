@@ -44,6 +44,7 @@ target_link_libraries(audio PUBLIC
 	spdlog
 	core
 	platform
+	Rtworkq.lib
 )
 
 set_property(TARGET audio APPEND PROPERTY FOLDER Engine)

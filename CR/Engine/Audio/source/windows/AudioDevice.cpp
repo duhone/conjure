@@ -4,16 +4,16 @@
 #include <function2/function2.hpp>
 #include <platform/windows/CRWindows.h>
 
+#include <atlbase.h>
+#include <audioclient.h>
+#include <mmdeviceapi.h>
+#include <rtworkq.h>
+
 module CR.Engine.Audio.AudioDevice;
 
 import CR.Engine.Audio.Constants;
 
 import CR.Engine.Core;
-
-#include <atlbase.h>
-#include <audioclient.h>
-#include <mmdeviceapi.h>
-#include <rtworkq.h>
 
 import<chrono>;
 import<cstdint>;

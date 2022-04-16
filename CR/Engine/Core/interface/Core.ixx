@@ -8,6 +8,7 @@ export import CR.Engine.Core.Guid;
 export import CR.Engine.Core.Hash;
 export import CR.Engine.Core.Literals;
 export import CR.Engine.Core.Locked;
+export import CR.Engine.Core.Log;
 export import CR.Engine.Core.Random;
 export import CR.Engine.Core.ScopeExit;
 export import CR.Engine.Core.StorageBuffer;
