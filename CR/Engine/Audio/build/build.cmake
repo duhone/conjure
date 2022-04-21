@@ -19,6 +19,7 @@ set(SOURCE_FILES
     ${root}/source/OutputConversion.ixx
     ${root}/source/Sample.ixx
     ${root}/source/TestTone.ixx
+    ${root}/source/ToneSystem.ixx
     ${root}/source/Windows/AudioDevice.cpp
 )
 

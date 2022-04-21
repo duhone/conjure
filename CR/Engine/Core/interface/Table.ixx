@@ -75,13 +75,16 @@ export namespace CR::Engine::Core {
 	// just one column. You can grab multiple iterators if you need to walk multiple columns at once. The
 	// fastest way to get to a row for a column is by index, not by primary key, you can save these indices
 	// for future use. Indices are stable.
-	template<std::regular t_primaryKey, typename... t_columns>
+	//
+	// c_maxSize - maximum rows. this many rows is allocated up front currently. Can use a lot of memory
+	// There can be no more than 64K-1 rows. If you need more than that, probably should be writing custom
+	// code. Using arrays currently, and std::bitset. For larger tables need a bitset replacement(which would
+	// help here too). And should use std::vector instead of arrays for larger tables.
+	template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 	class Table {
 		static_assert(is_unique_v<t_columns...>, "column types must be unique currently");
+		static_assert(c_maxSize < 0xffff, "no more than 64K-1 rows allowed");
 
-		// Using arrays currently, and std::bitset. For larger tables need a bitset replacement(which would
-		// help here too). And should use std::vector instead of arrays for larger tables.
-		static constexpr uint16_t c_maxSize = 512;
 		// If column is larger than this, should refactor. Bulk data should be stored elsewhere on the
 		// heap(i.e. unique_ptr, or a vector). If still larger than this, then you probably aren't in
 		// boyce-codd normal form. Or you just need to split up the table. You can of course have multiple
@@ -297,8 +300,8 @@ export namespace CR::Engine::Core {
 	};
 }    // namespace CR::Engine::Core
 
-template<std::regular t_primaryKey, typename... t_columns>
-inline uint16_t CR::Engine::Core::Table<t_primaryKey, t_columns...>::FindUnused() {
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
+inline uint16_t CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::FindUnused() {
 	// TODO: std::bitset sucks, unless its 64 bits or less, can't do a bitscan manually even.
 	for(uint16_t i = 0; i < c_maxSize; ++i) {
 		if(!m_used[i]) { return i; }
@@ -306,38 +309,37 @@ inline uint16_t CR::Engine::Core::Table<t_primaryKey, t_columns...>::FindUnused(
 	return c_maxSize;
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename t_column>
-void CR::Engine::Core::Table<t_primaryKey, t_columns...>::ClearColumnDefault(
+void CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::ClearColumnDefault(
     [[maybe_unused]] uint16_t a_index) {
 	if constexpr(!std::is_standard_layout_v<t_column>) { std::get<t_column>(m_rows)[a_index] = t_column{}; }
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<size_t index, typename t_column>
-void CR::Engine::Core::Table<t_primaryKey, t_columns...>::ClearColumn([[maybe_unused]] uint16_t a_index,
-                                                                      [[maybe_unused]] t_column&& a_column) {
+void CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::ClearColumn(
+    [[maybe_unused]] uint16_t a_index, [[maybe_unused]] t_column&& a_column) {
 	if constexpr(!std::is_standard_layout_v<t_column>) {
 		std::get<index>(m_rows)[a_index] = std::move(a_column);
 	}
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
-void CR::Engine::Core::Table<t_primaryKey, t_columns...>::ClearRowDefault(uint16_t a_index) {
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
+void CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::ClearRowDefault(uint16_t a_index) {
 	(ClearColumnDefault<t_columns>(a_index), ...);
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<size_t... tupleIndices>
-void CR::Engine::Core::Table<t_primaryKey, t_columns...>::ClearRow(uint16_t a_index,
-                                                                   std::index_sequence<tupleIndices...>,
-                                                                   t_columns&&... a_row) {
+void CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::ClearRow(
+    uint16_t a_index, std::index_sequence<tupleIndices...>, t_columns&&... a_row) {
 	(ClearColumn<tupleIndices>(a_index, std::move(a_row)), ...);
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
-inline uint16_t CR::Engine::Core::Table<t_primaryKey, t_columns...>::insert(t_primaryKey&& a_key,
-                                                                            t_columns&&... a_row) {
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
+inline uint16_t CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::insert(t_primaryKey&& a_key,
+                                                                                       t_columns&&... a_row) {
 	uint16_t unusedIndex = insert(a_key);
 
 	ClearRow(unusedIndex, std::index_sequence_for<t_columns...>{}, std::move(a_row)...);
@@ -345,8 +347,8 @@ inline uint16_t CR::Engine::Core::Table<t_primaryKey, t_columns...>::insert(t_pr
 	return unusedIndex;
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
-inline uint16_t CR::Engine::Core::Table<t_primaryKey, t_columns...>::insert(t_primaryKey&& a_key) {
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
+inline uint16_t CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::insert(t_primaryKey&& a_key) {
 	CR_REQUIRES_AUDIT(m_lookUp.find(a_key) == std::end(m_lookUp),
 	                  "Tried to insert, but row already exists with this key {}", m_tableName);
 
@@ -361,9 +363,9 @@ inline uint16_t CR::Engine::Core::Table<t_primaryKey, t_columns...>::insert(t_pr
 	return unusedIndex;
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
-inline uint16_t
-    CR::Engine::Core::Table<t_primaryKey, t_columns...>::GetIndex(const t_primaryKey& a_key) const {
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
+inline uint16_t CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::GetIndex(
+    const t_primaryKey& a_key) const {
 	auto iter = m_lookUp.find(a_key);
 	if(iter == m_lookUp.end()) {
 		return c_unused;
@@ -372,26 +374,27 @@ inline uint16_t
 	}
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename t_value>
-inline const t_value& CR::Engine::Core::Table<t_primaryKey, t_columns...>::GetValue(uint16_t a_index) const {
+inline const t_value&
+    CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::GetValue(uint16_t a_index) const {
 	CR_REQUIRES_AUDIT(a_index != c_unused && m_used[a_index], "asked for an unused row in table {}",
 	                  m_tableName);
 
 	return std::get<std::array<t_value, c_maxSize>>(m_rows)[a_index];
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename t_value>
-inline t_value& CR::Engine::Core::Table<t_primaryKey, t_columns...>::GetValue(uint16_t a_index) {
+inline t_value& CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::GetValue(uint16_t a_index) {
 	CR_REQUIRES_AUDIT(a_index != c_unused && m_used[a_index], "asked for an unused row in table {}",
 	                  m_tableName);
 
 	return std::get<std::array<t_value, c_maxSize>>(m_rows)[a_index];
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
-inline void CR::Engine::Core::Table<t_primaryKey, t_columns...>::erase(uint16_t a_index) {
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
+inline void CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::erase(uint16_t a_index) {
 	CR_REQUIRES_AUDIT(a_index != c_unused && m_used[a_index], "tried to delete an unused row in table {}",
 	                  m_tableName);
 
@@ -407,9 +410,9 @@ inline void CR::Engine::Core::Table<t_primaryKey, t_columns...>::erase(uint16_t 
 // Iterator
 //////////////////////////////
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename... t_columnsSubset>
-CR::Engine::Core::Table<t_primaryKey, t_columns...>::Iterator<t_columnsSubset...>::Iterator(
+CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::Iterator<t_columnsSubset...>::Iterator(
     Table& a_table, uint16_t a_index) :
     m_table(a_table),
     m_index(a_index) {
@@ -417,10 +420,10 @@ CR::Engine::Core::Table<t_primaryKey, t_columns...>::Iterator<t_columnsSubset...
 	SetBinding();
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename... t_columnsSubset>
-auto CR::Engine::Core::Table<t_primaryKey, t_columns...>::Iterator<t_columnsSubset...>::operator++()
-    -> Iterator& {
+auto CR::Engine::Core::Table<c_maxSize, t_primaryKey,
+                             t_columns...>::Iterator<t_columnsSubset...>::operator++() -> Iterator& {
 	if(m_index == c_maxSize) { return *this; }
 	++m_index;
 	while(m_index < c_maxSize && !m_table.m_used[m_index]) { ++m_index; }
@@ -428,19 +431,19 @@ auto CR::Engine::Core::Table<t_primaryKey, t_columns...>::Iterator<t_columnsSubs
 	return *this;
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename... t_columnsSubset>
-auto CR::Engine::Core::Table<t_primaryKey, t_columns...>::Iterator<t_columnsSubset...>::operator++(int)
-    -> Iterator& {
+auto CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::Iterator<t_columnsSubset...>::operator++(
+    int) -> Iterator& {
 	Iterator tmp = *this;
 	++(*this);
 	return tmp;
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename... t_columnsSubset>
-auto CR::Engine::Core::Table<t_primaryKey, t_columns...>::Iterator<t_columnsSubset...>::operator--()
-    -> Iterator& {
+auto CR::Engine::Core::Table<c_maxSize, t_primaryKey,
+                             t_columns...>::Iterator<t_columnsSubset...>::operator--() -> Iterator& {
 	if(m_index == 0) { return *this; }
 	uint16_t oldIndex = m_index;
 	--m_index;
@@ -450,32 +453,33 @@ auto CR::Engine::Core::Table<t_primaryKey, t_columns...>::Iterator<t_columnsSubs
 	return *this;
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename... t_columnsSubset>
-auto CR::Engine::Core::Table<t_primaryKey, t_columns...>::Iterator<t_columnsSubset...>::operator--(int)
-    -> Iterator& {
+auto CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::Iterator<t_columnsSubset...>::operator--(
+    int) -> Iterator& {
 	Iterator tmp = *this;
 	--(*this);
 	return tmp;
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename... t_columnsSubset>
-auto CR::Engine::Core::Table<t_primaryKey, t_columns...>::Iterator<t_columnsSubset...>::operator*()
+auto CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::Iterator<t_columnsSubset...>::operator*()
     -> reference {
 	return m_binding;
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename... t_columnsSubset>
-auto CR::Engine::Core::Table<t_primaryKey, t_columns...>::Iterator<t_columnsSubset...>::operator->()
-    -> pointer {
+auto CR::Engine::Core::Table<c_maxSize, t_primaryKey,
+                             t_columns...>::Iterator<t_columnsSubset...>::operator->() -> pointer {
 	return &m_binding;
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename... t_columnsSubset>
-void CR::Engine::Core::Table<t_primaryKey, t_columns...>::Iterator<t_columnsSubset...>::SetBinding() {
+void CR::Engine::Core::Table<c_maxSize, t_primaryKey,
+                             t_columns...>::Iterator<t_columnsSubset...>::SetBinding() {
 	if(m_index >= c_maxSize || !m_table.m_used[m_index]) {
 		m_binding.SetNull();
 	} else {
@@ -487,19 +491,21 @@ void CR::Engine::Core::Table<t_primaryKey, t_columns...>::Iterator<t_columnsSubs
 // ConstIterator
 //////////////////////////////
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename... t_columnsSubset>
-CR::Engine::Core::Table<t_primaryKey, t_columns...>::ConstIterator<t_columnsSubset...>::ConstIterator(
-    const Table& a_table, uint16_t a_index) :
+CR::Engine::Core::Table<c_maxSize, t_primaryKey,
+                        t_columns...>::ConstIterator<t_columnsSubset...>::ConstIterator(const Table& a_table,
+                                                                                        uint16_t a_index) :
     m_table(a_table),
     m_index(a_index) {
 	while(m_index < c_maxSize && !m_table.m_used[m_index]) { ++m_index; }
 	SetBinding();
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename... t_columnsSubset>
-auto CR::Engine::Core::Table<t_primaryKey, t_columns...>::ConstIterator<t_columnsSubset...>::operator++()
+auto CR::Engine::Core::Table<c_maxSize, t_primaryKey,
+                             t_columns...>::ConstIterator<t_columnsSubset...>::operator++()
     -> ConstIterator& {
 	if(m_index == c_maxSize) { return *this; }
 	++m_index;
@@ -508,18 +514,20 @@ auto CR::Engine::Core::Table<t_primaryKey, t_columns...>::ConstIterator<t_column
 	return *this;
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename... t_columnsSubset>
-auto CR::Engine::Core::Table<t_primaryKey, t_columns...>::ConstIterator<t_columnsSubset...>::operator++(int)
+auto CR::Engine::Core::Table<c_maxSize, t_primaryKey,
+                             t_columns...>::ConstIterator<t_columnsSubset...>::operator++(int)
     -> ConstIterator& {
 	Iterator tmp = *this;
 	++(*this);
 	return tmp;
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename... t_columnsSubset>
-auto CR::Engine::Core::Table<t_primaryKey, t_columns...>::ConstIterator<t_columnsSubset...>::operator--()
+auto CR::Engine::Core::Table<c_maxSize, t_primaryKey,
+                             t_columns...>::ConstIterator<t_columnsSubset...>::operator--()
     -> ConstIterator& {
 	if(m_index == 0) { return *this; }
 	uint16_t oldIndex = m_index;
@@ -530,32 +538,34 @@ auto CR::Engine::Core::Table<t_primaryKey, t_columns...>::ConstIterator<t_column
 	return *this;
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename... t_columnsSubset>
-auto CR::Engine::Core::Table<t_primaryKey, t_columns...>::ConstIterator<t_columnsSubset...>::operator--(int)
+auto CR::Engine::Core::Table<c_maxSize, t_primaryKey,
+                             t_columns...>::ConstIterator<t_columnsSubset...>::operator--(int)
     -> ConstIterator& {
 	Iterator tmp = *this;
 	--(*this);
 	return tmp;
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename... t_columnsSubset>
-auto CR::Engine::Core::Table<t_primaryKey, t_columns...>::ConstIterator<t_columnsSubset...>::operator*()
-    -> reference {
+auto CR::Engine::Core::Table<c_maxSize, t_primaryKey,
+                             t_columns...>::ConstIterator<t_columnsSubset...>::operator*() -> reference {
 	return m_binding;
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename... t_columnsSubset>
-auto CR::Engine::Core::Table<t_primaryKey, t_columns...>::ConstIterator<t_columnsSubset...>::operator->()
-    -> pointer {
+auto CR::Engine::Core::Table<c_maxSize, t_primaryKey,
+                             t_columns...>::ConstIterator<t_columnsSubset...>::operator->() -> pointer {
 	return &m_binding;
 }
 
-template<std::regular t_primaryKey, typename... t_columns>
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
 template<typename... t_columnsSubset>
-void CR::Engine::Core::Table<t_primaryKey, t_columns...>::ConstIterator<t_columnsSubset...>::SetBinding() {
+void CR::Engine::Core::Table<c_maxSize, t_primaryKey,
+                             t_columns...>::ConstIterator<t_columnsSubset...>::SetBinding() {
 	if(m_index >= c_maxSize || !m_table.m_used[m_index]) {
 		m_binding.SetNull();
 	} else {

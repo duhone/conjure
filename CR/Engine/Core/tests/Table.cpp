@@ -44,7 +44,7 @@ namespace {
 }    // namespace
 
 TEST_CASE("table_simple") {
-	using t_Table = CR::Engine::Core::Table<uint32_t, PlayerHealth>;
+	using t_Table = CR::Engine::Core::Table<16, uint32_t, PlayerHealth>;
 	t_Table table{"simple table"};
 
 	REQUIRE(table.GetIndex(0) == t_Table::c_unused);
@@ -112,7 +112,7 @@ TEST_CASE("table_simple") {
 }
 
 TEST_CASE("table_multiple") {
-	using t_Table = CR::Engine::Core::Table<std::string, PlayerHealth, PlayerMoney, PlayerStats>;
+	using t_Table = CR::Engine::Core::Table<16, std::string, PlayerHealth, PlayerMoney, PlayerStats>;
 	t_Table table{"a table"};
 
 	REQUIRE(table.GetIndex("knight") == t_Table::c_unused);
