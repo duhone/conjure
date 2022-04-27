@@ -11,6 +11,7 @@ set(INTERFACE_FILES
     ${root}/interface/FileHandle.ixx
     ${root}/interface/Function.ixx
     ${root}/interface/Guid.ixx
+    ${root}/interface/Handle.ixx
     ${root}/interface/Hash.ixx
     ${root}/interface/Literals.ixx
     ${root}/interface/Locked.ixx

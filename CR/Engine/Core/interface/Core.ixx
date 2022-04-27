@@ -5,6 +5,7 @@ export import CR.Engine.Core.BinaryStream;
 export import CR.Engine.Core.FileHandle;
 export import CR.Engine.Core.Function;
 export import CR.Engine.Core.Guid;
+export import CR.Engine.Core.Handle;
 export import CR.Engine.Core.Hash;
 export import CR.Engine.Core.Literals;
 export import CR.Engine.Core.Locked;
