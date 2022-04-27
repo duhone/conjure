@@ -10,6 +10,7 @@ import<array>;
 import<bitset>;
 import<cinttypes>;
 import<concepts>;
+import<string>;
 import<tuple>;
 import<type_traits>;
 import<unordered_map>;
@@ -108,9 +109,13 @@ export namespace CR::Engine::Core {
 		Table& operator=(Table&&) = delete;
 
 		// returns the new index, fatal error if table is full
-		uint16_t insert(t_primaryKey&& a_key, t_columns&&... a_row);
+		uint16_t insert(t_primaryKey&& a_key, t_columns&&... a_row) requires
+		    !std::same_as<t_primaryKey, std::string>;
+		uint16_t insert(const std::string_view a_key,
+		                t_columns&&... a_row) requires std::same_as<t_primaryKey, std::string>;
 		// row will be default constructed if not standard layout, otherwise uninitialized
-		uint16_t insert(t_primaryKey&& a_key);
+		uint16_t insert(t_primaryKey&& a_key) requires !std::same_as<t_primaryKey, std::string>;
+		uint16_t insert(const std::string_view a_key) requires std::same_as<t_primaryKey, std::string>;
 
 		// problematic when t_primaryKey is a string type(char*, string, string_view, ect) should just take a
 		// string_view for those. Wait until C++20 to fix, can be done cleaner there.
@@ -120,6 +125,9 @@ export namespace CR::Engine::Core {
 		[[nodiscard]] const t_value& GetValue(uint16_t a_index) const;
 		template<typename t_value>
 		[[nodiscard]] t_value& GetValue(uint16_t a_index);
+
+		[[nodiscard]] const std::tuple<const t_columns&...> operator[](uint16_t a_index) const;
+		[[nodiscard]] std::tuple<t_columns&...> operator[](uint16_t a_index);
 
 		void erase(uint16_t a_index);
 
@@ -291,6 +299,9 @@ export namespace CR::Engine::Core {
 		template<size_t... tupleIndices>
 		void ClearRow(uint16_t a_index, std::index_sequence<tupleIndices...>, t_columns&&... row);
 
+		template<std::size_t... I>
+		[[nodiscard]] std::tuple<t_columns&...> GetValues(uint16_t a_index, std::index_sequence<I...>);
+
 		std::string m_tableName;
 		std::bitset<c_maxSize> m_used;
 		t_primaryKey m_primaryKeys[c_maxSize];
@@ -338,8 +349,8 @@ void CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::ClearRow(
 }
 
 template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
-inline uint16_t CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::insert(t_primaryKey&& a_key,
-                                                                                       t_columns&&... a_row) {
+inline uint16_t CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::insert(
+    t_primaryKey&& a_key, t_columns&&... a_row) requires !std::same_as<t_primaryKey, std::string> {
 	uint16_t unusedIndex = insert(a_key);
 
 	ClearRow(unusedIndex, std::index_sequence_for<t_columns...>{}, std::move(a_row)...);
@@ -348,8 +359,37 @@ inline uint16_t CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::
 }
 
 template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
-inline uint16_t CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::insert(t_primaryKey&& a_key) {
+inline uint16_t CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::insert(
+    const std::string_view a_key, t_columns&&... a_row) requires std::same_as<t_primaryKey, std::string> {
+	uint16_t unusedIndex = insert(a_key);
+
+	ClearRow(unusedIndex, std::index_sequence_for<t_columns...>{}, std::move(a_row)...);
+
+	return unusedIndex;
+}
+
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
+inline uint16_t
+    CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::insert(t_primaryKey&& a_key) requires
+    !std::same_as<t_primaryKey, std::string> {
 	CR_REQUIRES_AUDIT(m_lookUp.find(a_key) == std::end(m_lookUp),
+	                  "Tried to insert, but row already exists with this key {}", m_tableName);
+
+	uint16_t unusedIndex = FindUnused();
+	CR_REQUIRES_AUDIT(unusedIndex != c_maxSize, "Ran out of available rows in table {}", m_tableName);
+
+	m_lookUp.emplace(a_key, unusedIndex);
+	m_primaryKeys[unusedIndex] = std::move(a_key);
+
+	m_used[unusedIndex] = true;
+
+	return unusedIndex;
+}
+
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
+inline uint16_t CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::insert(
+    const std::string_view a_key) requires std::same_as<t_primaryKey, std::string> {
+	CR_REQUIRES_AUDIT(m_lookUp.find(std::string(a_key)) == std::end(m_lookUp),
 	                  "Tried to insert, but row already exists with this key {}", m_tableName);
 
 	uint16_t unusedIndex = FindUnused();
@@ -391,6 +431,29 @@ inline t_value& CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::
 	                  m_tableName);
 
 	return std::get<std::array<t_value, c_maxSize>>(m_rows)[a_index];
+}
+
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
+template<std::size_t... I>
+[[nodiscard]] std::tuple<t_columns&...>
+    CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::GetValues(uint16_t a_index,
+                                                                              std::index_sequence<I...>) {
+	return std::tuple<t_columns&...>(std::get<I>(m_rows)[a_index]...);
+}
+
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
+[[nodiscard]] const std::tuple<const t_columns&...>
+    CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::operator[](uint16_t a_index) const {
+	CR_REQUIRES_AUDIT(a_index != c_unused && m_used[a_index], "asked for an unused row in table {}",
+	                  m_tableName);
+
+	return GetValues(a_index, std::index_sequence_for<t_columns...>{});
+}
+
+template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
+[[nodiscard]] std::tuple<t_columns&...>
+    CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::operator[](uint16_t a_index) {
+	return GetValues(a_index, std::index_sequence_for<t_columns...>{});
 }
 
 template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
