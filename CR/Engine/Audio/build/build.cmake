@@ -7,6 +7,7 @@ set(INTERFACE_FILES
     ${root}/interface/Audio.ixx
     ${root}/interface/AudioEngine.ixx
     ${root}/interface/MixerHandle.ixx
+    ${root}/interface/Tone.ixx
 )
 
 set(SOURCE_FILES
@@ -19,6 +20,7 @@ set(SOURCE_FILES
     ${root}/source/OutputConversion.ixx
     ${root}/source/Sample.ixx
     ${root}/source/TestTone.ixx
+    ${root}/source/Tone.cpp
     ${root}/source/ToneSystem.ixx
     ${root}/source/Windows/AudioDevice.cpp
 )
