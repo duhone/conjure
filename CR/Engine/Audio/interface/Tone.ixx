@@ -10,7 +10,7 @@ namespace CR::Engine::Audio {
 
 	  public:
 		Tone() = default;
-		Tone(std::string_view name, float frequency);
+		Tone(std::string_view a_name, float a_freq);
 		~Tone()                       = default;
 		Tone(const Tone&)             = delete;
 		Tone(Tone&& a_other) noexcept = default;

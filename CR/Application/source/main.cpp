@@ -22,7 +22,15 @@ int main(int, char*) {
 
 	cea::EngineStart();
 
-	while(!done) { std::this_thread::sleep_for(16ms); }
+	{
+		cea::Tone tone("440hz", 440.0f);
+		cea::Tone tone2("880hz", 880.0f);
+		tone2.SetVolume(0.75f);
+		cea::Tone tone3("1320hz", 1320.0f);
+		tone3.SetVolume(0.5f);
+
+		while(!done) { std::this_thread::sleep_for(16ms); }
+	}
 
 	cea::EngineStop();
 

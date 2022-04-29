@@ -21,13 +21,13 @@ namespace CR::Engine::Core {
 	  protected:
 		inline static constexpr uint16_t c_unused{0xffff};
 
-		uint16_t m_index = c_unused;
+		uint16_t m_id = c_unused;
 	};
 }    // namespace CR::Engine::Core
 
 template<typename CRTP>
 inline CR::Engine::Core::Handle<CRTP>::~Handle() {
-	if(m_index != c_unused) { static_cast<CRTP*>(this)->FreeHandle(); }
+	if(m_id != c_unused) { static_cast<CRTP*>(this)->FreeHandle(); }
 }
 
 template<typename CRTP>
@@ -37,9 +37,9 @@ inline CR::Engine::Core::Handle<CRTP>::Handle(Handle&& a_other) noexcept {
 
 template<typename CRTP>
 inline CR::Engine::Core::Handle<CRTP>& CR::Engine::Core::Handle<CRTP>::operator=(Handle&& a_other) noexcept {
-	if(m_index != c_unused) { static_cast<CRTP*>(this)->FreeHandle(); }
-	m_index         = a_other.m_index;
-	a_other.m_index = c_unused;
+	if(m_id != c_unused) { static_cast<CRTP*>(this)->FreeHandle(); }
+	m_id         = a_other.m_id;
+	a_other.m_id = c_unused;
 
 	return *this;
 }

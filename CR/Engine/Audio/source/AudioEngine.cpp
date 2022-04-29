@@ -13,10 +13,12 @@ import CR.Engine.Audio.MixerHandle;
 import CR.Engine.Audio.MixerSystem;
 import CR.Engine.Audio.OutputConversion;
 import CR.Engine.Audio.Sample;
-import CR.Engine.Audio.TestTone;
+import CR.Engine.Audio.ToneSystem;
 
+import<algorithm>;
 import<span>;
 import<memory>;
+import<ranges>;
 import<vector>;
 
 namespace cea = CR::Engine::Audio;
@@ -31,7 +33,6 @@ namespace {
 		// Holds audio after main buffer conversion to device sample rate, if needed
 		std::vector<cea::Sample> m_deviceSampleBuffer;
 		std::vector<float> m_deviceChannelBuffer;
-		cea::TestTone m_testTone{1000.0f};
 
 		cea::OutputConversion m_outputConversion;
 
@@ -49,7 +50,8 @@ bool Engine::Mix(std::span<float>& a_buffer, int32_t a_numChannels, int32_t a_sa
 	int32_t mixBufferSize =
 	    static_cast<int32_t>((a_buffer.size() * cea::c_mixSampleRate) / (a_sampleRate * a_numChannels));
 	m_mixBuffer.resize(mixBufferSize);
-	// m_testTone.Mix({m_mixBuffer.data(), m_mixBuffer.size()});
+	std::ranges::fill(m_mixBuffer, cea::Sample{});
+	cea::GetToneSystem().Mix({m_mixBuffer.data(), m_mixBuffer.size()});
 
 	std::span<cea::Sample> resampleBuffer;
 	if(a_sampleRate == cea::c_mixSampleRate) {
