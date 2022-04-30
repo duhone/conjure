@@ -1,3 +1,7 @@
+module;
+
+#include "core/Log.h"
+
 export module CR.Engine.Audio.ToneSystem;
 
 import CR.Engine.Audio.Constants;
@@ -10,6 +14,7 @@ import<cstdint>;
 import<numbers>;
 import<span>;
 import<string_view>;
+import<shared_mutex>;
 
 namespace CR::Engine::Audio {
 	export class ToneSystem {
@@ -37,6 +42,7 @@ namespace CR::Engine::Audio {
 			int32_t Period{0};
 		};
 
+		std::mutex m_mutex;
 		Core::Table<64, std::string, ToneData> m_toneTable{"Tone System Table"};
 	};
 
@@ -56,6 +62,7 @@ namespace {
 }    // namespace
 
 void cea::ToneSystem::Mix([[maybe_unused]] std::span<Sample> a_data) {
+	std::scoped_lock lock(m_mutex);
 	for(Sample& sample : a_data) {
 		for(auto& [tone] : m_toneTable) {
 			float toneSample =
@@ -70,6 +77,7 @@ void cea::ToneSystem::Mix([[maybe_unused]] std::span<Sample> a_data) {
 }
 
 uint16_t cea::ToneSystem::Create(std::string_view a_name, float a_frequency) {
+	std::scoped_lock lock(m_mutex);
 	uint16_t id    = m_toneTable.insert(a_name);
 	auto [tone]    = m_toneTable[id];
 	tone.Frequency = a_frequency;
@@ -79,16 +87,19 @@ uint16_t cea::ToneSystem::Create(std::string_view a_name, float a_frequency) {
 }
 
 void cea::ToneSystem::Delete(uint16_t a_id) {
+	std::scoped_lock lock(m_mutex);
 	m_toneTable.erase(a_id);
 }
 
 void cea::ToneSystem::SetFrequency(uint16_t id, float a_freq) {
+	std::scoped_lock lock(m_mutex);
 	auto [tone]    = m_toneTable[id];
 	tone.Frequency = a_freq;
 	tone.Period    = CalcPeriod(a_freq);
 }
 
 void cea::ToneSystem::SetVolume(uint16_t id, float a_vol) {
+	std::scoped_lock lock(m_mutex);
 	auto [tone] = m_toneTable[id];
 	tone.Volume = CalcVolume(a_vol);
 }

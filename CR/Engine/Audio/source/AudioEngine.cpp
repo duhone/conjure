@@ -38,6 +38,8 @@ namespace {
 
 		cea::MixerSystem m_mixerSystem;
 		cea::MixerHandle m_masterMix;
+
+		bool m_checkForClipping;
 	};
 	Engine& GetEngine() {
 		static Engine s_engine;
@@ -75,6 +77,12 @@ bool Engine::Mix(std::span<float>& a_buffer, int32_t a_numChannels, int32_t a_sa
 	CR_ASSERT(deviceChannelBuffer.size() == a_buffer.size(),
 	          "Logic error, final buffer did not match device requirements");
 
+	if(m_checkForClipping) {
+		for(const float& val : deviceChannelBuffer) {
+			CR_ASSERT(val >= -1.0f && val < 1.0f, "audio clipping");
+		}
+	}
+
 	memcpy(a_buffer.data(), deviceChannelBuffer.data(), a_buffer.size() * sizeof(float));
 
 	if(a_closing) {
@@ -84,10 +92,11 @@ bool Engine::Mix(std::span<float>& a_buffer, int32_t a_numChannels, int32_t a_sa
 	}
 }
 
-void cea::EngineStart() {
+void cea::EngineStart(bool a_checkForClipping) {
 	::Engine& engine = GetEngine();
 
-	engine.m_masterMix = engine.m_mixerSystem.CreateMixer();
+	engine.m_checkForClipping = a_checkForClipping;
+	engine.m_masterMix        = engine.m_mixerSystem.CreateMixer();
 
 	engine.m_device = std::make_unique<AudioDevice>(
 	    [&engine](std::span<float> a_buffer, int32_t a_numChannels, int32_t a_sampleRate,
