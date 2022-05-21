@@ -109,12 +109,15 @@ export namespace CR::Engine::Core {
 		Table& operator=(Table&&) = delete;
 
 		// returns the new index, fatal error if table is full
-		uint16_t insert(t_primaryKey&& a_key, t_columns&&... a_row) requires
+		template<typename t_primaryKeyF, typename... t_columnsF>
+		uint16_t insert(t_primaryKeyF&& a_key, t_columnsF&&... a_row) requires
 		    !std::same_as<t_primaryKey, std::string>;
+		template<typename... t_columnsF>
 		uint16_t insert(const std::string_view a_key,
-		                t_columns&&... a_row) requires std::same_as<t_primaryKey, std::string>;
+		                t_columnsF&&... a_row) requires std::same_as<t_primaryKey, std::string>;
 		// row will be default constructed if not standard layout, otherwise uninitialized
-		uint16_t insert(t_primaryKey&& a_key) requires !std::same_as<t_primaryKey, std::string>;
+		template<typename t_primaryKeyF>
+		uint16_t insert(t_primaryKeyF&& a_key) requires !std::same_as<t_primaryKey, std::string>;
 		uint16_t insert(const std::string_view a_key) requires std::same_as<t_primaryKey, std::string>;
 
 		// problematic when t_primaryKey is a string type(char*, string, string_view, ect) should just take a
@@ -349,28 +352,31 @@ void CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::ClearRow(
 }
 
 template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
+template<typename t_primaryKeyF, typename... t_columnsF>
 inline uint16_t CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::insert(
-    t_primaryKey&& a_key, t_columns&&... a_row) requires !std::same_as<t_primaryKey, std::string> {
-	uint16_t unusedIndex = insert(a_key);
+    t_primaryKeyF&& a_key, t_columnsF&&... a_row) requires !std::same_as<t_primaryKey, std::string> {
+	uint16_t unusedIndex = insert(std::forward<t_primaryKeyF>(a_key));
 
-	ClearRow(unusedIndex, std::index_sequence_for<t_columns...>{}, std::move(a_row)...);
+	ClearRow(unusedIndex, std::index_sequence_for<t_columnsF...>{}, std::forward<t_columnsF>(a_row)...);
 
 	return unusedIndex;
 }
 
 template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
+template<typename... t_columnsF>
 inline uint16_t CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::insert(
-    const std::string_view a_key, t_columns&&... a_row) requires std::same_as<t_primaryKey, std::string> {
+    const std::string_view a_key, t_columnsF&&... a_row) requires std::same_as<t_primaryKey, std::string> {
 	uint16_t unusedIndex = insert(a_key);
 
-	ClearRow(unusedIndex, std::index_sequence_for<t_columns...>{}, std::move(a_row)...);
+	ClearRow(unusedIndex, std::index_sequence_for<t_columnsF...>{}, std::forward<t_columnsF>(a_row)...);
 
 	return unusedIndex;
 }
 
 template<uint16_t c_maxSize, std::regular t_primaryKey, typename... t_columns>
+template<typename t_primaryKeyF>
 inline uint16_t
-    CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::insert(t_primaryKey&& a_key) requires
+    CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::insert(t_primaryKeyF&& a_key) requires
     !std::same_as<t_primaryKey, std::string> {
 	CR_REQUIRES_AUDIT(m_lookUp.find(a_key) == std::end(m_lookUp),
 	                  "Tried to insert, but row already exists with this key {}", m_tableName);
@@ -379,7 +385,7 @@ inline uint16_t
 	CR_REQUIRES_AUDIT(unusedIndex != c_maxSize, "Ran out of available rows in table {}", m_tableName);
 
 	m_lookUp.emplace(a_key, unusedIndex);
-	m_primaryKeys[unusedIndex] = std::move(a_key);
+	m_primaryKeys[unusedIndex] = std::forward<t_primaryKeyF>(a_key);
 
 	m_used[unusedIndex] = true;
 
@@ -396,7 +402,7 @@ inline uint16_t CR::Engine::Core::Table<c_maxSize, t_primaryKey, t_columns...>::
 	CR_REQUIRES_AUDIT(unusedIndex != c_maxSize, "Ran out of available rows in table {}", m_tableName);
 
 	m_lookUp.emplace(a_key, unusedIndex);
-	m_primaryKeys[unusedIndex] = std::move(a_key);
+	m_primaryKeys[unusedIndex] = a_key;
 
 	m_used[unusedIndex] = true;
 

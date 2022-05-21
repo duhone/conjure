@@ -6,7 +6,7 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 set(INTERFACE_FILES
     ${root}/interface/Audio.ixx
     ${root}/interface/AudioEngine.ixx
-    ${root}/interface/MixerHandle.ixx
+    ${root}/interface/Mixer.ixx
     ${root}/interface/Tone.ixx
 )
 
@@ -15,7 +15,7 @@ set(SOURCE_FILES
     ${root}/source/AudioEngine.cpp
     ${root}/source/ChannelWeights.ixx
     ${root}/source/Constants.ixx
-    ${root}/source/Mixer.ixx
+    ${root}/source/Mixer.cpp
     ${root}/source/MixerSystem.ixx
     ${root}/source/OutputConversion.ixx
     ${root}/source/Sample.ixx

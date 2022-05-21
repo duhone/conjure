@@ -9,7 +9,6 @@ module CR.Engine.Audio.Engine;
 import CR.Engine.Audio.AudioDevice;
 import CR.Engine.Audio.ChannelWeights;
 import CR.Engine.Audio.Constants;
-import CR.Engine.Audio.MixerHandle;
 import CR.Engine.Audio.MixerSystem;
 import CR.Engine.Audio.OutputConversion;
 import CR.Engine.Audio.Sample;
@@ -37,7 +36,6 @@ namespace {
 		cea::OutputConversion m_outputConversion;
 
 		cea::MixerSystem m_mixerSystem;
-		cea::MixerHandle m_masterMix;
 
 		bool m_checkForClipping;
 	};
@@ -96,7 +94,7 @@ void cea::EngineStart(bool a_checkForClipping) {
 	::Engine& engine = GetEngine();
 
 	engine.m_checkForClipping = a_checkForClipping;
-	engine.m_masterMix        = engine.m_mixerSystem.CreateMixer();
+	// engine.m_masterMix        = engine.m_mixerSystem.CreateMixer();
 
 	engine.m_device = std::make_unique<AudioDevice>(
 	    [&engine](std::span<float> a_buffer, int32_t a_numChannels, int32_t a_sampleRate,
