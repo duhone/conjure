@@ -1,6 +1,7 @@
 ﻿// std header units, get rid of these and use import std in actual code files instead, once on C++23. except a few that
 // will need to stay here, ones that export macros. like cassert.
 import<algorithm>;
+import<any>;
 import<cassert>;
 import<charconv>;
 import<chrono>;
@@ -32,6 +33,8 @@ import<stdexcept>;
 import<string>;
 import<thread>;
 import<tuple>;
+import<typeinfo>;
+import<typeindex>;
 import<type_traits>;
 import<vector>;
 import<unordered_set>;

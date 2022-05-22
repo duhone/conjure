@@ -45,12 +45,6 @@ namespace CR::Engine::Audio {
 		std::mutex m_mutex;
 		Core::Table<64, std::string, ToneData> m_toneTable{"Tone System Table"};
 	};
-
-	// temp. will eventually be owned by a mixer.
-	export ToneSystem& GetToneSystem() {
-		static ToneSystem ts;
-		return ts;
-	}
 }    // namespace CR::Engine::Audio
 
 module : private;

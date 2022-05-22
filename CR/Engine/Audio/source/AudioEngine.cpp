@@ -12,6 +12,7 @@ import CR.Engine.Audio.Constants;
 import CR.Engine.Audio.MixerSystem;
 import CR.Engine.Audio.OutputConversion;
 import CR.Engine.Audio.Sample;
+import CR.Engine.Audio.Services;
 import CR.Engine.Audio.ToneSystem;
 
 import<algorithm>;
@@ -51,7 +52,7 @@ bool Engine::Mix(std::span<float>& a_buffer, int32_t a_numChannels, int32_t a_sa
 	    static_cast<int32_t>((a_buffer.size() * cea::c_mixSampleRate) / (a_sampleRate * a_numChannels));
 	m_mixBuffer.resize(mixBufferSize);
 	std::ranges::fill(m_mixBuffer, cea::Sample{});
-	cea::GetToneSystem().Mix({m_mixBuffer.data(), m_mixBuffer.size()});
+	cea::GetService<cea::ToneSystem>().Mix({m_mixBuffer.data(), m_mixBuffer.size()});
 
 	std::span<cea::Sample> resampleBuffer;
 	if(a_sampleRate == cea::c_mixSampleRate) {
@@ -91,6 +92,9 @@ bool Engine::Mix(std::span<float>& a_buffer, int32_t a_numChannels, int32_t a_sa
 }
 
 void cea::EngineStart(bool a_checkForClipping) {
+	ServicesStart();
+	AddService<ToneSystem>();
+
 	::Engine& engine = GetEngine();
 
 	engine.m_checkForClipping = a_checkForClipping;
@@ -107,4 +111,6 @@ void cea::EngineStop() {
 	::Engine& engine = GetEngine();
 
 	engine.m_device.reset();
+
+	ServicesStop();
 }
