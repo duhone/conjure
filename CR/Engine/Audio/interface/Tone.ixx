@@ -22,5 +22,7 @@ namespace CR::Engine::Audio {
 
 	  private:
 		void FreeHandle();
+
+		static class ToneSystem* s_toneSystem;
 	};
 }    // namespace CR::Engine::Audio
