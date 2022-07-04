@@ -15,10 +15,13 @@ import<numbers>;
 import<span>;
 import<string_view>;
 import<shared_mutex>;
+import<typeindex>;
 
 namespace CR::Engine::Audio {
 	export class ToneSystem {
 	  public:
+		static std::type_index s_typeIndex;
+
 		ToneSystem()                  = default;
 		~ToneSystem()                 = default;
 		ToneSystem(const ToneSystem&) = delete;
@@ -50,6 +53,8 @@ namespace CR::Engine::Audio {
 module : private;
 
 namespace cea = CR::Engine::Audio;
+
+std::type_index cea::ToneSystem::s_typeIndex{typeid(ToneSystem)};
 
 namespace {
 	int32_t CalcPeriod(float a_freq) { return static_cast<int32_t>(cea::c_mixSampleRate / a_freq); }
