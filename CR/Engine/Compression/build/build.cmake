@@ -4,56 +4,58 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 #library
 ###############################################
 set(INTERFACE_FILES
-    ${root}/interface/DataCompression.ixx
+    ${root}/interface/Compression.ixx
+    ${root}/interface/General.ixx
+    ${root}/interface/Wave.ixx
 )
 
 set(SOURCE_FILES
-    ${root}/source/DataCompression.cpp
+    ${root}/source/General.cpp
 )
 
 set(BUILD_FILES
     ${root}/build/build.cmake
 )
 
-add_library(dataCompression 
+add_library(compression 
   ${INTERFACE_FILES} 
   ${SOURCE_FILES} 
   ${BUILD_FILES}
 )
 
-settingsCR(dataCompression)
+settingsCR(compression)
 
-target_link_libraries(dataCompression PUBLIC
+target_link_libraries(compression PUBLIC
 	headerUnits
 	core
 	zstd
 )
 
-set_property(TARGET dataCompression APPEND PROPERTY FOLDER Engine)
+set_property(TARGET compression APPEND PROPERTY FOLDER Engine)
 	
 ###############################################
 #unit tests
 ###############################################
 set(SOURCE_FILES
 	${root}/tests/main.cpp
-	${root}/tests/DataCompression.cpp
+	${root}/tests/General.cpp
 )
 
-add_executable(dataCompression_tests 
+add_executable(compression_tests 
 	${SOURCE_FILES}
 )
 		
-settingsCR(dataCompression_tests)
+settingsCR(compression_tests)
 	
-target_link_libraries(dataCompression_tests 
+target_link_libraries(compression_tests 
 	headerUnits
 	doctest
-	dataCompression
+	compression
 	core
 	platform
 )		
 
-set_property(TARGET dataCompression_tests APPEND PROPERTY FOLDER Engine/Tests)
+set_property(TARGET compression_tests APPEND PROPERTY FOLDER Engine/Tests)
 
 set(TEST_DATA 
 	"${root}/tests/content/alice29.txt"
@@ -67,7 +69,7 @@ set(TEST_DATA
 	"${root}/tests/content/TitleThemeRemix.wav"
 )
 
-add_custom_command(TARGET dataCompression_tests POST_BUILD        
+add_custom_command(TARGET compression_tests POST_BUILD        
 COMMAND ${CMAKE_COMMAND} -E copy_if_different  
 	${TEST_DATA}
-	$<TARGET_FILE_DIR:dataCompression_tests>)
+	$<TARGET_FILE_DIR:compression_tests>)

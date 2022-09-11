@@ -41,6 +41,7 @@ add_library(audio
 settingsCR(audio)
 
 target_link_libraries(audio PUBLIC
+	compression
 	headerUnits
 	fmt
 	function2

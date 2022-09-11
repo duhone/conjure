@@ -4,12 +4,12 @@
 
 #include <zstd.h>
 
-module CR.Engine.DataCompression;
+module CR.Engine.Compression.General;
 
 import CR.Engine.Core.Literals;
 
-namespace cec = CR::Engine::Core;
-namespace ced = CR::Engine::DataCompression;
+namespace cec    = CR::Engine::Core;
+namespace cecomp = CR::Engine::Compression;
 
 using namespace CR::Engine::Core::Literals;
 
@@ -27,7 +27,8 @@ namespace {
 #pragma pack()
 }    // namespace
 
-cec::StorageBuffer<std::byte> ced::Compress(const std::span<const std::byte> a_src, int32_t a_level) {
+cec::StorageBuffer<std::byte> cecomp::General::Compress(const std::span<const std::byte> a_src,
+                                                        int32_t a_level) {
 	cec::StorageBuffer<std::byte> result;
 
 	int bound = (int)ZSTD_compressBound(a_src.size());
@@ -44,7 +45,7 @@ cec::StorageBuffer<std::byte> ced::Compress(const std::span<const std::byte> a_s
 	return result;
 }
 
-cec::StorageBuffer<std::byte> ced::Decompress(const std::span<const std::byte> a_src) {
+cec::StorageBuffer<std::byte> cecomp::General::Decompress(const std::span<const std::byte> a_src) {
 	cec::StorageBuffer<std::byte> result;
 	if(a_src.size() < sizeof(CompressionHeader)) return result;
 

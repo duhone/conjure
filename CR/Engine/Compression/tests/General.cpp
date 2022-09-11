@@ -1,4 +1,4 @@
-﻿import CR.Engine.DataCompression;
+﻿import CR.Engine.Compression;
 import CR.Engine.Platform;
 import CR.Engine.Core;
 
@@ -6,9 +6,9 @@ import<span>;
 
 #include <doctest/doctest.h>
 
-namespace cec = CR::Engine::Core;
-namespace ced = CR::Engine::DataCompression;
-namespace cep = CR::Engine::Platform;
+namespace cec    = CR::Engine::Core;
+namespace cecomp = CR::Engine::Compression;
+namespace cep    = CR::Engine::Platform;
 
 TEST_CASE("basic compression") {
 	auto test = [](const char* testFile) {
@@ -23,12 +23,12 @@ TEST_CASE("basic compression") {
 			printf("%s mode\n", label);
 			{
 				cec::ScopedTimer time("compress time");
-				compressedData = ced::Compress(
+				compressedData = cecomp::General::Compress(
 				    std::span<const std::byte>(testFileMMap.data(), (uint32_t)testFileMMap.size()), level);
 			}
 			{
 				cec::ScopedTimer time("decompress time");
-				decompressedData = ced::Decompress(
+				decompressedData = cecomp::General::Decompress(
 				    std::span<const std::byte>(compressedData.data(), (uint32_t)compressedData.size()));
 			}
 			REQUIRE(decompressedData.size() == testFileMMap.size());
