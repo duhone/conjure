@@ -28,6 +28,7 @@ settingsCR(compression)
 target_link_libraries(compression PUBLIC
 	headerUnits
 	core
+	platform
 	zstd
 )
 
