@@ -6,21 +6,28 @@ import CR.Engine.Platform;
 
 import<chrono>;
 import<cstdlib>;
+import<filesystem>;
 import<thread>;
 
 namespace cea = CR::Engine::Audio;
 namespace cec = CR::Engine::Core;
 namespace cep = CR::Engine::Platform;
 
+namespace fs = std::filesystem;
+
 using namespace std::literals;
 
 int main(int, char*) {
+	fs::current_path(cep::GetCurrentProcessPath());
+
 	cec::LogSystem logSystem;
 
 	bool done = false;
 	cep::Window window("Conjure", 800, 600, [&done]() { done = true; });
 
-	cea::EngineStart(false);
+	fs::path assetsPath = fs::canonical(ASSETS_FOLDER);
+
+	cea::EngineStart(false, assetsPath / "Audio/FX", assetsPath / "Audio/Music");
 
 	{
 		cea::Tone tone("440hz", 440.0f);

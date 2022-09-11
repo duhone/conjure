@@ -9,7 +9,9 @@ module CR.Engine.Audio.Engine;
 import CR.Engine.Audio.AudioDevice;
 import CR.Engine.Audio.ChannelWeights;
 import CR.Engine.Audio.Constants;
+import CR.Engine.Audio.FXLibrary;
 import CR.Engine.Audio.MixerSystem;
+import CR.Engine.Audio.MusicLibrary;
 import CR.Engine.Audio.OutputConversion;
 import CR.Engine.Audio.Sample;
 import CR.Engine.Audio.Services;
@@ -91,9 +93,12 @@ bool Engine::Mix(std::span<float>& a_buffer, int32_t a_numChannels, int32_t a_sa
 	}
 }
 
-void cea::EngineStart(bool a_checkForClipping) {
+void cea::EngineStart(bool a_checkForClipping, std::filesystem::path a_fxFolder,
+                      std::filesystem::path a_musicFolder) {
 	ServicesStart();
 	AddService<ToneSystem>();
+	AddService<FXLibrary>(std::move(a_fxFolder));
+	AddService<MusicLibrary>(std::move(a_musicFolder));
 
 	::Engine& engine = GetEngine();
 

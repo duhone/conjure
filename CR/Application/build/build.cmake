@@ -28,3 +28,5 @@ target_link_libraries(application PUBLIC
 	platform
 	audio
 )
+
+target_compile_definitions(application PRIVATE ASSETS_FOLDER="${root}/../Assets")

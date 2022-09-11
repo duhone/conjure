@@ -15,8 +15,10 @@ set(SOURCE_FILES
     ${root}/source/AudioEngine.cpp
     ${root}/source/ChannelWeights.ixx
     ${root}/source/Constants.ixx
+    ${root}/source/FXLibrary.ixx
     ${root}/source/Mixer.cpp
     ${root}/source/MixerSystem.ixx
+    ${root}/source/MusicLibrary.ixx
     ${root}/source/OutputConversion.ixx
     ${root}/source/Sample.ixx
     ${root}/source/Services.ixx
