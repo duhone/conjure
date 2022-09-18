@@ -6,6 +6,7 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 set(INTERFACE_FILES
     ${root}/interface/Audio.ixx
     ${root}/interface/AudioEngine.ixx
+    ${root}/interface/FX.ixx
     ${root}/interface/Mixer.ixx
     ${root}/interface/Tone.ixx
 )

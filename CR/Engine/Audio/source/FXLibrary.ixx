@@ -1,3 +1,7 @@
+module;
+
+#include "core/Log.h"
+
 export module CR.Engine.Audio.FXLibrary;
 
 import CR.Engine.Core;
@@ -16,9 +20,23 @@ namespace CR::Engine::Audio {
 
 		FXLibrary(std::filesystem::path a_folder);
 
+		uint16_t GetIndex(const std::string_view a_name) const noexcept {
+			auto iter = m_lookup.find(std::string(a_name));
+			CR_ASSERT(iter != m_lookup.end(), "Could not find audio fx asset {}", a_name);
+			return iter->second;
+		}
+
+		void Play(uint16_t a_index) { m_playing.emplace_back(0, a_index); }
+
 	  private:
-		std::unordered_map<std::string, uint32_t> m_lookup;
+		std::unordered_map<std::string, uint16_t> m_lookup;
 		std::vector<CR::Engine::Core::StorageBuffer<int16_t>> m_pcmData;
+
+		struct Playing {
+			uint32_t Offset;
+			uint16_t Index;
+		};
+		std::vector<Playing> m_playing;
 	};
 }    // namespace CR::Engine::Audio
 
@@ -37,7 +55,7 @@ cea::FXLibrary::FXLibrary(std::filesystem::path a_folder) {
 			auto file = fs::relative(dirEntry.path(), a_folder);
 			file.make_preferred();
 			file.replace_extension();
-			m_lookup[file.string()] = (uint32_t)m_pcmData.size();
+			m_lookup[file.string()] = (uint16_t)m_pcmData.size();
 
 			m_pcmData.push_back(cecomp::Wave::Decompress(dirEntry.path()));
 		}
