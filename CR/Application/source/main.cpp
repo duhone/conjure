@@ -4,10 +4,10 @@ import CR.Engine.Audio;
 import CR.Engine.Core;
 import CR.Engine.Platform;
 
-import<chrono>;
-import<cstdlib>;
-import<filesystem>;
-import<thread>;
+import <chrono>;
+import <cstdlib>;
+import <filesystem>;
+import <thread>;
 
 namespace cea = CR::Engine::Audio;
 namespace cec = CR::Engine::Core;

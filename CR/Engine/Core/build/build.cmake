@@ -26,7 +26,6 @@ set(INTERFACE_FILES
 )
 
 set(SOURCE_FILES
-    ${root}/source/Hash.cpp
     ${root}/source/Log.cpp
     ${root}/source/Random.cpp
     ${root}/source/Timer.cpp
