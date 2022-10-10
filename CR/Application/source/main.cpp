@@ -1,5 +1,6 @@
 #include <function2/function2.hpp>
 
+import CR.Engine.Assets;
 import CR.Engine.Audio;
 import CR.Engine.Core;
 import CR.Engine.Platform;
@@ -9,9 +10,10 @@ import <cstdlib>;
 import <filesystem>;
 import <thread>;
 
-namespace cea = CR::Engine::Audio;
-namespace cec = CR::Engine::Core;
-namespace cep = CR::Engine::Platform;
+namespace ceassets = CR::Engine::Assets;
+namespace cea      = CR::Engine::Audio;
+namespace cec      = CR::Engine::Core;
+namespace cep      = CR::Engine::Platform;
 
 namespace fs = std::filesystem;
 
@@ -29,11 +31,14 @@ int main(int, char*) {
 
 	fs::path assetsPath = fs::canonical(ASSETS_FOLDER);
 
+	cec::AddService<ceassets::Service>(assetsPath);
+
 	cea::EngineStart(false, assetsPath / "Audio/FX", assetsPath / "Audio/Music");
-	auto fanfareFX = cea::GetHandleFX(cec::C_Hash64("levelupfanfare"));
-	fanfareFX.Play();
 
 	{
+		auto fanfareFX = cea::GetHandleFX(cec::C_Hash64("levelupfanfare"));
+		fanfareFX.Play();
+
 		cea::Tone tone("440hz", 440.0f);
 		tone.SetVolume(0.5f);
 		cea::Tone tone2("880hz", 880.0f);
