@@ -6,26 +6,33 @@ import CR.Engine.Audio.FXLibrary;
 import <string_view>;
 
 namespace CR::Engine::Audio {
-	export struct HandleFX {
-		FXLibrary& Library;
-		uint16_t Index;
+	export class HandleFX {
+		friend HandleFX GetHandleFX(uint64_t);
+
+	  public:
+		void Play();
+
+	  private:
+		HandleFX(FXLibrary& a_library, uint16_t a_index) : m_library(a_library), m_index(a_index) {}
+
+		FXLibrary& m_library;
+		uint16_t m_index;
 	};
 
-	export [[nodiscard]] HandleFX GetHandle(std::string_view a_fxPath);
-	export void PlayFX(HandleFX handle);
+	export [[nodiscard]] HandleFX GetHandleFX(uint64_t a_fxPathHash);
 }    // namespace CR::Engine::Audio
 
 module :private;
 
 namespace ceaud = CR::Engine::Audio;
 
-ceaud::HandleFX ceaud::GetHandle(std::string_view a_fxPath) {
+ceaud::HandleFX ceaud::GetHandleFX(uint64_t a_fxPathHash) {
 	auto& library = GetService<FXLibrary>();
-	auto index    = library.GetIndex(a_fxPath);
+	auto index    = library.GetIndex(a_fxPathHash);
 
 	return {library, index};
 }
 
-void ceaud::PlayFX(HandleFX handle) {
-	handle.Library.Play(handle.Index);
+void ceaud::HandleFX::Play() {
+	m_library.Play(m_index);
 }

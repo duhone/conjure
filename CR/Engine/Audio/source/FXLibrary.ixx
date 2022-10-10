@@ -20,28 +20,32 @@ namespace CR::Engine::Audio {
 
 		FXLibrary(std::filesystem::path a_folder);
 
-		uint16_t GetIndex(const std::string_view a_name) const noexcept {
-			auto iter = m_lookup.find(std::string(a_name));
-			CR_ASSERT(iter != m_lookup.end(), "Could not find audio fx asset {}", a_name);
+		uint16_t GetIndex(uint64_t a_nameHash) const noexcept {
+			auto iter = m_lookup.find(a_nameHash);
+			CR_ASSERT(iter != m_lookup.end(), "Could not find audio fx asset {}", a_nameHash);
 			return iter->second;
 		}
 
-		void Play(uint16_t a_index) { m_playing.emplace_back(0, a_index); }
+		void Play(uint16_t a_index) {
+			m_playing([a_index](std::vector<Playing>& a_playing) { a_playing.emplace_back(0, a_index); });
+		}
 
 	  private:
-		std::unordered_map<std::string, uint16_t> m_lookup;
+		std::unordered_map<uint64_t, uint16_t> m_lookup;
+		std::vector<std::string> m_paths;
 		std::vector<CR::Engine::Core::StorageBuffer<int16_t>> m_pcmData;
 
 		struct Playing {
 			uint32_t Offset;
 			uint16_t Index;
 		};
-		std::vector<Playing> m_playing;
+		CR::Engine::Core::Locked<std::vector<Playing>> m_playing;
 	};
 }    // namespace CR::Engine::Audio
 
 module :private;
 
+namespace cecore = CR::Engine::Core;
 namespace cea    = CR::Engine::Audio;
 namespace cecomp = CR::Engine::Compression;
 
@@ -55,7 +59,8 @@ cea::FXLibrary::FXLibrary(std::filesystem::path a_folder) {
 			auto file = fs::relative(dirEntry.path(), a_folder);
 			file.make_preferred();
 			file.replace_extension();
-			m_lookup[file.string()] = (uint16_t)m_pcmData.size();
+			m_paths.push_back(file.string());
+			m_lookup[cecore::Hash64(file.string())] = (uint16_t)m_pcmData.size();
 
 			m_pcmData.push_back(cecomp::Wave::Decompress(dirEntry.path()));
 		}
