@@ -18,6 +18,8 @@ namespace fs = std::filesystem;
 using namespace std::literals;
 
 int main(int, char*) {
+	cec::ServicesStart();
+
 	fs::current_path(cep::GetCurrentProcessPath());
 
 	cec::LogSystem logSystem;
@@ -43,6 +45,8 @@ int main(int, char*) {
 	}
 
 	cea::EngineStop();
+
+	cec::ServicesStop();
 
 	return EXIT_SUCCESS;
 }

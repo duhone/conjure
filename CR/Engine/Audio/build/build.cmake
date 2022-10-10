@@ -22,7 +22,6 @@ set(SOURCE_FILES
     ${root}/source/MusicLibrary.ixx
     ${root}/source/OutputConversion.ixx
     ${root}/source/Sample.ixx
-    ${root}/source/Services.ixx
     ${root}/source/Tone.cpp
     ${root}/source/ToneSystem.ixx
     ${root}/source/Utilities.ixx

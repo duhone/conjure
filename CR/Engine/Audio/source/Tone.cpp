@@ -1,14 +1,16 @@
 module CR.Engine.Audio.Tone;
 
-import CR.Engine.Audio.Services;
+import CR.Engine.Core;
+
 import CR.Engine.Audio.ToneSystem;
 
-namespace cea = CR::Engine::Audio;
+namespace cecore = CR::Engine::Core;
+namespace cea    = CR::Engine::Audio;
 
 cea::ToneSystem* cea::Tone::s_toneSystem{nullptr};
 
 cea::Tone::Tone([[maybe_unused]] std::string_view a_name, [[maybe_unused]] float a_freq) {
-	if(!s_toneSystem) { s_toneSystem = &GetService<ToneSystem>(); }
+	if(!s_toneSystem) { s_toneSystem = &cecore::GetService<ToneSystem>(); }
 	m_id = s_toneSystem->Create(a_name, a_freq);
 }
 

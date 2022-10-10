@@ -2,13 +2,13 @@ module;
 
 #include "core/Log.h"
 
-export module CR.Engine.Audio.Services;
+export module CR.Engine.Core.Services;
 
-import CR.Engine.Core;
+import CR.Engine.Core.ServiceLocator;
 
-import<optional>;
+import <optional>;
 
-namespace CR::Engine::Audio {
+namespace CR::Engine::Core {
 	export void ServicesStart();
 	export void ServicesStop();
 
@@ -16,31 +16,31 @@ namespace CR::Engine::Audio {
 
 	export template<typename T, typename... ArgsT>
 	void AddService(ArgsT&&... args) {
-		CR_ASSERT(GetServices().has_value(), "Audio Services missing");
+		CR_ASSERT(GetServices().has_value(), "Services missing");
 		GetServices()->Add<T>(std::forward<ArgsT>(args)...);
 	}
 
 	export template<typename T>
 	T& GetService() {
-		CR_ASSERT_AUDIT(GetServices().has_value(), "Audio Services missing");
+		CR_ASSERT_AUDIT(GetServices().has_value(), "Services missing");
 		return GetServices()->Get<T>();
 	}
 
-}    // namespace CR::Engine::Audio
+}    // namespace CR::Engine::Core
 
-module : private;
+module :private;
 
-namespace cea = CR::Engine::Audio;
+namespace cecore = CR::Engine::Core;
 
-[[nodiscard]] std::optional<CR::Engine::Core::ServiceLocator>& cea::GetServices() {
+[[nodiscard]] std::optional<CR::Engine::Core::ServiceLocator>& cecore::GetServices() {
 	static std::optional<CR::Engine::Core::ServiceLocator> services;
 	return services;
 }
 
-void cea::ServicesStart() {
+void cecore::ServicesStart() {
 	GetServices().emplace();
 }
 
-void cea::ServicesStop() {
+void cecore::ServicesStop() {
 	GetServices().reset();
 }

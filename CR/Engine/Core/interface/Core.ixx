@@ -13,6 +13,7 @@ export import CR.Engine.Core.Log;
 export import CR.Engine.Core.Random;
 export import CR.Engine.Core.ScopeExit;
 export import CR.Engine.Core.ServiceLocator;
+export import CR.Engine.Core.Services;
 export import CR.Engine.Core.StorageBuffer;
 export import CR.Engine.Core.Table;
 export import CR.Engine.Core.Timer;

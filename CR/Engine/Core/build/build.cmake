@@ -19,6 +19,7 @@ set(INTERFACE_FILES
     ${root}/interface/Random.ixx
     ${root}/interface/ScopeExit.ixx
     ${root}/interface/ServiceLocator.ixx
+    ${root}/interface/Services.ixx
     ${root}/interface/StorageBuffer.ixx
     ${root}/interface/Table.ixx
     ${root}/interface/Timer.ixx

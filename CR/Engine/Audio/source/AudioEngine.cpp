@@ -6,6 +6,8 @@
 
 module CR.Engine.Audio.Engine;
 
+import CR.Engine.Core;
+
 import CR.Engine.Audio.AudioDevice;
 import CR.Engine.Audio.ChannelWeights;
 import CR.Engine.Audio.Constants;
@@ -14,16 +16,16 @@ import CR.Engine.Audio.MixerSystem;
 import CR.Engine.Audio.MusicLibrary;
 import CR.Engine.Audio.OutputConversion;
 import CR.Engine.Audio.Sample;
-import CR.Engine.Audio.Services;
 import CR.Engine.Audio.ToneSystem;
 
-import<algorithm>;
-import<span>;
-import<memory>;
-import<ranges>;
-import<vector>;
+import <algorithm>;
+import <span>;
+import <memory>;
+import <ranges>;
+import <vector>;
 
-namespace cea = CR::Engine::Audio;
+namespace cecore = CR::Engine::Core;
+namespace cea    = CR::Engine::Audio;
 
 namespace {
 	struct Engine {
@@ -54,7 +56,7 @@ bool Engine::Mix(std::span<float>& a_buffer, int32_t a_numChannels, int32_t a_sa
 	    static_cast<int32_t>((a_buffer.size() * cea::c_mixSampleRate) / (a_sampleRate * a_numChannels));
 	m_mixBuffer.resize(mixBufferSize);
 	std::ranges::fill(m_mixBuffer, cea::Sample{});
-	cea::GetService<cea::ToneSystem>().Mix({m_mixBuffer.data(), m_mixBuffer.size()});
+	cecore::GetService<cea::ToneSystem>().Mix({m_mixBuffer.data(), m_mixBuffer.size()});
 
 	std::span<cea::Sample> resampleBuffer;
 	if(a_sampleRate == cea::c_mixSampleRate) {
@@ -95,10 +97,9 @@ bool Engine::Mix(std::span<float>& a_buffer, int32_t a_numChannels, int32_t a_sa
 
 void cea::EngineStart(bool a_checkForClipping, std::filesystem::path a_fxFolder,
                       std::filesystem::path a_musicFolder) {
-	ServicesStart();
-	AddService<ToneSystem>();
-	AddService<FXLibrary>(std::move(a_fxFolder));
-	AddService<MusicLibrary>(std::move(a_musicFolder));
+	cecore::AddService<ToneSystem>();
+	cecore::AddService<FXLibrary>(std::move(a_fxFolder));
+	cecore::AddService<MusicLibrary>(std::move(a_musicFolder));
 
 	::Engine& engine = GetEngine();
 
@@ -116,6 +117,4 @@ void cea::EngineStop() {
 	::Engine& engine = GetEngine();
 
 	engine.m_device.reset();
-
-	ServicesStop();
 }

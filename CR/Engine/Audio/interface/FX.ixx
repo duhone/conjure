@@ -1,6 +1,7 @@
 export module CR.Engine.Audio.FX;
 
-import CR.Engine.Audio.Services;
+import CR.Engine.Core;
+
 import CR.Engine.Audio.FXLibrary;
 
 import <string_view>;
@@ -24,10 +25,11 @@ namespace CR::Engine::Audio {
 
 module :private;
 
-namespace ceaud = CR::Engine::Audio;
+namespace cecore = CR::Engine::Core;
+namespace ceaud  = CR::Engine::Audio;
 
 ceaud::HandleFX ceaud::GetHandleFX(uint64_t a_fxPathHash) {
-	auto& library = GetService<FXLibrary>();
+	auto& library = cecore::GetService<FXLibrary>();
 	auto index    = library.GetIndex(a_fxPathHash);
 
 	return {library, index};
