@@ -9,6 +9,8 @@ import CR.Engine.Core;
 import CR.Engine.Assets.Partition;
 
 import <filesystem>;
+import <functional>;
+import <span>;
 import <string_view>;
 import <typeindex>;
 
@@ -25,6 +27,11 @@ namespace CR::Engine::Assets {
 
 		Service& operator=(const Service&) = delete;
 		Service& operator=(Service&&)      = delete;
+
+		using LoadCallbackT =
+		    std::function<void(uint64_t a_hash, std::string_view a_path, const std::span<std::byte>)>;
+		void Load(Partitions a_partition, const std::filesystem::path& a_subFolder,
+		          std::string_view a_extensionFilter, LoadCallbackT a_loadCallback);
 
 	  private:
 		std::vector<Partition> m_partitions;
@@ -49,4 +56,10 @@ ceassets::Service::Service(std::filesystem::path a_assetsFolder) {
 		fs::path partitionFolder = a_assetsFolder / folder;
 		m_partitions.emplace_back(partitionFolder);
 	}
+}
+
+void ceassets::Service::Load(Partitions a_partition, const std::filesystem::path& a_subFolder,
+                             std::string_view a_extensionFilter, LoadCallbackT a_loadCallback) {
+	CR_ASSERT(a_partition < m_partitions.size(), "Invalid partition");
+	m_partitions[a_partition].Load(a_subFolder, a_extensionFilter, std::move(a_loadCallback));
 }
