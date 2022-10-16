@@ -36,7 +36,7 @@ int main(int, char*) {
 	cea::EngineStart(false, assetsPath / "Audio/FX", assetsPath / "Audio/Music");
 
 	{
-		auto fanfareFX = cea::GetHandleFX(cec::C_Hash64("levelupfanfare"));
+		auto fanfareFX = cea::GetHandleFX(cec::C_Hash64("FX/levelupfanfare.wav"));
 		fanfareFX.Play();
 
 		cea::Tone tone("440hz", 440.0f);

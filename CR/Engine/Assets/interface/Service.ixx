@@ -29,7 +29,7 @@ namespace CR::Engine::Assets {
 		Service& operator=(Service&&)      = delete;
 
 		using LoadCallbackT =
-		    std::function<void(uint64_t a_hash, std::string_view a_path, const std::span<std::byte>)>;
+		    std::function<void(uint64_t a_hash, std::string_view a_path, const std::span<std::byte> a_data)>;
 		void Load(Partitions a_partition, const std::filesystem::path& a_subFolder,
 		          std::string_view a_extensionFilter, LoadCallbackT a_loadCallback);
 

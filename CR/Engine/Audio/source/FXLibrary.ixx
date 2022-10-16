@@ -4,10 +4,12 @@ module;
 
 export module CR.Engine.Audio.FXLibrary;
 
+import CR.Engine.Assets;
 import CR.Engine.Core;
 import CR.Engine.Compression;
 
 import <filesystem>;
+import <numeric>;
 import <typeindex>;
 import <string>;
 import <vector>;
@@ -45,24 +47,23 @@ namespace CR::Engine::Audio {
 
 module :private;
 
-namespace cecore = CR::Engine::Core;
-namespace cea    = CR::Engine::Audio;
-namespace cecomp = CR::Engine::Compression;
+namespace ceasset = CR::Engine::Assets;
+namespace cecore  = CR::Engine::Core;
+namespace cea     = CR::Engine::Audio;
+namespace cecomp  = CR::Engine::Compression;
 
 namespace fs = std::filesystem;
 
 std::type_index cea::FXLibrary::s_typeIndex{typeid(FXLibrary)};
 
 cea::FXLibrary::FXLibrary(std::filesystem::path a_folder) {
-	for(const auto& dirEntry : fs::recursive_directory_iterator(a_folder)) {
-		if(dirEntry.is_regular_file() && dirEntry.path().extension() == ".wav") {
-			auto file = fs::relative(dirEntry.path(), a_folder);
-			file.make_preferred();
-			file.replace_extension();
-			m_paths.push_back(file.string());
-			m_lookup[cecore::Hash64(file.string())] = (uint16_t)m_pcmData.size();
-
-			m_pcmData.push_back(cecomp::Wave::Decompress(dirEntry.path()));
-		}
-	}
+	auto& assetService = cecore::GetService<ceasset::Service>();
+	assetService.Load(ceasset::Service::Partitions::Audio, "FX", "wav",
+	                  [&](uint64_t a_hash, std::string_view a_path, const std::span<std::byte> a_data) {
+		                  CR_ASSERT(m_pcmData.size() < std::numeric_limits<uint16_t>::max(),
+		                            "Too many fx, max supported is 64K");
+		                  m_lookup[a_hash] = (uint16_t)m_pcmData.size();
+		                  m_paths.push_back(std::string(a_path));
+		                  m_pcmData.push_back(cecomp::Wave::Decompress(a_data, a_path));
+	                  });
 }
