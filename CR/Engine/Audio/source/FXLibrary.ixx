@@ -8,9 +8,14 @@ import CR.Engine.Assets;
 import CR.Engine.Core;
 import CR.Engine.Compression;
 
+import CR.Engine.Audio.Sample;
+
+import <algorithm>;
 import <filesystem>;
+import <limits>;
 import <numeric>;
 import <typeindex>;
+import <span>;
 import <string>;
 import <vector>;
 import <unordered_map>;
@@ -29,8 +34,12 @@ namespace CR::Engine::Audio {
 		}
 
 		void Play(uint16_t a_index) {
-			m_playing([a_index](std::vector<Playing>& a_playing) { a_playing.emplace_back(0, a_index); });
+			CR_ASSERT(a_index < m_pcmData.size(), "Trying to play an invalid FX {}", a_index);
+			m_playRequests(
+			    [a_index](std::vector<uint16_t>& a_requests) { a_requests.emplace_back(a_index); });
 		}
+
+		void Mix(std::span<Sample> a_data);
 
 	  private:
 		std::unordered_map<uint64_t, uint16_t> m_lookup;
@@ -41,7 +50,8 @@ namespace CR::Engine::Audio {
 			uint32_t Offset;
 			uint16_t Index;
 		};
-		CR::Engine::Core::Locked<std::vector<Playing>> m_playing;
+		CR::Engine::Core::Locked<std::vector<uint16_t>> m_playRequests;
+		std::vector<Playing> m_playing;
 	};
 }    // namespace CR::Engine::Audio
 
@@ -66,4 +76,28 @@ cea::FXLibrary::FXLibrary(std::filesystem::path a_folder) {
 		                  m_paths.push_back(std::string(a_path));
 		                  m_pcmData.push_back(cecomp::Wave::Decompress(a_data, a_path));
 	                  });
+}
+
+void cea::FXLibrary::Mix(std::span<Sample> a_data) {
+	m_playRequests([this](std::vector<uint16_t>& a_requests) {
+		for(auto index : a_requests) { m_playing.emplace_back(0, index); }
+		a_requests.clear();
+	});
+
+	for(auto& playing : m_playing) {
+		CR_ASSERT_AUDIT(playing.Index < m_pcmData.size(),
+		                "invalid playing audio, should have been caught in Play call");
+		auto& pcmData = m_pcmData[playing.Index];
+		auto toMix    = std::min<int32_t>((int32_t)pcmData.size() - playing.Offset, (int32_t)a_data.size());
+		for(int32_t i = 0; i < toMix; ++i) {
+			float sample = pcmData[playing.Offset + i];
+			sample *= 1.0f / std::numeric_limits<int16_t>::max();
+			a_data[i].Left += sample;
+			a_data[i].Right += sample;
+		}
+		playing.Offset += toMix;
+	}
+
+	std::erase_if(m_playing,
+	              [this](auto& playing) { return playing.Offset >= m_pcmData[playing.Index].size(); });
 }

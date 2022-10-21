@@ -15,9 +15,9 @@ import CR.Engine.Audio.Constants;
 
 import CR.Engine.Core;
 
-import<chrono>;
-import<cstdint>;
-import<thread>;
+import <chrono>;
+import <cstdint>;
+import <thread>;
 
 namespace cec = CR::Engine::Core;
 namespace cea = CR::Engine::Audio;
@@ -35,10 +35,10 @@ namespace CR::Engine::Audio {
 		AudioDeviceImpl(AudioDevice::DeviceCallback_t a_callback);
 		virtual ~AudioDeviceImpl();
 
-		AudioDeviceImpl(const AudioDeviceImpl&) = delete;
-		AudioDeviceImpl(AudioDeviceImpl&&)      = delete;
+		AudioDeviceImpl(const AudioDeviceImpl&)            = delete;
+		AudioDeviceImpl(AudioDeviceImpl&&)                 = delete;
 		AudioDeviceImpl& operator=(const AudioDeviceImpl&) = delete;
-		AudioDeviceImpl& operator=(AudioDeviceImpl&&) = delete;
+		AudioDeviceImpl& operator=(AudioDeviceImpl&&)      = delete;
 
 		STDMETHODIMP GetParameters(DWORD* a_flags, DWORD* a_queue) override;
 		STDMETHODIMP Invoke(IRtwqAsyncResult* a_result) override;
@@ -229,7 +229,7 @@ STDMETHODIMP cea::AudioDeviceImpl::Invoke(IRtwqAsyncResult*) {
 	hr = m_audioClient->GetCurrentPadding(&padding);
 	CR_ASSERT(hr == S_OK, "Failed to get current padding");
 
-	uint32_t numFrames = m_bufferFrames - padding;
+	uint32_t numFrames = std::min(m_bufferFrames - padding, m_frameSamples);
 
 	float* buffer = nullptr;
 	hr            = m_audioRenderClient->GetBuffer(numFrames, (BYTE**)&buffer);

@@ -73,7 +73,7 @@ CR::Engine::Core::StorageBuffer<int16_t>
 		} else if(header.ChunkID == 'atad') {
 			// handle data chunk specially
 			result.prepare(header.ChunkSize / 2);
-			memcpy(result.data(), reader.Data + reader.Offset, header.ChunkSize / 2);
+			memcpy(result.data(), reader.Data + reader.Offset, header.ChunkSize);
 			result.commit(header.ChunkSize / 2);
 			reader.Offset += header.ChunkSize;
 		} else {

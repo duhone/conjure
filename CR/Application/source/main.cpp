@@ -39,13 +39,6 @@ int main(int, char*) {
 		auto fanfareFX = cea::GetHandleFX(cec::C_Hash64("FX/levelupfanfare.wav"));
 		fanfareFX.Play();
 
-		cea::Tone tone("440hz", 440.0f);
-		tone.SetVolume(0.5f);
-		cea::Tone tone2("880hz", 880.0f);
-		tone2.SetVolume(0.35f);
-		cea::Tone tone3("1760hz", 1760.0f);
-		tone3.SetVolume(0.2f);
-
 		while(!done) { std::this_thread::sleep_for(16ms); }
 	}
 
