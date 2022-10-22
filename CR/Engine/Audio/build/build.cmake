@@ -7,7 +7,6 @@ set(INTERFACE_FILES
     ${root}/interface/Audio.ixx
     ${root}/interface/AudioEngine.ixx
     ${root}/interface/FX.ixx
-    ${root}/interface/Mixer.ixx
 )
 
 set(SOURCE_FILES
@@ -16,8 +15,6 @@ set(SOURCE_FILES
     ${root}/source/ChannelWeights.ixx
     ${root}/source/Constants.ixx
     ${root}/source/FXLibrary.ixx
-    ${root}/source/Mixer.cpp
-    ${root}/source/MixerSystem.ixx
     ${root}/source/MusicLibrary.ixx
     ${root}/source/OutputConversion.ixx
     ${root}/source/Sample.ixx

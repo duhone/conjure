@@ -12,7 +12,6 @@ import CR.Engine.Audio.AudioDevice;
 import CR.Engine.Audio.ChannelWeights;
 import CR.Engine.Audio.Constants;
 import CR.Engine.Audio.FXLibrary;
-import CR.Engine.Audio.MixerSystem;
 import CR.Engine.Audio.MusicLibrary;
 import CR.Engine.Audio.OutputConversion;
 import CR.Engine.Audio.Sample;
@@ -38,8 +37,6 @@ namespace {
 		std::vector<float> m_deviceChannelBuffer;
 
 		cea::OutputConversion m_outputConversion;
-
-		cea::MixerSystem m_mixerSystem;
 
 		bool m_checkForClipping;
 	};
