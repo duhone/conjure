@@ -1,4 +1,5 @@
-﻿module;
+﻿/* not currently building with github actions
+module;
 
 #include <platform/windows/CRWindows.h>
 
@@ -96,3 +97,4 @@ inline CR::Engine::Platform::IOCPPort&
 	m_completion = std::move(a_other.m_completion);
 	return *this;
 }
+*/
