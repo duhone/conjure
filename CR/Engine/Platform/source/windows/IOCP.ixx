@@ -1,8 +1,9 @@
 ﻿module;
 
+#include <platform/windows/CRWindows.h>
+
 #include "core/Log.h"
 #include <function2/function2.hpp>
-#include <platform/windows/CRWindows.h>
 
 export module CR.Engine.Platform.IOCP;
 
