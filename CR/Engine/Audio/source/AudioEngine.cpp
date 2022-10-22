@@ -16,7 +16,6 @@ import CR.Engine.Audio.MixerSystem;
 import CR.Engine.Audio.MusicLibrary;
 import CR.Engine.Audio.OutputConversion;
 import CR.Engine.Audio.Sample;
-import CR.Engine.Audio.ToneSystem;
 
 import <algorithm>;
 import <span>;
@@ -56,7 +55,6 @@ bool Engine::Mix(std::span<float>& a_buffer, int32_t a_numChannels, int32_t a_sa
 	    static_cast<int32_t>((a_buffer.size() * cea::c_mixSampleRate) / (a_sampleRate * a_numChannels));
 	m_mixBuffer.resize(mixBufferSize);
 	std::ranges::fill(m_mixBuffer, cea::Sample{});
-	cecore::GetService<cea::ToneSystem>().Mix({m_mixBuffer.data(), m_mixBuffer.size()});
 	cecore::GetService<cea::FXLibrary>().Mix({m_mixBuffer.data(), m_mixBuffer.size()});
 
 	std::span<cea::Sample> resampleBuffer;
@@ -98,7 +96,6 @@ bool Engine::Mix(std::span<float>& a_buffer, int32_t a_numChannels, int32_t a_sa
 
 void cea::EngineStart(bool a_checkForClipping, std::filesystem::path a_fxFolder,
                       std::filesystem::path a_musicFolder) {
-	cecore::AddService<ToneSystem>();
 	cecore::AddService<FXLibrary>(std::move(a_fxFolder));
 	cecore::AddService<MusicLibrary>(std::move(a_musicFolder));
 

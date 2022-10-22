@@ -8,7 +8,6 @@ set(INTERFACE_FILES
     ${root}/interface/AudioEngine.ixx
     ${root}/interface/FX.ixx
     ${root}/interface/Mixer.ixx
-    ${root}/interface/Tone.ixx
 )
 
 set(SOURCE_FILES
@@ -22,8 +21,6 @@ set(SOURCE_FILES
     ${root}/source/MusicLibrary.ixx
     ${root}/source/OutputConversion.ixx
     ${root}/source/Sample.ixx
-    ${root}/source/Tone.cpp
-    ${root}/source/ToneSystem.ixx
     ${root}/source/Utilities.ixx
     ${root}/source/Windows/AudioDevice.cpp
 )
