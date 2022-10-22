@@ -6,10 +6,7 @@
 
 export module CR.Engine.Platform.IOCP;
 
-import<functional>;
-import<memory>;
-import<thread>;
-import<unordered_map>;
+import <thread>;
 
 namespace CR::Engine::Platform {
 	export class IOCPPort final {
@@ -18,8 +15,8 @@ namespace CR::Engine::Platform {
 
 		IOCPPort() = default;
 		IOCPPort(HANDLE a_handle, CompletionCallback_t a_completion);
-		~IOCPPort()               = default;
-		IOCPPort(const IOCPPort&) = delete;
+		~IOCPPort()                          = default;
+		IOCPPort(const IOCPPort&)            = delete;
 		IOCPPort& operator=(const IOCPPort&) = delete;
 		IOCPPort(IOCPPort&& a_other) noexcept;
 		IOCPPort& operator=(IOCPPort&& a_other) noexcept;
@@ -34,7 +31,7 @@ namespace CR::Engine::Platform {
 
 }    // namespace CR::Engine::Platform
 
-module : private;
+module :private;
 
 namespace {
 	// Doesn't scale past one thread at the moment. would require some redesign to do so.
@@ -43,10 +40,10 @@ namespace {
 		void RegisterIOCPPort(CR::Engine::Platform::IOCPPort* a_port, HANDLE a_handle);
 		IOCPThread();
 		~IOCPThread();
-		IOCPThread(const IOCPThread&) = delete;
+		IOCPThread(const IOCPThread&)            = delete;
 		IOCPThread& operator=(const IOCPThread&) = delete;
 		IOCPThread(IOCPThread&&)                 = delete;
-		IOCPThread& operator=(IOCPThread&&) = delete;
+		IOCPThread& operator=(IOCPThread&&)      = delete;
 
 		void RunIOCPThread();
 

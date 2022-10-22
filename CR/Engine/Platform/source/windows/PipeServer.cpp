@@ -2,16 +2,15 @@
 
 #include "core/Log.h"
 #include <concurrent_queue.h>
-#include <platform/windows/CRWindows.h>
-
 #include <function2/function2.hpp>
+#include <platform/windows/CRWindows.h>
 
 module CR.Engine.Platform.PipeServer;
 
 import CR.Engine.Platform.IOCP;
 import CR.Engine.Core.Literals;
 
-import<algorithm>;
+import <algorithm>;
 
 using namespace CR::Engine::Core::Literals;
 
