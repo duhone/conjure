@@ -100,7 +100,6 @@ void cea::EngineStart(bool a_checkForClipping, std::filesystem::path a_fxFolder,
 	::Engine& engine = GetEngine();
 
 	engine.m_checkForClipping = a_checkForClipping;
-	// engine.m_masterMix        = engine.m_mixerSystem.CreateMixer();
 
 	engine.m_device = std::make_unique<AudioDevice>(
 	    [&engine](std::span<float> a_buffer, int32_t a_numChannels, int32_t a_sampleRate,

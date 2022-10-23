@@ -10,6 +10,7 @@ import CR.Engine.Compression;
 
 import CR.Engine.Audio.Constants;
 import CR.Engine.Audio.Sample;
+import CR.Engine.Audio.Utilities;
 
 import <filesystem>;
 import <typeindex>;
@@ -32,6 +33,8 @@ namespace CR::Engine::Audio {
 		}
 
 		void Mix(std::span<Sample> a_data);
+
+		void SetVolume(float a_volume) { m_volume = CR::Engine::Audio::CalcVolume(a_volume); }
 
 	  private:
 		// quarter second
@@ -57,6 +60,7 @@ namespace CR::Engine::Audio {
 		std::optional<Playing> m_playing;
 		std::optional<uint16_t> m_pending;
 		uint32_t m_transition{0};
+		float m_volume{1.0f};
 	};
 }    // namespace CR::Engine::Audio
 
@@ -117,7 +121,7 @@ void cea::MusicLibrary::Mix(std::span<Sample> a_data) {
 			sample *= fade;
 			fade = std::max(0.0f, fade - c_fadeStep);
 		}
-		sample *= 1.0f / std::numeric_limits<int16_t>::max();
+		sample *= m_volume / std::numeric_limits<int16_t>::max();
 		a_data[i].Left += sample;
 		a_data[i].Right += sample;
 	}

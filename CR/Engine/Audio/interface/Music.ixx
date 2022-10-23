@@ -12,6 +12,7 @@ namespace CR::Engine::Audio {
 
 	  public:
 		void Play(uint64_t a_nameHash);
+		void SetVolume(float a_volume);
 
 	  private:
 		HandleMusic(MusicLibrary& a_library) : m_library(a_library) {}
@@ -35,4 +36,8 @@ ceaud::HandleMusic ceaud::GetHandleMusic() {
 
 void ceaud::HandleMusic::Play(uint64_t a_nameHash) {
 	m_library.Play(a_nameHash);
+}
+
+void ceaud::HandleMusic::SetVolume(float a_volume) {
+	m_library.SetVolume(a_volume);
 }
