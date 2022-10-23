@@ -7,6 +7,7 @@ set(INTERFACE_FILES
     ${root}/interface/Audio.ixx
     ${root}/interface/AudioEngine.ixx
     ${root}/interface/FX.ixx
+    ${root}/interface/Music.ixx
 )
 
 set(SOURCE_FILES

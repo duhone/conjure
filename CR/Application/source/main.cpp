@@ -39,6 +39,9 @@ int main(int, char*) {
 		auto fanfareFX = cea::GetHandleFX(cec::C_Hash64("FX/levelupfanfare.wav"));
 		fanfareFX.Play();
 
+		auto music = cea::GetHandleMusic();
+		music.Play(cec::C_Hash64("Music/BGM_Menu.wav"));
+
 		while(!done) { std::this_thread::sleep_for(16ms); }
 	}
 

@@ -53,6 +53,7 @@ bool Engine::Mix(std::span<float>& a_buffer, int32_t a_numChannels, int32_t a_sa
 	m_mixBuffer.resize(mixBufferSize);
 	std::ranges::fill(m_mixBuffer, cea::Sample{});
 	cecore::GetService<cea::FXLibrary>().Mix({m_mixBuffer.data(), m_mixBuffer.size()});
+	cecore::GetService<cea::MusicLibrary>().Mix({m_mixBuffer.data(), m_mixBuffer.size()});
 
 	std::span<cea::Sample> resampleBuffer;
 	if(a_sampleRate == cea::c_mixSampleRate) {
