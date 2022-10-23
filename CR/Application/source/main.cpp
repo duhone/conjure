@@ -11,48 +11,45 @@ import <filesystem>;
 import <thread>;
 
 namespace ceassets = CR::Engine::Assets;
-namespace cea      = CR::Engine::Audio;
-namespace cec      = CR::Engine::Core;
-namespace cep      = CR::Engine::Platform;
+namespace ceaud    = CR::Engine::Audio;
+namespace ceccore  = CR::Engine::Core;
+namespace ceplat   = CR::Engine::Platform;
 
 namespace fs = std::filesystem;
 
 using namespace std::literals;
 
 int main(int, char*) {
-	cec::ServicesStart();
+	ceccore::ServicesStart();
 
-	fs::current_path(cep::GetCurrentProcessPath());
+	fs::current_path(ceplat::GetCurrentProcessPath());
 
-	cec::LogSystem logSystem;
+	ceccore::LogSystem logSystem;
 
 	bool done = false;
-	cep::Window window("Conjure", 800, 600, [&done]() { done = true; });
+	ceplat::Window window("Conjure", 800, 600, [&done]() { done = true; });
 
 	fs::path assetsPath = fs::canonical(ASSETS_FOLDER);
 
-	cec::AddService<ceassets::Service>(assetsPath);
-
-	cea::EngineStart(false, assetsPath / "Audio/FX", assetsPath / "Audio/Music");
+	ceccore::AddService<ceassets::Service>(assetsPath);
+	ceccore::AddService<ceaud::Service>(false);
 
 	{
-		auto handleFxs = cea::GetHandleFXs();
-		auto music     = cea::GetHandleMusic();
+		auto handleFxs = ceaud::GetHandleFXs();
+		auto music     = ceaud::GetHandleMusic();
 
 		handleFxs.SetVolume(1.0f);
 		music.SetVolume(0.75f);
 
-		auto fanfareFX = cea::GetHandleFX(cec::C_Hash64("FX/levelupfanfare.wav"));
+		auto fanfareFX = ceaud::GetHandleFX(ceccore::C_Hash64("FX/levelupfanfare.wav"));
 		fanfareFX.Play();
 
-		music.Play(cec::C_Hash64("Music/BGM_Menu.wav"));
+		music.Play(ceccore::C_Hash64("Music/BGM_Menu.wav"));
 
 		while(!done) { std::this_thread::sleep_for(16ms); }
 	}
 
-	cea::EngineStop();
-
-	cec::ServicesStop();
+	ceccore::ServicesStop();
 
 	return EXIT_SUCCESS;
 }

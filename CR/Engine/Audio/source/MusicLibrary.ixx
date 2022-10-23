@@ -24,7 +24,7 @@ namespace CR::Engine::Audio {
 	  public:
 		static std::type_index s_typeIndex;
 
-		MusicLibrary(std::filesystem::path a_folder);
+		MusicLibrary();
 
 		void Play(uint64_t a_nameHash) {
 			uint16_t index = GetIndex(a_nameHash);
@@ -75,7 +75,7 @@ namespace fs = std::filesystem;
 
 std::type_index cea::MusicLibrary::s_typeIndex{typeid(MusicLibrary)};
 
-cea::MusicLibrary::MusicLibrary(std::filesystem::path a_folder) {
+cea::MusicLibrary::MusicLibrary() {
 	auto& assetService = cecore::GetService<ceasset::Service>();
 	assetService.Load(ceasset::Service::Partitions::Audio, "Music", "wav",
 	                  [&](uint64_t a_hash, std::string_view a_path, const std::span<std::byte> a_data) {

@@ -4,22 +4,23 @@ module;
 
 export module CR.Engine.Core.ServiceLocator;
 
-import<any>;
-import<memory>;
-import<typeinfo>;
-import<typeindex>;
-import<unordered_map>;
+import <any>;
+import <memory>;
+import <typeinfo>;
+import <typeindex>;
+import <utility>;
+import <unordered_map>;
 
 namespace CR::Engine::Core {
 	export class ServiceLocator final {
 	  public:
-		ServiceLocator()                      = default;
-		~ServiceLocator()                     = default;
+		ServiceLocator() = default;
+		~ServiceLocator();
 		ServiceLocator(const ServiceLocator&) = delete;
 		ServiceLocator(ServiceLocator&&)      = delete;
 
 		ServiceLocator& operator=(const ServiceLocator&) = delete;
-		ServiceLocator& operator=(ServiceLocator&&) = delete;
+		ServiceLocator& operator=(ServiceLocator&&)      = delete;
 
 		template<typename T, typename... ArgsT>
 		void Add(ArgsT&&... args) {
@@ -43,6 +44,7 @@ namespace CR::Engine::Core {
 			virtual ~Service() = default;
 
 			virtual std::byte* GetService() = 0;
+			virtual void Stop()             = 0;
 		};
 
 		template<typename T>
@@ -58,9 +60,29 @@ namespace CR::Engine::Core {
 
 			std::byte* GetService() override { return buffer; }
 
+			template<typename, typename = void>
+			constexpr bool static HasStop = false;
+			template<typename T>
+			constexpr bool static HasStop<T, std::void_t<decltype(std::declval<T>().Stop())>> = true;
+
+			void Stop() override {
+				if constexpr(HasStop<T>) {
+					T* t = std::launder(reinterpret_cast<T*>(buffer));
+					t->Stop();
+				}
+			}
+
 			alignas(T) std::byte buffer[sizeof(T)];
 		};
 
 		std::unordered_map<std::type_index, std::unique_ptr<Service>> m_services;
 	};
 }    // namespace CR::Engine::Core
+
+module :private;
+
+namespace cecore = CR::Engine::Core;
+
+cecore::ServiceLocator ::~ServiceLocator() {
+	for(auto& service : m_services) { service.second->Stop(); }
+}

@@ -26,7 +26,7 @@ namespace CR::Engine::Audio {
 	  public:
 		static std::type_index s_typeIndex;
 
-		FXLibrary(std::filesystem::path a_folder);
+		FXLibrary();
 
 		uint16_t GetIndex(uint64_t a_nameHash) const noexcept {
 			auto iter = m_lookup.find(a_nameHash);
@@ -70,7 +70,7 @@ namespace fs = std::filesystem;
 
 std::type_index cea::FXLibrary::s_typeIndex{typeid(FXLibrary)};
 
-cea::FXLibrary::FXLibrary(std::filesystem::path a_folder) {
+cea::FXLibrary::FXLibrary() {
 	auto& assetService = cecore::GetService<ceasset::Service>();
 	assetService.Load(ceasset::Service::Partitions::Audio, "FX", "wav",
 	                  [&](uint64_t a_hash, std::string_view a_path, const std::span<std::byte> a_data) {
