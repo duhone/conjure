@@ -34,7 +34,10 @@ namespace CR::Engine::Audio {
 
 		void Mix(std::span<Sample> a_data);
 
-		void SetVolume(float a_volume) { m_volume = CR::Engine::Audio::CalcVolume(a_volume); }
+		float GetVolume() const { return CR::Engine::Audio::CalcLinearVolume(m_volume); }
+		void SetVolume(float a_volume) { m_volume = CR::Engine::Audio::CalcLogVolume(a_volume); }
+		bool GetMute() const { return m_mute; }
+		void SetMute(bool a_mute) { m_mute = a_mute; }
 
 	  private:
 		// quarter second
@@ -61,6 +64,7 @@ namespace CR::Engine::Audio {
 		std::optional<uint16_t> m_pending;
 		uint32_t m_transition{0};
 		float m_volume{1.0f};
+		bool m_mute;
 	};
 }    // namespace CR::Engine::Audio
 
@@ -122,6 +126,7 @@ void cea::MusicLibrary::Mix(std::span<Sample> a_data) {
 			fade = std::max(0.0f, fade - c_fadeStep);
 		}
 		sample *= m_volume / std::numeric_limits<int16_t>::max();
+		if(m_mute) { sample = 0.0f; }
 		a_data[i].Left += sample;
 		a_data[i].Right += sample;
 	}

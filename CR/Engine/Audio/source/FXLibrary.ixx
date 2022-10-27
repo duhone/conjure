@@ -42,7 +42,10 @@ namespace CR::Engine::Audio {
 
 		void Mix(std::span<Sample> a_data);
 
-		void SetVolume(float a_volume) { m_volume = CR::Engine::Audio::CalcVolume(a_volume); }
+		float GetVolume() const { return CR::Engine::Audio::CalcLinearVolume(m_volume); }
+		void SetVolume(float a_volume) { m_volume = CR::Engine::Audio::CalcLogVolume(a_volume); }
+		bool GetMute() const { return m_mute; }
+		void SetMute(bool a_mute) { m_mute = a_mute; }
 
 	  private:
 		std::unordered_map<uint64_t, uint16_t> m_lookup;
@@ -56,6 +59,7 @@ namespace CR::Engine::Audio {
 		CR::Engine::Core::Locked<std::vector<uint16_t>> m_playRequests;
 		std::vector<Playing> m_playing;
 		float m_volume{1.0f};
+		bool m_mute;
 	};
 }    // namespace CR::Engine::Audio
 
@@ -96,6 +100,7 @@ void cea::FXLibrary::Mix(std::span<Sample> a_data) {
 		for(int32_t i = 0; i < toMix; ++i) {
 			float sample = pcmData[playing.Offset + i];
 			sample *= m_volume / std::numeric_limits<int16_t>::max();
+			if(m_mute) { sample = 0.0f; }
 			a_data[i].Left += sample;
 			a_data[i].Right += sample;
 		}

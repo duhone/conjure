@@ -11,7 +11,10 @@ namespace CR::Engine::Audio {
 		friend HandleFXs GetHandleFXs();
 
 	  public:
+		float GetVolume() const;
 		void SetVolume(float a_volume);
+		bool GetMute() const;
+		void SetMute(bool a_mute);
 
 	  private:
 		HandleFXs(FXLibrary& a_library) : m_library(a_library) {}
@@ -58,6 +61,18 @@ void ceaud::HandleFX::Play() {
 	m_library.Play(m_index);
 }
 
+float ceaud::HandleFXs::GetVolume() const {
+	return m_library.GetVolume();
+}
+
 void ceaud::HandleFXs::SetVolume(float a_volume) {
 	m_library.SetVolume(a_volume);
+}
+
+bool ceaud::HandleFXs::GetMute() const {
+	return m_library.GetMute();
+}
+
+void ceaud::HandleFXs::SetMute(bool a_mute) {
+	m_library.SetMute(a_mute);
 }
