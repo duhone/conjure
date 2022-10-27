@@ -4,30 +4,33 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 #library
 ###############################################
 set(INTERFACE_FILES
+    ${root}/interface/Input.ixx
 )
 
 set(SOURCE_FILES
-    ${root}/source/main.cpp
 )
 
 set(BUILD_FILES
     ${root}/build/build.cmake
 )
 
-add_executable(application 
+add_library(input 
   ${INTERFACE_FILES} 
   ${SOURCE_FILES} 
   ${BUILD_FILES}
 )
 
-settingsCR(application)
+settingsCR(input)
 
-target_link_libraries(application PUBLIC
+target_link_libraries(input PUBLIC
 	headerUnits
+	fmt
+	function2
+	glm
+	spdlog
 	core
 	platform
-	audio
-	input
 )
 
-target_compile_definitions(application PRIVATE ASSETS_FOLDER="${root}/../Assets")
+set_property(TARGET input APPEND PROPERTY FOLDER Engine)
+
