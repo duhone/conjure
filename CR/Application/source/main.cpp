@@ -3,6 +3,7 @@
 import CR.Engine.Assets;
 import CR.Engine.Audio;
 import CR.Engine.Core;
+import CR.Engine.Input;
 import CR.Engine.Platform;
 
 import <chrono>;
@@ -13,6 +14,7 @@ import <thread>;
 namespace ceassets = CR::Engine::Assets;
 namespace ceaud    = CR::Engine::Audio;
 namespace ceccore  = CR::Engine::Core;
+namespace ceinput  = CR::Engine::Input;
 namespace ceplat   = CR::Engine::Platform;
 
 namespace fs = std::filesystem;
@@ -33,6 +35,7 @@ int main(int, char*) {
 
 	ceccore::AddService<ceassets::Service>(assetsPath);
 	ceccore::AddService<ceaud::Service>(false);
+	ceccore::AddService<ceinput::Service>();
 
 	{
 		auto handleFxs = ceaud::GetHandleFXs();
