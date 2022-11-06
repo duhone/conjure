@@ -44,6 +44,7 @@ settingsCR(platform)
 
 target_link_libraries(platform PUBLIC
 	headerUnits
+    glm
 	core
 )
 

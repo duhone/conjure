@@ -16,4 +16,5 @@
 #define NOSERVICE
 #define NOMCX
 #include <windows.h>
+#include <windowsx.h>
 #pragma pop(0)

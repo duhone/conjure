@@ -4,22 +4,29 @@
 #include <platform/windows/CRWindows.h>
 
 #include <function2/function2.hpp>
+#include <glm/glm.hpp>
 
 module CR.Engine.Platform.Window;
 
 import CR.Engine.Core.Locked;
-import<thread>;
-import<unordered_map>;
+import <thread>;
+import <unordered_map>;
 
 namespace CR::Engine::Platform {
 	struct WindowData {
 		void MyCreateWindow(std::string_view a_windowTitle, uint32_t a_width, uint32_t a_height,
 		                    Window* self);
 		void RunMsgLoop();
+		void UpdateMousePos(int a_x, int a_y);
+		void UpdateLeftMouse(bool a_down, int a_x, int a_y);
 
 		HWND m_HWND{nullptr};
 		std::jthread m_thread;
 		Window::OnDestroy_t m_onDestroy;
+
+		std::mutex m_inputMutex;
+		glm::ivec2 m_mousePos;
+		bool m_mouseLeftDown{false};
 	};
 }    // namespace CR::Engine::Platform
 
@@ -39,6 +46,37 @@ namespace {
 				});
 				PostQuitMessage(0);
 				return 0;
+			case WM_LBUTTONDOWN:
+				g_windowLookup([&](auto& winLookup) {
+					auto window = winLookup.find(a_hWnd);
+					if(window != end(winLookup)) {
+						auto winData = window->second->GetWindowData();
+
+						SetCapture(a_hWnd);
+						winData->UpdateLeftMouse(true, GET_X_LPARAM(a_lParam), GET_Y_LPARAM(a_lParam));
+					}
+				});
+				break;
+			case WM_MOUSEMOVE:
+				g_windowLookup([&](auto& winLookup) {
+					auto window = winLookup.find(a_hWnd);
+					if(window != end(winLookup)) {
+						auto winData = window->second->GetWindowData();
+						winData->UpdateMousePos(GET_X_LPARAM(a_lParam), GET_Y_LPARAM(a_lParam));
+					}
+				});
+				break;
+			case WM_LBUTTONUP:
+				g_windowLookup([&](auto& winLookup) {
+					auto window = winLookup.find(a_hWnd);
+					if(window != end(winLookup)) {
+						auto winData = window->second->GetWindowData();
+
+						SetCapture(nullptr);
+						winData->UpdateLeftMouse(false, GET_X_LPARAM(a_lParam), GET_Y_LPARAM(a_lParam));
+					}
+				});
+				break;
 		}
 
 		// Handle any messages the switch statement didn't.
@@ -53,7 +91,7 @@ cep::Window::Window(std::string_view a_windowTitle, uint32_t a_width, uint32_t a
 	m_data->m_thread    = std::jthread([this, windowTitle = std::string{a_windowTitle}, a_width, a_height]() {
         this->m_data->MyCreateWindow(windowTitle.c_str(), a_width, a_height, this);
         this->m_data->RunMsgLoop();
-	   });
+    });
 
 	ShowWindow(GetConsoleWindow(), SW_HIDE);
 }
@@ -82,12 +120,19 @@ void cep::Window::OnDestroy() {
 	m_data->m_onDestroy();
 }
 
+void cep::Window::UpdateInputPlatform() {
+	CR_ASSERT(m_data, "platform data not created");
+	std::scoped_lock lock(m_data->m_inputMutex);
+	m_mouseState.LeftDown = m_data->m_mouseLeftDown;
+	m_mouseState.Position = m_data->m_mousePos;
+}
+
 void cep::WindowData::MyCreateWindow(std::string_view a_windowTitle, uint32_t a_width, uint32_t a_height,
                                      Window* self) {
 	// Initialize the window class.
 	WNDCLASSEX windowClass    = {0};
 	windowClass.cbSize        = sizeof(WNDCLASSEX);
-	windowClass.style         = CS_HREDRAW | CS_VREDRAW;
+	windowClass.style         = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
 	windowClass.lpfnWndProc   = WinProc;
 	windowClass.hInstance     = GetModuleHandle(NULL);
 	windowClass.hCursor       = LoadCursor(NULL, IDC_ARROW);
@@ -116,4 +161,17 @@ void cep::WindowData::RunMsgLoop() {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+}
+
+void cep::WindowData::UpdateMousePos(int a_x, int a_y) {
+	std::scoped_lock lock(m_inputMutex);
+	m_mousePos.x = a_x;
+	m_mousePos.y = a_y;
+}
+
+void cep::WindowData::UpdateLeftMouse(bool a_down, int a_x, int a_y) {
+	std::scoped_lock lock(m_inputMutex);
+	m_mouseLeftDown = a_down;
+	m_mousePos.x    = a_x;
+	m_mousePos.y    = a_y;
 }
