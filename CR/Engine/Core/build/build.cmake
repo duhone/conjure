@@ -17,6 +17,7 @@ set(INTERFACE_FILES
     ${root}/interface/Locked.ixx
     ${root}/interface/Log.ixx
     ${root}/interface/Random.ixx
+    ${root}/interface/Rect.ixx
     ${root}/interface/ScopeExit.ixx
     ${root}/interface/ServiceLocator.ixx
     ${root}/interface/Services.ixx
@@ -48,6 +49,7 @@ target_link_libraries(core PUBLIC
 	headerUnits
 	fmt
 	function2
+    glm
 	spdlog
 )
 
