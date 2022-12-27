@@ -5,10 +5,12 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 ###############################################
 set(INTERFACE_FILES
     ${root}/interface/Input.ixx
+    ${root}/interface/Region.ixx
     ${root}/interface/Service.ixx
 )
 
 set(SOURCE_FILES
+    ${root}/source/RegionService.ixx
 )
 
 set(BUILD_FILES

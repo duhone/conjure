@@ -33,11 +33,15 @@ namespace CR::Engine::Input {
 
 module :private;
 
+import CR.Engine.Input.RegionService;
+
 namespace cecore  = CR::Engine::Core;
 namespace ceinput = CR::Engine::Input;
 
 std::type_index ceinput::Service::s_typeIndex{typeid(Service)};
 
-ceinput::Service::Service(CR::Engine::Platform::Window& a_window) : m_window(a_window) {}
+ceinput::Service::Service(CR::Engine::Platform::Window& a_window) : m_window(a_window) {
+	cecore::AddService<RegionService>();
+}
 
 void ceinput::Service::Update() {}
