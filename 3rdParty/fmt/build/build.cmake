@@ -8,11 +8,11 @@ set(INTERFACE_FILES
     ${root}/fmt/include/fmt/core.h
     ${root}/fmt/include/fmt/format.h
     ${root}/fmt/include/fmt/format-inl.h
-    ${root}/fmt/include/fmt/locale.h
     ${root}/fmt/include/fmt/os.h
     ${root}/fmt/include/fmt/ostream.h
     ${root}/fmt/include/fmt/printf.h
     ${root}/fmt/include/fmt/ranges.h
+    ${root}/fmt/include/fmt/std.h
     ${root}/fmt/include/fmt/xchar.h
 )
 
