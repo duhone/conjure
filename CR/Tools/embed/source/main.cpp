@@ -1,9 +1,9 @@
 ﻿import CR.Engine.Core;
 import CR.Engine.Platform;
 
-import<charconv>;
-import<chrono>;
-import<cstdio>;
+import <charconv>;
+import <chrono>;
+import <cstdio>;
 
 #include "core/Log.h"
 
@@ -15,7 +15,7 @@ namespace fs  = std::filesystem;
 namespace cec = CR::Engine::Core;
 namespace cep = CR::Engine::Platform;
 
-static const char* c_interfaceProto = R"(
+static constexpr const char* c_interfaceProto = R"(
 export module CR.Tools.Embed.{0};
 
 import <span.h>;
@@ -25,13 +25,13 @@ namespace CR::Tools::Embed{{
 }}
 )";
 
-static const char* c_srcProtoBegin = R"(
+static constexpr const char* c_srcProtoBegin = R"(
 module CR.Tools.Embed.{0};
 
 const std::span<const std::byte> CR::Tools::Embed::Get{0}(){{
 	static const std::byte data[] = {{)";
 
-static const char* c_srcProtoEnd = R"(
+static constexpr const char* c_srcProtoEnd = R"(
 	};
 
 	return std::span<const std::byte>(data);

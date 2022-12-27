@@ -62,8 +62,10 @@ namespace ceaud  = CR::Engine::Audio;
 
 std::type_index ceaud::Service::s_typeIndex{typeid(Service)};
 
-bool ceaud::Service::Mix(std::span<float>& a_buffer, int32_t a_numChannels, int32_t a_sampleRate,
-                         const std::vector<ChannelWeights> a_weights, bool a_closing) {
+bool ceaud::Service::Mix([[maybe_unused]] std::span<float>& a_buffer, [[maybe_unused]] int32_t a_numChannels,
+                         [[maybe_unused]] int32_t a_sampleRate,
+                         [[maybe_unused]] const std::vector<ChannelWeights> a_weights,
+                         [[maybe_unused]] bool a_closing) {
 	int32_t mixBufferSize =
 	    static_cast<int32_t>((a_buffer.size() * c_mixSampleRate) / (a_sampleRate * a_numChannels));
 	m_mixBuffer.resize(mixBufferSize);
@@ -73,34 +75,34 @@ bool ceaud::Service::Mix(std::span<float>& a_buffer, int32_t a_numChannels, int3
 
 	std::span<Sample> resampleBuffer;
 	if(a_sampleRate == c_mixSampleRate) {
-		resampleBuffer = {m_mixBuffer.data(), m_mixBuffer.size()};
+	    resampleBuffer = {m_mixBuffer.data(), m_mixBuffer.size()};
 	} else {
-		m_deviceSampleBuffer.resize(m_mixBuffer.size() * (a_sampleRate / c_mixSampleRate));
-		resampleBuffer = {m_deviceSampleBuffer.data(), m_deviceSampleBuffer.size()};
-		m_outputConversion.ConvertSampleRate(a_sampleRate, {m_mixBuffer.data(), m_mixBuffer.size()},
-		                                     resampleBuffer);
+	    m_deviceSampleBuffer.resize(m_mixBuffer.size() * (a_sampleRate / c_mixSampleRate));
+	    resampleBuffer = {m_deviceSampleBuffer.data(), m_deviceSampleBuffer.size()};
+	    m_outputConversion.ConvertSampleRate(a_sampleRate, {m_mixBuffer.data(), m_mixBuffer.size()},
+	                                         resampleBuffer);
 	}
 
 	std::span<float> deviceChannelBuffer;
 	if(a_numChannels == c_mixChannels) {
-		deviceChannelBuffer = {(float*)resampleBuffer.data(), resampleBuffer.size() * c_mixChannels};
+	    deviceChannelBuffer = {(float*)resampleBuffer.data(), resampleBuffer.size() * c_mixChannels};
 	} else {
-		m_deviceChannelBuffer.resize(resampleBuffer.size() * a_numChannels);
-		deviceChannelBuffer = {m_deviceChannelBuffer.data(), m_deviceChannelBuffer.size()};
-		m_outputConversion.ConvertChannelCount(resampleBuffer, deviceChannelBuffer, a_weights);
+	    m_deviceChannelBuffer.resize(resampleBuffer.size() * a_numChannels);
+	    deviceChannelBuffer = {m_deviceChannelBuffer.data(), m_deviceChannelBuffer.size()};
+	    m_outputConversion.ConvertChannelCount(resampleBuffer, deviceChannelBuffer, a_weights);
 	}
 
 	CR_ASSERT(deviceChannelBuffer.size() == a_buffer.size(),
 	          "Logic error, final buffer did not match device requirements");
 
 	if(m_checkForClipping) {
-		for(const float& val : deviceChannelBuffer) {
-			CR_ASSERT(val >= -1.0f && val < 1.0f, "audio clipping");
-		}
+	    for(const float& val : deviceChannelBuffer) {
+	        CR_ASSERT(val >= -1.0f && val < 1.0f, "audio clipping");
+	    }
 	}
 
 	memcpy(a_buffer.data(), deviceChannelBuffer.data(), a_buffer.size() * sizeof(float));
-
+	
 	if(a_closing) {
 		return true;
 	} else {
@@ -108,7 +110,7 @@ bool ceaud::Service::Mix(std::span<float>& a_buffer, int32_t a_numChannels, int3
 	}
 }
 
-ceaud::Service::Service(bool a_checkForClipping) {
+ceaud::Service::Service([[maybe_unused]] bool a_checkForClipping) {
 	cecore::AddService<FXLibrary>();
 	cecore::AddService<MusicLibrary>();
 
@@ -117,7 +119,8 @@ ceaud::Service::Service(bool a_checkForClipping) {
 	m_device = std::make_unique<AudioDevice>(
 	    [this](std::span<float> a_buffer, int32_t a_numChannels, int32_t a_sampleRate,
 	           const std::vector<ChannelWeights> a_weights,
-	           bool a_closing) { return Mix(a_buffer, a_numChannels, a_sampleRate, a_weights, a_closing); });
+	           bool a_closing) { return Mix(a_buffer, a_numChannels, a_sampleRate, a_weights, a_closing);
+	});
 }
 
 void ceaud::Service::Stop() {

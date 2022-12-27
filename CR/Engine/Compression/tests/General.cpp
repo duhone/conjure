@@ -1,8 +1,9 @@
 ﻿import CR.Engine.Compression;
 import CR.Engine.Platform;
-import CR.Engine.Core;
+import CR.Engine.Core.StorageBuffer;
+import CR.Engine.Core.Timer;
 
-import<span>;
+import <span>;
 
 #include <doctest/doctest.h>
 

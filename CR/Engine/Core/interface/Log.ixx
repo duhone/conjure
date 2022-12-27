@@ -15,7 +15,7 @@ import <thread>;
 // Final output can be larger once the users arguments are added in.
 constexpr uint32_t c_maxFmtStringSize = 256;
 
-/*inline void PreFormat(char* output, const char* fmt, const std::source_location& a_location) {
+inline void PreFormat(char* output, const char* fmt, const std::source_location& a_location) {
     // print a condensed path, starting just below CR/
     const char* start = strstr(a_location.file_name(), "CR");
     assert(start != nullptr);
@@ -30,7 +30,7 @@ constexpr uint32_t c_maxFmtStringSize = 256;
                                    a_location.line(), fmt);
     // fmt doesnt append a null terminator for some reason.
     *result.out = '\0';
-}*/
+}
 
 namespace CR::Engine::Core {
 	export class LogSystem final {
@@ -45,32 +45,35 @@ namespace CR::Engine::Core {
 	};
 
 	namespace Log {
-		// spdlog::async_logger* GetLogger();
+		spdlog::async_logger* GetLogger();
 
 		export template<typename... ArgTs>
 		inline void Info([[maybe_unused]] const std::source_location& a_location,
 		                 [[maybe_unused]] const char* a_fmt, [[maybe_unused]] ArgTs&&... a_args) {
-			// char buffer[c_maxFmtStringSize];
-			// PreFormat(buffer, a_fmt, a_location);
-			//  GetLogger()->info(buffer, std::forward<ArgTs>(a_args)...);
+			char buffer[c_maxFmtStringSize];
+			PreFormat(buffer, a_fmt, a_location);
+			//crashes compiler Visual Studio 17.3
+			//GetLogger()->info(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
 		}
 
 		export template<typename... ArgTs>
 		inline void Warn([[maybe_unused]] const std::source_location& a_location,
 		                 [[maybe_unused]] const char* a_fmt, [[maybe_unused]] ArgTs&&... a_args) {
-			// char buffer[c_maxFmtStringSize];
-			// PreFormat(buffer, a_fmt, a_location);
-			//  GetLogger()->warn(buffer, std::forward<ArgTs>(a_args)...);
+			char buffer[c_maxFmtStringSize];
+			PreFormat(buffer, a_fmt, a_location);
+			// crashes compiler Visual Studio 17.3
+			//GetLogger()->warn(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
 		}
 
 		export template<typename... ArgTs>
 		inline void Error([[maybe_unused]] const std::source_location& a_location,
 		                  [[maybe_unused]] const char* a_fmt, [[maybe_unused]] ArgTs&&... a_args) {
-			// char buffer[c_maxFmtStringSize];
-			// PreFormat(buffer, a_fmt, a_location);
-			//  GetLogger()->error(buffer, std::forward<ArgTs>(a_args)...);
-			//  GetLogger()->flush();
-			// throw std::exception(fmt::format(buffer, std::forward<ArgTs>(a_args)...).c_str());
+			char buffer[c_maxFmtStringSize];
+			PreFormat(buffer, a_fmt, a_location);
+			// crashes compiler Visual Studio 17.3
+			//GetLogger()->error(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
+			GetLogger()->flush();
+			throw std::exception(fmt::format(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...).c_str());
 		}
 	}    // namespace Log
 }    // namespace CR::Engine::Core

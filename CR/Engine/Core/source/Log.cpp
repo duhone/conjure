@@ -38,7 +38,7 @@ CR::Engine::Core::LogSystem::~LogSystem() {
 	spdlog::shutdown();
 }
 
-/*spdlog::async_logger* CR::Engine::Core::Log::GetLogger() {
+spdlog::async_logger* CR::Engine::Core::Log::GetLogger() {
 	assert(g_logger.get());
 	return g_logger.get();
-}*/
+}

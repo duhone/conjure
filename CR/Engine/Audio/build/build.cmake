@@ -33,6 +33,8 @@ add_library(audio
 )
 
 settingsCR(audio)
+#microsoft bug see https://developercommunity.visualstudio.com/t/warning-C4005:-Outptr:-macro-redefinit/1546919
+target_compile_options(audio PRIVATE /WX-)
 
 target_link_libraries(audio PUBLIC
     assets
