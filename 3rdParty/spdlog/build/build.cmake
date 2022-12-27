@@ -35,5 +35,10 @@ settings3rdParty(spdlog)
 set_property(TARGET spdlog APPEND PROPERTY LINKER_LANGUAGE CPP)
 
 target_compile_definitions(spdlog PUBLIC SPDLOG_COMPILED_LIB)
+target_compile_definitions(spdlog PUBLIC SPDLOG_FMT_EXTERNAL)
 
 target_include_directories(spdlog SYSTEM PUBLIC "${root}/spdlog/include")
+
+target_link_libraries(spdlog PUBLIC
+	fmt
+)
