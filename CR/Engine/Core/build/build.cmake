@@ -8,6 +8,7 @@ set(INTERFACE_FILES
     ${root}/interface/Algorithm.ixx
     ${root}/interface/BinaryStream.ixx
     ${root}/interface/Core.ixx
+    ${root}/interface/EightCC.ixx
     ${root}/interface/FileHandle.ixx
     ${root}/interface/Function.ixx
     ${root}/interface/Guid.ixx

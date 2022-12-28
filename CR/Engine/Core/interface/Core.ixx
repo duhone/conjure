@@ -2,6 +2,7 @@ export module CR.Engine.Core;
 
 export import CR.Engine.Core.Algorithm;
 export import CR.Engine.Core.BinaryStream;
+export import CR.Engine.Core.EightCC;
 export import CR.Engine.Core.FileHandle;
 export import CR.Engine.Core.Function;
 export import CR.Engine.Core.Guid;
