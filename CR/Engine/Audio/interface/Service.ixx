@@ -27,7 +27,7 @@ import <vector>;
 namespace CR::Engine::Audio {
 	export class Service {
 	  public:
-		static std::type_index s_typeIndex;
+		static inline constexpr uint64_t s_typeIndex = CR::Engine::Core::EightCC("EAudServ");
 
 		Service(bool a_checkForClipping);
 		~Service()              = default;
@@ -59,8 +59,6 @@ module :private;
 
 namespace cecore = CR::Engine::Core;
 namespace ceaud  = CR::Engine::Audio;
-
-std::type_index ceaud::Service::s_typeIndex{typeid(Service)};
 
 bool ceaud::Service::Mix([[maybe_unused]] std::span<float>& a_buffer, [[maybe_unused]] int32_t a_numChannels,
                          [[maybe_unused]] int32_t a_sampleRate,

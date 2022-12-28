@@ -2,6 +2,8 @@ export module CR.Engine.Core.EightCC;
 
 import <cassert>;
 import <cstdint>;
+import <cstdio>;
+import <string_view>;
 
 export namespace CR::Engine::Core {
 	consteval std::uint64_t EightCC(const char eightcc[9]) {
@@ -13,5 +15,10 @@ export namespace CR::Engine::Core {
 		}
 
 		return result;
+	}
+
+	//only use in debugging/logging code
+	std::string_view EightCC(std::uint64_t eightcc) {
+		return {reinterpret_cast<const char*>(&eightcc), 8};
 	}
 }    // namespace CR::Engine::Core

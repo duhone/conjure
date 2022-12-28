@@ -22,7 +22,7 @@ import <unordered_map>;
 namespace CR::Engine::Audio {
 	export class MusicLibrary {
 	  public:
-		static std::type_index s_typeIndex;
+		static inline constexpr uint64_t s_typeIndex = CR::Engine::Core::EightCC("EAudMusi");
 
 		MusicLibrary();
 
@@ -76,8 +76,6 @@ namespace cea     = CR::Engine::Audio;
 namespace cecomp  = CR::Engine::Compression;
 
 namespace fs = std::filesystem;
-
-std::type_index cea::MusicLibrary::s_typeIndex{typeid(MusicLibrary)};
 
 cea::MusicLibrary::MusicLibrary() {
 	auto& assetService = cecore::GetService<ceasset::Service>();

@@ -24,7 +24,7 @@ import <unordered_map>;
 namespace CR::Engine::Audio {
 	export class FXLibrary {
 	  public:
-		static std::type_index s_typeIndex;
+		static inline constexpr uint64_t s_typeIndex = CR::Engine::Core::EightCC("EAudFxfx");
 
 		FXLibrary();
 
@@ -71,8 +71,6 @@ namespace cea     = CR::Engine::Audio;
 namespace cecomp  = CR::Engine::Compression;
 
 namespace fs = std::filesystem;
-
-std::type_index cea::FXLibrary::s_typeIndex{typeid(FXLibrary)};
 
 cea::FXLibrary::FXLibrary() {
 	auto& assetService = cecore::GetService<ceasset::Service>();

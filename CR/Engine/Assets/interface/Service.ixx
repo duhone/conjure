@@ -17,7 +17,7 @@ import <typeindex>;
 namespace CR::Engine::Assets {
 	export class Service {
 	  public:
-		static std::type_index s_typeIndex;
+		static inline constexpr uint64_t s_typeIndex = CR::Engine::Core::EightCC("EAstServ");
 
 		enum Partitions { Audio };
 
@@ -44,8 +44,6 @@ namespace cecore   = CR::Engine::Core;
 namespace ceassets = CR::Engine::Assets;
 
 namespace fs = std::filesystem;
-
-std::type_index ceassets::Service::s_typeIndex{typeid(Service)};
 
 namespace {
 	constexpr std::string_view c_partitionFolders[] = {"Audio"};

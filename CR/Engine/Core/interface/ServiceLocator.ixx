@@ -4,6 +4,8 @@ module;
 
 export module CR.Engine.Core.ServiceLocator;
 
+import CR.Engine.Core.EightCC;
+
 import <any>;
 import <memory>;
 import <typeinfo>;
@@ -25,7 +27,7 @@ namespace CR::Engine::Core {
 		template<typename T, typename... ArgsT>
 		void Add(ArgsT&&... args) {
 			CR_ASSERT(!m_services.contains(T::s_typeIndex), "Service {} already added",
-			          T::s_typeIndex.name());
+			          EightCC(T::s_typeIndex));
 			std::unique_ptr<Service> service = std::make_unique<ServiceImpl<T>>(std::forward<ArgsT>(args)...);
 			m_services[T::s_typeIndex]       = std::move(service);
 		}
@@ -33,8 +35,8 @@ namespace CR::Engine::Core {
 		template<typename T>
 		T& Get() {
 			auto serviceIter = m_services.find(T::s_typeIndex);
-			CR_ASSERT(serviceIter != m_services.end(), "Could not find service {}", T::s_typeIndex.name());
-			CR_ASSERT_AUDIT(serviceIter->second.get(), "Service {} not constructed", T::s_typeIndex.name());
+			CR_ASSERT(serviceIter != m_services.end(), "Could not find service {}", EightCC(T::s_typeIndex));
+			CR_ASSERT_AUDIT(serviceIter->second.get(), "Service {} not constructed", EightCC(T::s_typeIndex));
 			return *std::launder(reinterpret_cast<T*>(serviceIter->second->GetService()));
 		}
 
@@ -75,7 +77,7 @@ namespace CR::Engine::Core {
 			alignas(T) std::byte buffer[sizeof(T)];
 		};
 
-		std::unordered_map<std::type_index, std::unique_ptr<Service>> m_services;
+		std::unordered_map<std::uint64_t, std::unique_ptr<Service>> m_services;
 	};
 }    // namespace CR::Engine::Core
 

@@ -14,7 +14,7 @@ import <typeindex>;
 namespace CR::Engine::Input {
 	export class Service {
 	  public:
-		static std::type_index s_typeIndex;
+		static inline constexpr uint64_t s_typeIndex = CR::Engine::Core::EightCC("EInpServ");
 
 		Service(CR::Engine::Platform::Window& a_window);
 		~Service()              = default;
@@ -37,8 +37,6 @@ import CR.Engine.Input.RegionService;
 
 namespace cecore  = CR::Engine::Core;
 namespace ceinput = CR::Engine::Input;
-
-std::type_index ceinput::Service::s_typeIndex{typeid(Service)};
 
 ceinput::Service::Service(CR::Engine::Platform::Window& a_window) : m_window(a_window) {
 	cecore::AddService<RegionService>();
