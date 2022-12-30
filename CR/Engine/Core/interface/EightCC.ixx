@@ -17,7 +17,7 @@ export namespace CR::Engine::Core {
 		return result;
 	}
 
-	//only use in debugging/logging code
+	//only use in debugging/logging code, should be able to make consteval too, compiler complains.
 	std::string_view EightCC(std::uint64_t eightcc) {
 		return {reinterpret_cast<const char*>(&eightcc), 8};
 	}

@@ -8,9 +8,9 @@ module CR.Engine.Platform.PipeClient;
 
 import CR.Engine.Core.Literals;
 
-import<cassert>;
-import<stdexcept>;
-import<thread>;
+import <cassert>;
+import <stdexcept>;
+import <thread>;
 
 namespace CR::Engine::Platform {
 	struct PipeClientData {
@@ -65,7 +65,7 @@ cep::PipeClient& cep::PipeClient::operator=(PipeClient&& a_other) noexcept {
 
 void cep::PipeClient::SendPipeMessage(const void* a_msg, size_t a_msgSize) {
 	DWORD bytesWritten = 0;
-	CR_ASSERT(a_msgSize < 4_Kb,
+	CR_ASSERT(a_msgSize < 4_KB,
 	          "a_msgSize too large");    // arbitrary, but if larger than this might want to switch to
 	                                     // an async implementation
 	ResetEvent(m_data->m_writeEvent);
@@ -80,7 +80,7 @@ void cep::PipeClient::SendPipeMessage(const void* a_msg, size_t a_msgSize) {
 }
 
 void cep::PipeClient::RunMsgHandler() {
-	char msg[4_Kb];
+	char msg[4_KB];
 	DWORD bytesRead;
 	OVERLAPPED overlapped;
 	memset(&overlapped, 0, sizeof(overlapped));
@@ -88,7 +88,7 @@ void cep::PipeClient::RunMsgHandler() {
 	overlapped.hEvent    = completeEvent;
 	while(!m_data->m_closed.load(std::memory_order_acquire)) {
 		ResetEvent(completeEvent);
-		auto result = ReadFile(m_data->m_pipeHandle, msg, static_cast<DWORD>(4_Kb), nullptr, &overlapped);
+		auto result = ReadFile(m_data->m_pipeHandle, msg, static_cast<DWORD>(4_KB), nullptr, &overlapped);
 		auto error  = GetLastError();
 		if(!result && error == ERROR_IO_PENDING) {
 			if(GetOverlappedResult(m_data->m_pipeHandle, &overlapped, &bytesRead, TRUE) != 0) {
