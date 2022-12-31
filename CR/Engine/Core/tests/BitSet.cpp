@@ -5,4 +5,6 @@ import CR.Engine.Core.BitSet;
 using namespace std;
 using namespace CR::Engine::Core;
 
-TEST_CASE("BitSet") {}
+TEST_CASE("BitSet") {
+	BitSet bitset;
+}
