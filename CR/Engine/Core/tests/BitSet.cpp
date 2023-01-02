@@ -36,3 +36,16 @@ TEST_CASE("BitSet Basic") {
 	CHECK(bitset.contains(43) == false);
 	CHECK(bitset.contains(128) == false);
 }
+
+TEST_CASE("BitSet Find integer not in set") {
+	BitSet<512> bitset;
+	CHECK(bitset.FindNotInSet() == 0);
+	bitset.insert(6);
+	CHECK(bitset.FindNotInSet() == 0);
+	bitset.insert(0);
+	CHECK(bitset.FindNotInSet() == 1);
+	for(std::uint16_t i = 0; i < 128; ++i) { bitset.insert(i); }
+	CHECK(bitset.FindNotInSet() == 128);
+	bitset.insert(128);
+	CHECK(bitset.FindNotInSet() == 129);
+}

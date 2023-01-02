@@ -54,6 +54,17 @@ namespace CR::Engine::Core {
 
 		constexpr void clear() noexcept { m_words.fill(0); }
 
+		// TODO: I don't like the name of this function.
+		// Find an integer not in the set. Will be the smallest one
+		constexpr std::uint16_t FindNotInSet() const noexcept {
+			CR_ASSERT_AUDIT(size() != capacity(), "bit set is full, undefined behavior");
+			int32_t i{};
+			std::uint64_t word{};
+			while((word = m_words[i++]) == std::numeric_limits<std::uint64_t>::max()) {}
+			auto bitPos = word == 0 ? 0 : std::countr_one(word);
+			return static_cast<std::uint16_t>(bitPos + (64 * (i - 1)));
+		}
+
 	  private:
 		// failing to compile as a std::array for some reason
 		std::array<std::uint64_t, Size / 64> m_words{};
