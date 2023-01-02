@@ -7,40 +7,57 @@ export module CR.Engine.Core.BitSet;
 import <bit>;
 import <cstdint>;
 import <limits>;
-import <vector>;
+import <cstdio>;
+import <array>;
 
 namespace CR::Engine::Core {
-	export class alignas(64) BitSet final {
-		static inline const uint32_t c_numStaticWords = 4;
+	export template<std::uint16_t Size>
+	class BitSet final {
+		static_assert(Size % 64 == 0, "BitSet must be a multiple of 64 bits, keep it simple");
 
 	  public:
-		BitSet()                         = default;
-		BitSet(const BitSet&)            = default;
-		BitSet(BitSet&&)                 = default;
-		BitSet& operator=(const BitSet&) = default;
-		BitSet& operator=(BitSet&&)      = default;
+		constexpr BitSet()                         = default;
+		constexpr BitSet(const BitSet&)            = default;
+		constexpr BitSet(BitSet&&)                 = default;
+		constexpr BitSet& operator=(const BitSet&) = default;
+		constexpr BitSet& operator=(BitSet&&)      = default;
 
-		[[nodiscard]] uint16_t size() const noexcept {
+		// number of integers in the set. i.e. the popcount of entire BitSet
+		[[nodiscard]] constexpr uint16_t size() const noexcept {
 			uint32_t result{};
-			for(const auto& word : m_staticWords) { result += std::popcount(word); }
-			for(const auto& word : m_dynamicWords) { result += std::popcount(word); }
+			for(const auto& word : m_words) { result += std::popcount(word); }
 			CR_ASSERT_AUDIT(result <= std::numeric_limits<uint16_t>::max(), "Bit set supports max of 64K");
 			return static_cast<uint16_t>(result);
 		}
 
-		[[nodiscard]] uint16_t capacity() const noexcept {
-			auto result = (std::size(m_staticWords) + std::size(m_dynamicWords)) * 64;
-			CR_ASSERT_AUDIT(result <= std::numeric_limits<uint16_t>::max(), "Bit set supports max of 64K");
-			return static_cast<uint16_t>(result);
+		[[nodiscard]] constexpr bool empty() const noexcept { return size() == 0; }
+
+		[[nodiscard]] constexpr uint16_t capacity() const noexcept { return Size; }
+
+		[[nodiscard]] constexpr bool contains(std::uint16_t a_value) noexcept {
+			CR_ASSERT_AUDIT(a_value < Size, "bitset capacity not large enough to hold {}", a_value);
+			auto& word = m_words[a_value / 64];
+			return ((1ull << (a_value % 64)) & word) != 0ull;
 		}
+
+		constexpr void insert(std::uint16_t a_value) noexcept {
+			CR_ASSERT_AUDIT(a_value < Size, "bitset capacity not large enough to hold {}", a_value);
+			auto& word = m_words[a_value / 64];
+			word |= 1ull << (a_value % 64);
+		}
+
+		constexpr void erase(std::uint16_t a_value) noexcept {
+			CR_ASSERT_AUDIT(a_value < Size, "bitset capacity not large enough to hold {}", a_value);
+			auto& word = m_words[a_value / 64];
+			word &= ~(1ull << (a_value % 64));
+		}
+
+		constexpr void clear() noexcept { m_words.fill(0); }
 
 	  private:
 		// failing to compile as a std::array for some reason
-		std::uint64_t m_staticWords[c_numStaticWords];
-		std::vector<uint64_t> m_dynamicWords;
+		std::array<std::uint64_t, Size / 64> m_words{};
 	};
-
-	static_assert(sizeof(BitSet) <= 64, "A Bitset should only take 1 cache line in-situ");
 }    // namespace CR::Engine::Core
 
 module :private;
