@@ -32,9 +32,9 @@ namespace CR::Engine::Platform {
 		// call on main frame once per frame. as last as possible to minimize latency;
 		void UpdateInput();
 
-		// OS States are for use in Editors, or non full screen apps
-		// Os States have OS processing applied, like mouse acceleration ect.
-		// OS States have higher latency though.
+		// OS States are for use in Editors, or non full screen apps, or anytime you need to make sure to line
+		// up to the onscreen cursor. Os States have OS processing applied, like mouse acceleration ect. OS
+		// States have higher latency though.
 		struct MouseStateOS {
 			bool LeftDown{};
 			glm::ivec2 Position{};

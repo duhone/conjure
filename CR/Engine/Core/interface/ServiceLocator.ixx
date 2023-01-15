@@ -25,11 +25,13 @@ namespace CR::Engine::Core {
 		ServiceLocator& operator=(ServiceLocator&&)      = delete;
 
 		template<typename T, typename... ArgsT>
-		void Add(ArgsT&&... args) {
+		T& Add(ArgsT&&... args) {
 			CR_ASSERT(!m_services.contains(T::s_typeIndex), "Service {} already added",
 			          EightCC(T::s_typeIndex));
 			std::unique_ptr<Service> service = std::make_unique<ServiceImpl<T>>(std::forward<ArgsT>(args)...);
+			auto result                      = std::launder(reinterpret_cast<T*>(service->GetService()));
 			m_services[T::s_typeIndex]       = std::move(service);
+			return *result;
 		}
 
 		template<typename T>

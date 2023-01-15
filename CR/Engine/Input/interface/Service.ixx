@@ -8,8 +8,13 @@ export module CR.Engine.Input.Service;
 
 import CR.Engine.Core;
 import CR.Engine.Platform;
+import CR.Engine.Input.RegionService;
 
 import <typeindex>;
+
+namespace cecore  = CR::Engine::Core;
+namespace ceinput = CR::Engine::Input;
+namespace ceplat  = CR::Engine::Platform;
 
 namespace CR::Engine::Input {
 	export class Service {
@@ -28,18 +33,18 @@ namespace CR::Engine::Input {
 
 	  private:
 		CR::Engine::Platform::Window& m_window;
+		RegionService& m_regionService;
 	};
 }    // namespace CR::Engine::Input
 
 module :private;
 
-import CR.Engine.Input.RegionService;
+ceinput::Service::Service(CR::Engine::Platform::Window& a_window) :
+    m_window(a_window), m_regionService(cecore::AddService<RegionService>()) {}
 
-namespace cecore  = CR::Engine::Core;
-namespace ceinput = CR::Engine::Input;
+void ceinput::Service::Update() {
+	const auto& mouseState = m_window.GetMouseStateOS();
+	m_regionService.UpdateCursor(true, mouseState.Position);
 
-ceinput::Service::Service(CR::Engine::Platform::Window& a_window) : m_window(a_window) {
-	cecore::AddService<RegionService>();
+	m_regionService.Update();
 }
-
-void ceinput::Service::Update() {}

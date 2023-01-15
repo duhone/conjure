@@ -15,9 +15,9 @@ namespace CR::Engine::Core {
 	[[nodiscard]] std::optional<CR::Engine::Core::ServiceLocator>& GetServices();
 
 	export template<typename T, typename... ArgsT>
-	void AddService(ArgsT&&... args) {
+	T& AddService(ArgsT&&... args) {
 		CR_ASSERT(GetServices().has_value(), "Services missing");
-		GetServices()->Add<T>(std::forward<ArgsT>(args)...);
+		return GetServices()->Add<T>(std::forward<ArgsT>(args)...);
 	}
 
 	export template<typename T>

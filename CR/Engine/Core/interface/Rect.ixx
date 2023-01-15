@@ -12,7 +12,7 @@ export namespace CR::Engine::Core {
 		glm::vec<2, T> Position;
 		glm::vec<2, T> Size;
 
-		bool Contains(const glm::vec<2, T> a_point) const noexcept {
+		bool Contains(const glm::vec<2, T>& a_point) const noexcept {
 			if(a_point.x < Position.x) return false;
 			if(a_point.x >= Position.x + Size.x) return false;
 			if(a_point.y < Position.y) return false;
