@@ -48,11 +48,16 @@ int main(int, char*) {
 		auto fanfareFX = ceaud::GetHandleFX(cecore::C_Hash64("FX/levelupfanfare.wav"));
 		fanfareFX.Play();
 
-		music.Play(cecore::C_Hash64("Music/BGM_Menu.wav"));
+		// music.Play(cecore::C_Hash64("Music/BGM_Menu.wav"));
+
+		ceinput::Regions regions;
+		auto region = regions.Create({{0, 0}, {400, 300}});
 
 		while(!done) {
 			window.UpdateInput();
 			inputService.Update();
+
+			if(regions.GetActive() == region) { fanfareFX.Play(); }
 
 			std::this_thread::sleep_for(16ms);
 		}

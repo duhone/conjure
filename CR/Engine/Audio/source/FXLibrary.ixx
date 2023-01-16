@@ -59,7 +59,7 @@ namespace CR::Engine::Audio {
 		CR::Engine::Core::Locked<std::vector<uint16_t>> m_playRequests;
 		std::vector<Playing> m_playing;
 		float m_volume{1.0f};
-		bool m_mute;
+		bool m_mute{};
 	};
 }    // namespace CR::Engine::Audio
 

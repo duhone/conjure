@@ -64,7 +64,7 @@ namespace CR::Engine::Audio {
 		std::optional<uint16_t> m_pending;
 		uint32_t m_transition{0};
 		float m_volume{1.0f};
-		bool m_mute;
+		bool m_mute{};
 	};
 }    // namespace CR::Engine::Audio
 

@@ -22,17 +22,20 @@ namespace CR::Engine::Input {
 		static_assert(c_maxRegions < 64_KB);
 
 	  public:
-		static inline constexpr uint64_t s_typeIndex = cecore::EightCC("EInpRegn");
+		static inline constexpr uint64_t s_typeIndex     = cecore::EightCC("EInpRegn");
+		static inline constexpr uint16_t s_invalidRegion = std::numeric_limits<std::uint16_t>::max();
 
 		std::uint16_t Create(const cecore::Rect2Di32& a_initial);
 		const cecore::Rect2Di32& Retrieve(std::uint16_t a_id) const;
 		cecore::Rect2Di32& Retrieve(std::uint16_t a_id);
-		void Update(std::uint16_t a_id, cecore::Rect2Di32& a_region);
+		void Update(std::uint16_t a_id, const cecore::Rect2Di32& a_region);
 		void Delete(std::uint16_t a_id);
 
 		void UpdateCursor(bool a_enabled, const glm::ivec2& a_position);
 
 		void Update();
+
+		std::uint16_t GetActive() const { return m_activeRegion; }
 
 	  private:
 		cecore::BitSet<c_maxRegions> m_regionsUsed;
@@ -48,7 +51,8 @@ module :private;
 namespace ceinput = CR::Engine::Input;
 
 std::uint16_t ceinput::RegionService::Create([[maybe_unused]] const cecore::Rect2Di32& a_initial) {
-	auto avail       = m_regionsUsed.FindNotInSet();
+	auto avail = m_regionsUsed.FindNotInSet();
+	m_regionsUsed.insert(avail);
 	m_regions[avail] = a_initial;
 	return avail;
 }
@@ -63,7 +67,7 @@ cecore::Rect2Di32& ceinput::RegionService::Retrieve(std::uint16_t a_id) {
 	return m_regions[a_id];
 }
 
-void ceinput::RegionService::Update(std::uint16_t a_id, cecore::Rect2Di32& a_region) {
+void ceinput::RegionService::Update(std::uint16_t a_id, const cecore::Rect2Di32& a_region) {
 	CR_ASSERT_AUDIT(a_id < c_maxRegions, "invalid input region id");
 	m_regions[a_id] = a_region;
 }
@@ -82,6 +86,7 @@ void ceinput::RegionService::UpdateCursor(bool a_enabled, const glm::ivec2& a_po
 void ceinput::RegionService::Update() {
 	if(!m_cursorEnabled) { return; }
 
+	m_activeRegion = s_invalidRegion;
 	for(const auto& region : m_regionsUsed) {
 		if(m_regions[region].Contains(m_cursorPosition)) { m_activeRegion = region; }
 	}
