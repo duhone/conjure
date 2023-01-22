@@ -4,6 +4,8 @@
 
 export module CR.Engine.Graphics.Service;
 
+import CR.Engine.Graphics.DeviceService;
+
 import CR.Engine.Core;
 import CR.Engine.Platform;
 
@@ -28,7 +30,7 @@ namespace CR::Engine::Graphics {
 		void Update();
 
 	  private:
-		ceplat::Window& m_window;
+		DeviceService& m_deviceService;
 	};
 }    // namespace CR::Engine::Graphics
 
@@ -36,6 +38,7 @@ module :private;
 
 namespace cegraph = CR::Engine::Graphics;
 
-cegraph::Service::Service(ceplat::Window& a_window) : m_window(a_window) {}
+cegraph::Service::Service(ceplat::Window& a_window) :
+    m_deviceService(cecore::AddService<DeviceService>(a_window)) {}
 
 void cegraph::Service::Update() {}
