@@ -19,28 +19,18 @@ namespace CR::Engine::Input {
 		friend Regions;
 
 	  public:
-		Region() = default;
-		~Region() {
-			if(!m_service) { return; }
-			m_service->Delete(m_id);
-		}
+		Region()  = default;
+		~Region() = default;
 
-		void Update(const cecore::Rect2Di32& a_value) {
-			CR_ASSERT_AUDIT(m_service != nullptr, "trying to updatie an invalid Region");
-			m_service->Update(m_id, a_value);
-		}
-
-		bool operator==(const Region& a_other) const {
-			if(m_service == nullptr || a_other.m_service == nullptr) { return false; }
-			return m_id == a_other.m_id;
-		}
+		bool operator==(const Region& a_other) const = default;
 		bool operator!=(const Region& a_other) const = default;
 
-	  private:
-		Region(RegionService& a_service, std::uint16_t a_id) : m_service(&a_service), m_id(a_id) {}
+		bool IsValid() const { return m_id != RegionService::s_invalidRegion; }
 
-		RegionService* m_service{};
-		std::uint16_t m_id{};
+	  private:
+		Region(std::uint16_t a_id) : m_id(a_id) {}
+
+		std::uint16_t m_id{RegionService::s_invalidRegion};
 	};
 
 	export class Regions final {
@@ -49,14 +39,23 @@ namespace CR::Engine::Input {
 
 		Region Create(const cecore::Rect2Di32& a_initial) {
 			auto id = m_service.Create(a_initial);
-			return Region{m_service, id};
+			return Region{id};
 		}
 
-		Region GetActive() const {
-			auto active = m_service.GetActive();
-			if(active == RegionService::s_invalidRegion) { return Region{}; }
-			return Region(m_service, active);
+		void Delete(Region& a_region) {
+			CR_ASSERT_AUDIT(a_region.IsValid(), "trying to delete an invalid region");
+			m_service.Delete(a_region.m_id);
+			a_region = Region{};
 		}
+
+		void Update(Region a_region, const cecore::Rect2Di32& a_value) {
+			CR_ASSERT_AUDIT(a_region.IsValid(), "trying to update an invalid region");
+			m_service.Update(a_region.m_id, a_value);
+		}
+
+		Region GetActive() const { return Region(m_service.GetActive()); }
+
+		bool WasActiveClicked() const { return (m_service.GetCursorState() & CursorStates::Clicked) != 0; }
 
 	  private:
 		RegionService& m_service;

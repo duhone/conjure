@@ -44,7 +44,7 @@ ceinput::Service::Service(CR::Engine::Platform::Window& a_window) :
 
 void ceinput::Service::Update() {
 	const auto& mouseState = m_window.GetMouseStateOS();
-	m_regionService.UpdateCursor(true, mouseState.Position);
+	m_regionService.UpdateCursor(true, mouseState.Position, mouseState.LeftDown);
 
 	m_regionService.Update();
 }
