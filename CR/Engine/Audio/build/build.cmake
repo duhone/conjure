@@ -40,6 +40,7 @@ target_link_libraries(audio PUBLIC
     assets
 	compression
 	headerUnits
+	drlibs
 	fmt
 	function2
 	glm
