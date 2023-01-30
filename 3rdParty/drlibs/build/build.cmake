@@ -21,8 +21,7 @@ settings3rdParty(drlibs)
 
 set_property(TARGET drlibs APPEND PROPERTY LINKER_LANGUAGE CPP)
 
-target_compile_definitions(drlibs PUBLIC SPDLOG_COMPILED_LIB)
-target_compile_definitions(drlibs PUBLIC SPDLOG_FMT_EXTERNAL)
+target_compile_definitions(drlibs PUBLIC DR_FLAC_NO_STDIO)
 
 target_include_directories(drlibs SYSTEM PUBLIC "${root}/drlibs")
 
