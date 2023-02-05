@@ -2,11 +2,12 @@ module;
 
 #include "core/Log.h"
 
+#include <dr_flac.h>
+
 export module CR.Engine.Audio.FXLibrary;
 
 import CR.Engine.Assets;
 import CR.Engine.Core;
-import CR.Engine.Compression;
 
 import CR.Engine.Audio.Sample;
 import CR.Engine.Audio.Utilities;
@@ -68,19 +69,43 @@ module :private;
 namespace ceasset = CR::Engine::Assets;
 namespace cecore  = CR::Engine::Core;
 namespace cea     = CR::Engine::Audio;
-namespace cecomp  = CR::Engine::Compression;
 
 namespace fs = std::filesystem;
 
 cea::FXLibrary::FXLibrary() {
 	auto& assetService = cecore::GetService<ceasset::Service>();
-	assetService.Load(ceasset::Service::Partitions::Audio, "FX", "wav",
+	assetService.Load(ceasset::Service::Partitions::Audio, "FX", "flac",
 	                  [&](uint64_t a_hash, std::string_view a_path, const std::span<std::byte> a_data) {
 		                  CR_ASSERT(m_pcmData.size() < std::numeric_limits<uint16_t>::max(),
 		                            "Too many fx, max supported is 64K");
 		                  m_lookup[a_hash] = (uint16_t)m_pcmData.size();
 		                  m_paths.push_back(std::string(a_path));
-		                  m_pcmData.push_back(cecomp::Wave::Decompress(a_data, a_path));
+
+		                  uint32_t uncompressedSize{};
+		                  auto metaData = [](void* pUserData, drflac_metadata* pMetadata) {
+			                  if(pMetadata->type == DRFLAC_METADATA_BLOCK_TYPE_STREAMINFO) {
+				                  uint32_t* size = (uint32_t*)pUserData;
+				                  *size          = (uint32_t)pMetadata->data.streaminfo.totalPCMFrameCount;
+			                  }
+		                  };
+		                  auto drFlac = drflac_open_memory_with_metadata(
+		                      a_data.data(), a_data.size(), metaData, &uncompressedSize, nullptr);
+
+		                  CR_ASSERT(uncompressedSize > 0, "0 size flac file");
+		                  CR::Engine::Core::StorageBuffer<int16_t> pcmData;
+		                  pcmData.prepare(uncompressedSize);
+
+		                  auto framesRead =
+		                      drflac_read_pcm_frames_s16(drFlac, uncompressedSize, pcmData.data());
+		                  while(framesRead < uncompressedSize) {
+			                  framesRead += drflac_read_pcm_frames_s16(drFlac, uncompressedSize - framesRead,
+			                                                           pcmData.data() + framesRead);
+		                  }
+		                  drflac_close(drFlac);
+
+		                  pcmData.commit(uncompressedSize);
+
+		                  m_pcmData.emplace_back(std::move(pcmData));
 	                  });
 }
 

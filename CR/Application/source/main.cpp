@@ -48,7 +48,7 @@ int main(int, char*) {
 		handleFxs.SetVolume(1.0f);
 		music.SetVolume(0.75f);
 
-		auto fanfareFX = ceaud::GetHandleFX(cecore::C_Hash64("FX/levelupfanfare.wav"));
+		auto fanfareFX = ceaud::GetHandleFX(cecore::C_Hash64("FX/levelupfanfare.flac"));
 
 		music.Play(cecore::C_Hash64("Music/BGM_Menu.flac"));
 
