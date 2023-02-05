@@ -2,11 +2,12 @@ module;
 
 #include "core/Log.h"
 
+#include <dr_flac.h>
+
 export module CR.Engine.Audio.MusicLibrary;
 
 import CR.Engine.Assets;
 import CR.Engine.Core;
-import CR.Engine.Compression;
 
 import CR.Engine.Audio.Constants;
 import CR.Engine.Audio.Sample;
@@ -26,9 +27,11 @@ namespace CR::Engine::Audio {
 
 		MusicLibrary();
 
+		void Stop();
+
 		void Play(uint64_t a_nameHash) {
 			uint16_t index = GetIndex(a_nameHash);
-			CR_ASSERT(index < m_pcmData.size(), "Trying to play an invalid FX {}", index);
+			CR_ASSERT(index < m_flacData.size(), "Trying to play an invalid Music {}", index);
 			m_playRequest([index](std::optional<uint16_t>& a_request) { a_request.emplace(index); });
 		}
 
@@ -52,13 +55,13 @@ namespace CR::Engine::Audio {
 
 		std::unordered_map<uint64_t, uint16_t> m_lookup;
 		std::vector<std::string> m_paths;
-		std::vector<CR::Engine::Core::StorageBuffer<int16_t>> m_pcmData;
+		std::vector<std::vector<std::byte>> m_flacData;
 
 		CR::Engine::Core::Locked<std::optional<uint16_t>> m_playRequest;
 
 		struct Playing {
-			uint32_t Offset;
 			uint16_t Index;
+			drflac* FlacPtr{};
 		};
 		std::optional<Playing> m_playing;
 		std::optional<uint16_t> m_pending;
@@ -73,20 +76,23 @@ module :private;
 namespace ceasset = CR::Engine::Assets;
 namespace cecore  = CR::Engine::Core;
 namespace cea     = CR::Engine::Audio;
-namespace cecomp  = CR::Engine::Compression;
 
 namespace fs = std::filesystem;
 
 cea::MusicLibrary::MusicLibrary() {
 	auto& assetService = cecore::GetService<ceasset::Service>();
-	assetService.Load(ceasset::Service::Partitions::Audio, "Music", "wav",
+	assetService.Load(ceasset::Service::Partitions::Audio, "Music", "flac",
 	                  [&](uint64_t a_hash, std::string_view a_path, const std::span<std::byte> a_data) {
-		                  CR_ASSERT(m_pcmData.size() < std::numeric_limits<uint16_t>::max(),
+		                  CR_ASSERT(m_flacData.size() < std::numeric_limits<uint16_t>::max(),
 		                            "Too many music files, max supported is 64K");
-		                  m_lookup[a_hash] = (uint16_t)m_pcmData.size();
+		                  m_lookup[a_hash] = (uint16_t)m_flacData.size();
 		                  m_paths.push_back(std::string(a_path));
-		                  m_pcmData.push_back(cecomp::Wave::Decompress(a_data, a_path));
+		                  m_flacData.emplace_back(a_data.begin(), a_data.end());
 	                  });
+}
+
+void cea::MusicLibrary::Stop() {
+	if(m_playing.has_value()) { drflac_close(m_playing.value().FlacPtr); }
 }
 
 void cea::MusicLibrary::Mix(std::span<Sample> a_data) {
@@ -96,14 +102,20 @@ void cea::MusicLibrary::Mix(std::span<Sample> a_data) {
 				m_pending    = a_request;
 				m_transition = c_transitionSamples;
 			} else {
-				m_playing.emplace(0, a_request.value());
+				CR_ASSERT_AUDIT(!m_playing.has_value(), "should be no need to free drflac here");
+				const auto& flacData = m_flacData[a_request.value()];
+				auto drFlac          = drflac_open_memory(flacData.data(), flacData.size(), nullptr);
+				m_playing.emplace(a_request.value(), drFlac);
 			}
 			a_request.reset();
 		}
 	});
 
 	if(m_pending.has_value() && m_transition <= 0) {
-		m_playing.emplace(0, m_pending.value());
+		if(m_playing.has_value()) { drflac_close(m_playing.value().FlacPtr); }
+		const auto& flacData = m_flacData[m_pending.value()];
+		auto drFlac          = drflac_open_memory(flacData.data(), flacData.size(), nullptr);
+		m_playing.emplace(m_pending.value(), drFlac);
 		m_pending.reset();
 	}
 
@@ -111,23 +123,26 @@ void cea::MusicLibrary::Mix(std::span<Sample> a_data) {
 	CR_ASSERT(!(!m_playing.has_value() && m_pending.has_value()),
 	          "Should not be possible to have a pending, but not playing music track");
 
-	auto& pcmData = m_pcmData[m_playing.value().Index];
-	auto offset   = m_playing.value().Offset;
-	float fade    = (float)m_transition / c_transitionSamples;
+	float fade = (float)m_transition / c_transitionSamples;
 	CR_ASSERT(!m_pending.has_value() || (fade > 0.0f && fade <= 1.0f), "unexpeded fade value");
 
+	float* pcmData  = (float*)alloca(a_data.size() * sizeof(float));
+	auto framesRead = drflac_read_pcm_frames_f32(m_playing.value().FlacPtr, a_data.size(), pcmData);
+	while(framesRead < a_data.size()) {
+		drflac_seek_to_pcm_frame(m_playing.value().FlacPtr, 0);
+		framesRead += drflac_read_pcm_frames_f32(m_playing.value().FlacPtr, a_data.size() - framesRead,
+		                                         pcmData + framesRead);
+	}
+
 	for(int32_t i = 0; i < a_data.size(); ++i) {
-		float sample = pcmData[offset++];
-		if(offset >= pcmData.size()) { offset = 0; }
+		float sample = pcmData[i];
 		if(m_pending.has_value()) {
 			sample *= fade;
 			fade = std::max(0.0f, fade - c_fadeStep);
 		}
-		sample *= m_volume / std::numeric_limits<int16_t>::max();
+		sample *= m_volume;
 		if(m_mute) { sample = 0.0f; }
 		a_data[i].Left += sample;
 		a_data[i].Right += sample;
 	}
-
-	m_playing.value().Offset = offset;
 }
