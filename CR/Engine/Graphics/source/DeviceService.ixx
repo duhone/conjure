@@ -40,11 +40,11 @@ namespace cegraph = CR::Engine::Graphics;
 
 cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_window) {
 	[[maybe_unused]] VkApplicationInfo appInfo;
-	// appInfo.pApplicationName   = a_settings.ApplicationName.c_str();
-	// appInfo.applicationVersion = a_settings.ApplicationVersion;
-	appInfo.pEngineName = "Conjure";
-	// appInfo.engineVersion      = Version;
-	appInfo.apiVersion = VK_API_VERSION_1_2;
+	appInfo.pApplicationName   = CR_APP_NAME;
+	appInfo.applicationVersion = CR_VERSION_APP;
+	appInfo.pEngineName        = CR_ENGINE_NAME;
+	appInfo.engineVersion      = CR_VERSION_ENGINE;
+	appInfo.apiVersion         = VK_API_VERSION_1_2;
 }
 
 void cegraph::DeviceService::Update() {}

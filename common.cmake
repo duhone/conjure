@@ -72,6 +72,23 @@ function(settingsCR target)
 	target_compile_options(${target} PRIVATE /W4)
 	target_compile_options(${target} PRIVATE /WX)
 	
+	# Version can be packed into a single 32 bit int
+	# the max major version is 31. the max minor version is 255. patch can be up to 512K
+	target_compile_definitions(${target} PRIVATE CR_VERSION_ENGINE_MAJOR=0)
+	target_compile_definitions(${target} PRIVATE CR_VERSION_ENGINE_MINOR=1)
+	target_compile_definitions(${target} PRIVATE CR_VERSION_ENGINE_PATCH=0)
+	math(EXPR engineVersion "(0<<27)|(1<<19) | 0" OUTPUT_FORMAT HEXADECIMAL)
+	target_compile_definitions(${target} PRIVATE CR_VERSION_ENGINE=${engineVersion})
+	target_compile_definitions(${target} PRIVATE CR_VERSION_ENGINE_STRING="0.1.0")
+	target_compile_definitions(${target} PRIVATE CR_ENGINE_NAME="Conjure")
+	target_compile_definitions(${target} PRIVATE CR_VERSION_APP_MAJOR=0)
+	target_compile_definitions(${target} PRIVATE CR_VERSION_APP_MINOR=1)
+	target_compile_definitions(${target} PRIVATE CR_VERSION_APP_PATCH=0)
+	math(EXPR appVersion "(0<<27)|(1<<19) | 0" OUTPUT_FORMAT HEXADECIMAL)
+	target_compile_definitions(${target} PRIVATE CR_VERSION_APP=${appVersion})
+	target_compile_definitions(${target} PRIVATE CR_VERSION_APP_STRING="0.1.0")
+	target_compile_definitions(${target} PRIVATE CR_APP_NAME="Conjure")
+	
 	# disable unit tests in profile and final builds
 	# target_compile_definitions(${target} PRIVATE $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<OR:$<CONFIG:Profile>,$<CONFIG:Final>>>:DOCTEST_CONFIG_DISABLE>)
 	
