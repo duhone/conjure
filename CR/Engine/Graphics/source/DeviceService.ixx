@@ -37,6 +37,7 @@ namespace CR::Engine::Graphics {
 	  private:
 		ceplat::Window& m_window;
 		vk::Instance m_instance;
+		vk::SurfaceKHR m_primarySurface;
 	};
 }    // namespace CR::Engine::Graphics
 
@@ -62,11 +63,22 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_win
 	vk::InstanceCreateInfo createInfo;
 	createInfo.pApplicationInfo = &appInfo;
 
+	std::vector<const char*> extensions;
+	extensions.emplace_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+	createInfo.setPEnabledExtensionNames(extensions);
+
 	m_instance = vk::createInstance(createInfo);
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(m_instance);
+
+	vk::Win32SurfaceCreateInfoKHR win32Surface;
+	win32Surface.hinstance = reinterpret_cast<HINSTANCE>(m_window.GetHInstance());
+	win32Surface.hwnd      = reinterpret_cast<HWND>(m_window.GetHWND());
+
+	m_primarySurface = m_instance.createWin32SurfaceKHR(win32Surface);
 }
 
 void cegraph::DeviceService::Stop() {
+	m_instance.destroySurfaceKHR(m_primarySurface);
 	m_instance.destroy();
 }
 

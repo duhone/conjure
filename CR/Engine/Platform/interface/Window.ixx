@@ -48,6 +48,10 @@ namespace CR::Engine::Platform {
 			return m_data.get();
 		}
 
+		// Windows specific, cast back as needed
+		void* GetHInstance() const;
+		void* GetHWND() const;
+
 	  private:
 		void UpdateInputPlatform();
 

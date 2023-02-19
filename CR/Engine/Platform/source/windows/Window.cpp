@@ -20,6 +20,7 @@ namespace CR::Engine::Platform {
 		void UpdateMousePos(int a_x, int a_y);
 		void UpdateLeftMouse(bool a_down, int a_x, int a_y);
 
+		HINSTANCE m_instance{nullptr};
 		HWND m_HWND{nullptr};
 		std::jthread m_thread;
 		Window::OnDestroy_t m_onDestroy;
@@ -127,6 +128,14 @@ void cep::Window::UpdateInputPlatform() {
 	m_mouseState.Position = m_data->m_mousePos;
 }
 
+void* cep::Window::GetHInstance() const {
+	return m_data->m_instance;
+}
+
+void* cep::Window::GetHWND() const {
+	return m_data->m_HWND;
+}
+
 void cep::WindowData::MyCreateWindow(std::string_view a_windowTitle, uint32_t a_width, uint32_t a_height,
                                      Window* self) {
 	// Initialize the window class.
@@ -141,6 +150,8 @@ void cep::WindowData::MyCreateWindow(std::string_view a_windowTitle, uint32_t a_
 
 	RECT windowRect = {0, 0, static_cast<LONG>(a_width), static_cast<LONG>(a_height)};
 	AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
+
+	m_instance = GetModuleHandle(nullptr);
 
 	// Create the window and store a handle to it.
 	m_HWND = CreateWindowEx(NULL, "WindowClass1", std::string(a_windowTitle).c_str(), WS_OVERLAPPEDWINDOW,
