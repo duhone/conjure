@@ -2,8 +2,7 @@
 
 #include "core/Log.h"
 
-#define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
-#include "vulkan/vulkan.hpp"
+#include "volk.h"
 
 export module CR.Engine.Graphics.DeviceService;
 
@@ -36,19 +35,19 @@ namespace CR::Engine::Graphics {
 		void Stop();
 
 	  private:
-		vk::PhysicalDevice FindDevice();
+		VkPhysicalDevice FindDevice();
 
 		ceplat::Window& m_window;
-		vk::Instance m_instance;
-		vk::SurfaceKHR m_primarySurface;
+		VkInstance m_instance;
+		VkSurfaceKHR m_primarySurface;
 
-		vk::Device m_device;
+		VkDevice m_device;
 		int32_t m_graphicsQueueIndex{-1};
 		int32_t m_transferQueueIndex{-1};
 		int32_t m_presentationQueueIndex{-1};
-		vk::Queue m_graphicsQueue;
-		vk::Queue m_transferQueue;
-		vk::Queue m_presentationQueue;
+		VkQueue m_graphicsQueue;
+		VkQueue m_transferQueue;
+		VkQueue m_presentationQueue;
 	};
 }    // namespace CR::Engine::Graphics
 
@@ -56,153 +55,238 @@ module :private;
 
 namespace cegraph = CR::Engine::Graphics;
 
-VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
-
 cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_window) {
-	vk::DynamicLoader loader;
-	PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr =
-	    loader.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
-	VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
+	[[maybe_unused]] auto result = volkInitialize();
+	CR_ASSERT(result == VK_SUCCESS, "Failed to initialize Volk");
 
-	[[maybe_unused]] vk::ApplicationInfo appInfo;
+	VkApplicationInfo appInfo;
+	appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	appInfo.pNext              = nullptr;
 	appInfo.pApplicationName   = CR_APP_NAME;
 	appInfo.applicationVersion = CR_VERSION_APP;
 	appInfo.pEngineName        = CR_ENGINE_NAME;
 	appInfo.engineVersion      = CR_VERSION_ENGINE;
 	appInfo.apiVersion         = VK_API_VERSION_1_2;
 
-	vk::InstanceCreateInfo createInfo;
-	createInfo.pApplicationInfo = &appInfo;
+	VkInstanceCreateInfo createInfo;
+	createInfo.sType               = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	createInfo.pNext               = nullptr;
+	createInfo.pApplicationInfo    = &appInfo;
+	createInfo.enabledLayerCount   = 0;
+	createInfo.ppEnabledLayerNames = nullptr;
+	createInfo.flags               = 0;
 
 	std::vector<const char*> extensions;
+	extensions.emplace_back(VK_KHR_SURFACE_EXTENSION_NAME);
 	extensions.emplace_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-	createInfo.setPEnabledExtensionNames(extensions);
+	createInfo.enabledExtensionCount   = extensions.size();
+	createInfo.ppEnabledExtensionNames = extensions.data();
 
-	m_instance = vk::createInstance(createInfo);
-	VULKAN_HPP_DEFAULT_DISPATCHER.init(m_instance);
+	result = vkCreateInstance(&createInfo, nullptr, &m_instance);
+	CR_ASSERT(result == VK_SUCCESS, "Failed to create vulkan instance");
 
-	vk::Win32SurfaceCreateInfoKHR win32Surface;
+	volkLoadInstance(m_instance);
+
+	VkWin32SurfaceCreateInfoKHR win32Surface;
 	win32Surface.hinstance = reinterpret_cast<HINSTANCE>(m_window.GetHInstance());
 	win32Surface.hwnd      = reinterpret_cast<HWND>(m_window.GetHWND());
 
-	m_primarySurface = m_instance.createWin32SurfaceKHR(win32Surface);
+	vkCreateWin32SurfaceKHR(m_instance, &win32Surface, nullptr, &m_primarySurface);
 
-	vk::PhysicalDevice selectedDevice = FindDevice();
+	VkPhysicalDevice selectedDevice = FindDevice();
 }
 
 void cegraph::DeviceService::Stop() {
-	m_instance.destroySurfaceKHR(m_primarySurface);
-	m_instance.destroy();
+	vkDestroySurfaceKHR(m_instance, m_primarySurface, nullptr);
+	vkDestroyInstance(m_instance, nullptr);
 }
 
 void cegraph::DeviceService::Update() {}
 
-vk::PhysicalDevice cegraph::DeviceService::FindDevice() {
-	std::vector<vk::PhysicalDevice> physicalDevices = m_instance.enumeratePhysicalDevices();
+VkPhysicalDevice cegraph::DeviceService::FindDevice() {
+	std::vector<VkPhysicalDevice> physicalDevices;
+	uint32_t deviceCount{};
+	[[maybe_unused]] auto result = vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
+	CR_ASSERT(result == VK_SUCCESS, "Failed to enumerate vulkan devices");
+	physicalDevices.resize(deviceCount);
+	result = vkEnumeratePhysicalDevices(m_instance, &deviceCount, physicalDevices.data());
+	CR_ASSERT(result == VK_SUCCESS, "Failed to enumerate vulkan devices");
 
-	vk::PhysicalDevice selectedDevice;
-	bool foundDevice = false;
-	for(auto& device : physicalDevices) {
-		auto props = device.getProperties();
-		CR_LOG("Device Name : {}", props.deviceName);
-		if(props.apiVersion < VK_API_VERSION_1_2) {
-			CR_WARN("Device didn't support vulkan 1.2");
-			continue;
-		}
-		auto memProps = device.getMemoryProperties();
-		CR_LOG("  Device max allocations: {}", props.limits.maxMemoryAllocationCount);
-		CR_LOG("  Device max array layers: {}", props.limits.maxImageArrayLayers);
-		CR_LOG("  Device max 2D image dimensions: {}", props.limits.maxImageDimension2D);
-		CR_LOG("  Device max multisample: {}", (VkFlags)props.limits.framebufferColorSampleCounts);
-		for(uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
-			if(memProps.memoryTypes[i].propertyFlags & vk::MemoryPropertyFlagBits::eDeviceLocal) {
-				CR_LOG("  Device Local Memory Amount: {}MB",
-				       memProps.memoryHeaps[memProps.memoryTypes[i].heapIndex].size / (1024 * 1024));
-			}
-		}
+	CR_ASSERT(!physicalDevices.empty(), "No GPU's that support Vulkan on this machine");
 
-		std::vector<vk::QueueFamilyProperties> queueProps = device.getQueueFamilyProperties();
-		std::vector<uint32_t> graphicsQueues;
-		std::vector<uint32_t> transferQueues;
-		std::vector<uint32_t> presentationQueues;
-		std::optional<uint32_t> dedicatedTransfer;
-		std::optional<uint32_t> graphicsAndPresentation;
-		for(uint32_t i = 0; i < queueProps.size(); ++i) {
-			bool supportsGraphics     = false;
-			bool supportsCompute      = false;
-			bool supportsTransfer     = false;
-			bool supportsPresentation = false;
+	int32_t foundDevice = -1;
+	std::vector<VkPhysicalDeviceProperties> physicalDevicesProps;
+	physicalDevicesProps.resize(physicalDevices.size());
+	for(int32_t device = 0; device < physicalDevices.size(); ++device) {
+		vkGetPhysicalDeviceProperties(physicalDevices[device], &physicalDevicesProps[device]);
+	}
 
-			CR_LOG("Queue family: {}", i);
-			// This one should only be false for tesla compute cards and similiar
-			if((queueProps[i].queueFlags & vk::QueueFlagBits::eGraphics) && queueProps[i].queueCount >= 1) {
-				supportsGraphics = true;
-				graphicsQueues.push_back(i);
-				CR_LOG("  supports graphics");
-			}
-			if((queueProps[i].queueFlags & vk::QueueFlagBits::eCompute) && queueProps[i].queueCount >= 1) {
-				supportsCompute = true;
-				CR_LOG("  supports compute");
-			}
-			if((queueProps[i].queueFlags & vk::QueueFlagBits::eTransfer) && queueProps[i].queueCount >= 1) {
-				supportsTransfer = true;
-				transferQueues.push_back(i);
-				CR_LOG("  supports transfer");
-			}
-			if(device.getSurfaceSupportKHR(i, m_primarySurface)) {
-				supportsPresentation = true;
-				presentationQueues.push_back(i);
-				CR_LOG("  supports presentation");
-			}
-
-			// for transfers, prefer a dedicated transfer queue(probably doesnt matter). If more than one,
-			// grab first
-			if(!supportsGraphics && !supportsCompute && !supportsPresentation && supportsTransfer &&
-			   !dedicatedTransfer.has_value()) {
-				dedicatedTransfer = i;
-			}
-			// For graphics, we prefer one that does both graphics and presentation
-			if(supportsGraphics && supportsPresentation && !graphicsAndPresentation.has_value()) {
-				graphicsAndPresentation = i;
-			}
-		}
-
-		if(dedicatedTransfer.has_value()) {
-			m_transferQueueIndex = dedicatedTransfer.value();
-		} else if(!transferQueues.empty()) {
-			m_transferQueueIndex = transferQueues[0];
-		} else {
-			CR_LOG("Could not find a valid vulkan transfer queue");
-		}
-
-		if(graphicsAndPresentation.has_value()) {
-			m_graphicsQueueIndex = m_presentationQueueIndex = graphicsAndPresentation.value();
-		} else if(!graphicsQueues.empty() && !presentationQueues.empty()) {
-			m_graphicsQueueIndex     = graphicsQueues[0];
-			m_presentationQueueIndex = presentationQueues[0];
-		} else {
-			if(graphicsQueues.empty()) { CR_LOG("Could not find a valid vulkan graphics queue"); }
-			if(presentationQueues.empty()) { CR_LOG("Could not find a valid presentation queue"); }
-		}
-
-		CR_LOG("graphics queue family: {} transfer queue index: {} presentation queue index: {}",
-		       m_graphicsQueueIndex, m_transferQueueIndex, m_presentationQueueIndex);
-		auto features = device.getFeatures();
-
-		// TODO: We dont have a good heuristic for selecting a device, for now just take first one that
-		// supports graphics and hope for the best.  My machine has only one, so cant test a better
-		// implementation.
-		if((m_graphicsQueueIndex != -1) && (m_transferQueueIndex != -1) && (m_presentationQueueIndex != -1) &&
-		   features.textureCompressionBC && features.fullDrawIndexUint32) {
-			foundDevice    = true;
-			selectedDevice = device;
+	// First try to find a discrete gpu.
+	for(int32_t prop = 0; prop < physicalDevicesProps.size(); ++prop) {
+		if(physicalDevicesProps[prop].deviceType ==
+		   VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+			foundDevice = prop;
 			break;
 		}
-		m_graphicsQueueIndex     = -1;
-		m_transferQueueIndex     = -1;
-		m_presentationQueueIndex = -1;
 	}
-	CR_ASSERT(foundDevice, "Could not find a valid vulkan 1.2 graphics device");
 
-	return selectedDevice;
+	// Next find an integrated GPU
+	if(foundDevice == -1) {
+		for(int32_t prop = 0; prop < physicalDevicesProps.size(); ++prop) {
+			if(physicalDevicesProps[prop].deviceType ==
+			   VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
+				foundDevice = prop;
+				break;
+			}
+		}
+	}
+
+	// Not going to support any other types of GPU's.
+	CR_ASSERT(foundDevice != -1, "Could not find a suitable GPU");
+
+	VkPhysicalDeviceProperties props = physicalDevicesProps[foundDevice];
+	CR_LOG("Device Name : {}", props.deviceName);
+	CR_ASSERT(props.apiVersion >= VK_API_VERSION_1_2,
+	          "Require Vulkan 1.2 or greater, check for newer drivers");
+
+	VkPhysicalDeviceMemoryProperties memProps;
+	vkGetPhysicalDeviceMemoryProperties(physicalDevices[foundDevice], &memProps);
+	CR_LOG("  Device max allocations: {}", props.limits.maxMemoryAllocationCount);
+	CR_LOG("  Device max array layers: {}", props.limits.maxImageArrayLayers);
+	CR_LOG("  Device max 2D image dimensions: {}", props.limits.maxImageDimension2D);
+	CR_LOG("  Device max multisample: {}", (VkFlags)props.limits.framebufferColorSampleCounts);
+	for(uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
+		if(memProps.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+			CR_LOG("  Device Local Memory Amount: {}MB",
+			       memProps.memoryHeaps[memProps.memoryTypes[i].heapIndex].size / (1024 * 1024));
+		}
+	}
+
+	std::vector<VkQueueFamilyProperties> queueProps;
+	uint32_t numQueueProps{};
+	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevices[foundDevice], &numQueueProps, nullptr);
+	queueProps.resize(numQueueProps);
+	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevices[foundDevice], &numQueueProps, queueProps.data());
+
+	std::vector<uint32_t> graphicsQueues;
+	std::vector<uint32_t> transferQueues;
+	std::vector<uint32_t> presentationQueues;
+	std::optional<uint32_t> dedicatedTransfer;
+	std::optional<uint32_t> graphicsAndPresentation;
+	for(uint32_t i = 0; i < queueProps.size(); ++i) {
+		bool supportsGraphics     = false;
+		bool supportsCompute      = false;
+		bool supportsTransfer     = false;
+		bool supportsPresentation = false;
+
+		CR_LOG("Queue family: {}", i);
+		// This one should only be false for tesla compute cards and similiar
+		if((queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && queueProps[i].queueCount >= 1) {
+			supportsGraphics = true;
+			graphicsQueues.push_back(i);
+			CR_LOG("  supports graphics");
+		}
+		if((queueProps[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && queueProps[i].queueCount >= 1) {
+			supportsCompute = true;
+			CR_LOG("  supports compute");
+		}
+		if((queueProps[i].queueFlags & VK_QUEUE_TRANSFER_BIT) && queueProps[i].queueCount >= 1) {
+			supportsTransfer = true;
+			transferQueues.push_back(i);
+			CR_LOG("  supports transfer");
+		}
+
+		VkBool32 surfaceSupported{};
+		vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevices[foundDevice], i, m_primarySurface,
+		                                     &surfaceSupported);
+		if(surfaceSupported) {
+			supportsPresentation = true;
+			presentationQueues.push_back(i);
+			CR_LOG("  supports presentation");
+		}
+
+		// for transfers, prefer a dedicated transfer queue(. If more than one,
+		// grab first
+		if(!supportsGraphics && !supportsCompute && !supportsPresentation && supportsTransfer &&
+		   !dedicatedTransfer.has_value()) {
+			dedicatedTransfer = i;
+		}
+		// For graphics, we prefer one that does graphics, compute, and presentation
+		if(supportsGraphics && supportsCompute && supportsPresentation &&
+		   !graphicsAndPresentation.has_value()) {
+			graphicsAndPresentation = i;
+		}
+	}
+
+	if(dedicatedTransfer.has_value()) {
+		m_transferQueueIndex = dedicatedTransfer.value();
+	} else if(!transferQueues.empty()) {
+		m_transferQueueIndex = transferQueues[0];
+	} else {
+		CR_LOG("Could not find a valid vulkan transfer queue");
+	}
+
+	if(graphicsAndPresentation.has_value()) {
+		m_graphicsQueueIndex = m_presentationQueueIndex = graphicsAndPresentation.value();
+	} else if(!graphicsQueues.empty() && !presentationQueues.empty()) {
+		m_graphicsQueueIndex     = graphicsQueues[0];
+		m_presentationQueueIndex = presentationQueues[0];
+	} else {
+		if(graphicsQueues.empty()) { CR_LOG("Could not find a valid vulkan graphics queue"); }
+		if(presentationQueues.empty()) { CR_LOG("Could not find a valid presentation queue"); }
+	}
+
+	CR_LOG("graphics queue family: {} transfer queue index: {} presentation queue index: {}",
+	       m_graphicsQueueIndex, m_transferQueueIndex, m_presentationQueueIndex);
+
+	VkPhysicalDeviceVulkan12Features features12;
+	features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+	features12.pNext = nullptr;
+
+	VkPhysicalDeviceVulkan11Features features11;
+	features11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+	features11.pNext = &features12;
+
+	VkPhysicalDeviceFeatures2 features;
+	features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	features.pNext = &features11;
+	vkGetPhysicalDeviceFeatures2(physicalDevices[foundDevice], &features);
+	CR_ASSERT(features.features.textureCompressionBC, "Require support for BC texture compression");
+	CR_ASSERT(features.features.multiDrawIndirect, "Require support for multi draw indirect");
+	CR_ASSERT(features11.uniformAndStorageBuffer16BitAccess, "Require support for 16 bit types in buffers");
+	CR_ASSERT(features11.storagePushConstant16, "Require support for 16 bit types in push constants");
+	CR_ASSERT(features12.drawIndirectCount, "Require support for multi draw indirect");
+	CR_ASSERT(features12.descriptorIndexing, "Require support for descriptor indexing");
+	CR_ASSERT(features12.shaderUniformTexelBufferArrayDynamicIndexing,
+	          "Require support for descriptor indexing");
+	CR_ASSERT(features12.shaderStorageTexelBufferArrayDynamicIndexing,
+	          "Require support for descriptor indexing");
+	CR_ASSERT(features12.shaderUniformBufferArrayNonUniformIndexing,
+	          "Require support for descriptor indexing");
+	CR_ASSERT(features12.shaderSampledImageArrayNonUniformIndexing,
+	          "Require support for descriptor indexing");
+	CR_ASSERT(features12.shaderStorageBufferArrayNonUniformIndexing,
+	          "Require support for descriptor indexing");
+	CR_ASSERT(features12.shaderStorageImageArrayNonUniformIndexing,
+	          "Require support for descriptor indexing");
+	CR_ASSERT(features12.shaderUniformTexelBufferArrayNonUniformIndexing,
+	          "Require support for descriptor indexing");
+	CR_ASSERT(features12.descriptorBindingSampledImageUpdateAfterBind,
+	          "Require support for descriptor indexing");
+	CR_ASSERT(features12.descriptorBindingStorageImageUpdateAfterBind,
+	          "Require support for descriptor indexing");
+	CR_ASSERT(features12.descriptorBindingStorageBufferUpdateAfterBind,
+	          "Require support for descriptor indexing");
+	CR_ASSERT(features12.descriptorBindingUniformTexelBufferUpdateAfterBind,
+	          "Require support for descriptor indexing");
+	CR_ASSERT(features12.descriptorBindingStorageTexelBufferUpdateAfterBind,
+	          "Require support for descriptor indexing");
+	CR_ASSERT(features12.descriptorBindingUpdateUnusedWhilePending,
+	          "Require support for descriptor indexing");
+	CR_ASSERT(features12.descriptorBindingPartiallyBound, "Require support for descriptor indexing");
+	CR_ASSERT(features12.uniformBufferStandardLayout, "Require support for standard layout");
+
+	CR_ASSERT(foundDevice != -1, "Could not find a valid vulkan 1.2 graphics device");
+
+	return physicalDevices[foundDevice];
 }

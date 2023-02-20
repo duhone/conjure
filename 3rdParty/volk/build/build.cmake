@@ -22,7 +22,7 @@ add_library(volk OBJECT
 settings3rdParty(volk)
 
 target_compile_definitions(volk PUBLIC VK_USE_PLATFORM_WIN32_KHR)
-target_compile_definitions(volk PUBLIC VK_NO_PROTOTYPES)
+# target_compile_definitions(volk PUBLIC VK_NO_PROTOTYPES)
 
 target_include_directories(volk SYSTEM PUBLIC "${root}/volk")
 

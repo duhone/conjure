@@ -1,7 +1,5 @@
 set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 
-find_package(Vulkan REQUIRED)
-
 ###############################################
 #library
 ###############################################
@@ -28,12 +26,6 @@ settingsCR(graphics)
 #microsoft bug see https://developercommunity.visualstudio.com/t/warning-C4005:-Outptr:-macro-redefinit/1546919
 target_compile_options(graphics PRIVATE /WX-)
 
-target_compile_definitions(graphics PRIVATE VK_USE_PLATFORM_WIN32_KHR)
-target_include_directories(graphics PRIVATE
-	$ENV{VULKAN_SDK}/include
-	Vulkan::Vulkan
-)		
-
 target_link_libraries(graphics PUBLIC
 	headerUnits
 	fmt
@@ -41,7 +33,7 @@ target_link_libraries(graphics PUBLIC
 	spdlog
 	core
 	platform
-	Vulkan::Vulkan 
+	Vulkan::Vulkan volk
 )
 
 set_property(TARGET graphics APPEND PROPERTY FOLDER Engine)
