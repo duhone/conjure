@@ -1,8 +1,8 @@
 ﻿import CR.Engine.Core;
 import CR.Engine.Platform;
 
-import<chrono>;
-import<cstdio>;
+import <chrono>;
+import <cstdio>;
 
 #include "core/Log.h"
 
@@ -220,7 +220,7 @@ int main(int argc, char** argv) {
 		int32_t bytesWritten =
 		    opus_encode(encoder, pcmData.Data.data() + frame * totalFrameSize, c_OpusFrameSize,
 		                (uint8_t*)outBuffer.data(), (int32_t)outBuffer.size());
-		fwrite(outBuffer.data(), sizeof(std::byte), bytesWritten, outFile);
+		fwrite(outBuffer.data(), sizeof(std::byte), bytesWritten, outFile.asFile());
 	}
 
 	opus_encoder_destroy(encoder);

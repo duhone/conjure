@@ -52,7 +52,6 @@ target_link_libraries(core PUBLIC
 	fmt
 	function2
     glm
-	spdlog
 )
 
 target_include_directories(core SYSTEM PUBLIC "${root}/interface")

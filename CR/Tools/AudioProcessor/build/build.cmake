@@ -28,7 +28,6 @@ target_link_libraries(AudioProcessor
 	cli11
 	fmt
 	opus
-	spdlog
 	core
 	platform
 )

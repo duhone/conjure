@@ -30,7 +30,6 @@ target_link_libraries(input PUBLIC
 	fmt
 	function2
 	glm
-	spdlog
 	core
 	platform
 )

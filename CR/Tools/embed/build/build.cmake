@@ -28,7 +28,6 @@ target_link_libraries(embed
 	cli11
 	fmt
     glm
-	spdlog
 	core
 	platform
 )

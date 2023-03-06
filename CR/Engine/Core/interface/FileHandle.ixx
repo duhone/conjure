@@ -1,26 +1,26 @@
 ﻿export module CR.Engine.Core.FileHandle;
 
-import<cstdio>;
-import<filesystem>;
+import <cstdio>;
+import <filesystem>;
 
-export namespace CR::Engine::Core {
+namespace CR::Engine::Core {
 	// Currently only for writing files, for reading use memory mapped files.
-	class FileHandle final {
+	export class FileHandle final {
 	  public:
 		FileHandle(const std::filesystem::path& a_path);
 		~FileHandle();
 
-		FileHandle(const FileHandle&) = delete;
+		FileHandle(const FileHandle&)            = delete;
 		FileHandle& operator=(const FileHandle&) = delete;
 		FileHandle(FileHandle&& a_other) noexcept;
 		FileHandle& operator=(FileHandle&& a_other) noexcept;
 
-		operator FILE*() const noexcept { return m_file; }
+		std::FILE* asFile() const noexcept { return m_file; }
 
 	  private:
-		FILE* m_file{nullptr};
+		std::FILE* m_file{nullptr};
 	};
-}    // namespace CR::Core
+}    // namespace CR::Engine::Core
 
 namespace crec = CR::Engine::Core;
 

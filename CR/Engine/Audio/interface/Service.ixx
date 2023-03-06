@@ -60,11 +60,9 @@ module :private;
 namespace cecore = CR::Engine::Core;
 namespace ceaud  = CR::Engine::Audio;
 
-bool ceaud::Service::Mix([[maybe_unused]] std::span<float>& a_buffer, [[maybe_unused]] int32_t a_numChannels,
-                         [[maybe_unused]] int32_t a_sampleRate,
-                         [[maybe_unused]] const std::vector<ChannelWeights> a_weights,
-                         [[maybe_unused]] bool a_closing) {
-	int32_t mixBufferSize =
+bool ceaud::Service::Mix(std::span<float>& a_buffer, int32_t a_numChannels, int32_t a_sampleRate,
+                         const std::vector<ChannelWeights> a_weights, bool a_closing) {
+	/* int32_t mixBufferSize =
 	    static_cast<int32_t>((a_buffer.size() * c_mixSampleRate) / (a_sampleRate * a_numChannels));
 	m_mixBuffer.resize(mixBufferSize);
 	std::ranges::fill(m_mixBuffer, Sample{});
@@ -100,16 +98,17 @@ bool ceaud::Service::Mix([[maybe_unused]] std::span<float>& a_buffer, [[maybe_un
 	}
 
 	memcpy(a_buffer.data(), deviceChannelBuffer.data(), a_buffer.size() * sizeof(float));
-	
+
 	if(a_closing) {
-		return true;
+	    return true;
 	} else {
-		return false;
-	}
+	    return false;
+	}*/
+	return true;
 }
 
-ceaud::Service::Service([[maybe_unused]] bool a_checkForClipping) {
-	cecore::AddService<FXLibrary>();
+ceaud::Service::Service(bool a_checkForClipping) {
+	/*cecore::AddService<FXLibrary>();
 	cecore::AddService<MusicLibrary>();
 
 	m_checkForClipping = a_checkForClipping;
@@ -118,9 +117,9 @@ ceaud::Service::Service([[maybe_unused]] bool a_checkForClipping) {
 	    [this](std::span<float> a_buffer, int32_t a_numChannels, int32_t a_sampleRate,
 	           const std::vector<ChannelWeights> a_weights,
 	           bool a_closing) { return Mix(a_buffer, a_numChannels, a_sampleRate, a_weights, a_closing);
-	});
+	});*/
 }
 
 void ceaud::Service::Stop() {
-	m_device.reset();
+	// m_device.reset();
 }

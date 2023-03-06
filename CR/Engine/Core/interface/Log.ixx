@@ -1,35 +1,38 @@
 ﻿module;
 
+#include <fmt/compile.h>
 #include <fmt/format.h>
-#include <spdlog/async_logger.h>
-#include <spdlog/spdlog.h>
+// #include <spdlog/spdlog.h>
+
+#include <cassert>
 
 export module CR.Engine.Core.Log;
 
-import <cassert>;
+import <iostream>;
 import <memory>;
 import <source_location>;
 import <thread>;
 
 // max size of user format string plus anything we add to the output.
 // Final output can be larger once the users arguments are added in.
-constexpr uint32_t c_maxFmtStringSize = 256;
+constexpr uint32_t c_maxFmtStringSize = 1024;
 
 inline void PreFormat(char* output, const char* fmt, const std::source_location& a_location) {
-    // print a condensed path, starting just below CR/
-    const char* start = strstr(a_location.file_name(), "CR");
-    assert(start != nullptr);
-    if(start == nullptr) {
-        // couldnt find CR, shouldnt be possible. files should never exists outside this folder.
-        start = a_location.file_name();
-    } else {
-        // skip past CR/
-        start += 3;
-    }
-    auto result = fmt::format_to_n(output, c_maxFmtStringSize - 1, FMT_STRING("[{}:{}] - {}"), start,
-                                   a_location.line(), fmt);
-    // fmt doesnt append a null terminator for some reason.
-    *result.out = '\0';
+	// print a condensed path, starting just below CR/
+	const char* start = strstr(a_location.file_name(), "CR");
+	assert(start != nullptr);
+	if(start == nullptr) {
+		// couldnt find CR, shouldnt be possible. files should never exists outside this folder.
+		assert(false);
+		start = a_location.file_name();
+	} else {
+		// skip past CR/
+		start += 3;
+	}
+	auto result = fmt::format_to_n(output, c_maxFmtStringSize - 1, FMT_COMPILE("[{}:{}] - {}"), start,
+	                               a_location.line(), fmt);
+	// fmt doesnt append a null terminator for some reason.
+	*result.out = '\0';
 }
 
 namespace CR::Engine::Core {
@@ -45,35 +48,35 @@ namespace CR::Engine::Core {
 	};
 
 	namespace Log {
-		spdlog::async_logger* GetLogger();
+		// spdlog::logger* GetLogger();
 
 		export template<typename... ArgTs>
-		inline void Info([[maybe_unused]] const std::source_location& a_location,
-		                 [[maybe_unused]] const char* a_fmt, [[maybe_unused]] ArgTs&&... a_args) {
+		inline void Info(const std::source_location& a_location, const char* a_fmt, ArgTs&&... a_args) {
 			char buffer[c_maxFmtStringSize];
 			PreFormat(buffer, a_fmt, a_location);
-			//crashes compiler Visual Studio 17.3
-			//GetLogger()->info(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
+			fmt::println(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
+			// GetLogger()->info(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
 		}
 
 		export template<typename... ArgTs>
-		inline void Warn([[maybe_unused]] const std::source_location& a_location,
-		                 [[maybe_unused]] const char* a_fmt, [[maybe_unused]] ArgTs&&... a_args) {
+		inline void Warn(const std::source_location& a_location, const char* a_fmt, ArgTs&&... a_args) {
 			char buffer[c_maxFmtStringSize];
 			PreFormat(buffer, a_fmt, a_location);
-			// crashes compiler Visual Studio 17.3
-			//GetLogger()->warn(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
+			fmt::println(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
+			// GetLogger()->warn(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
 		}
 
 		export template<typename... ArgTs>
-		inline void Error([[maybe_unused]] const std::source_location& a_location,
-		                  [[maybe_unused]] const char* a_fmt, [[maybe_unused]] ArgTs&&... a_args) {
+		inline void Error(const std::source_location& a_location, const char* a_fmt, ArgTs&&... a_args) {
 			char buffer[c_maxFmtStringSize];
 			PreFormat(buffer, a_fmt, a_location);
-			// crashes compiler Visual Studio 17.3
-			//GetLogger()->error(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
-			GetLogger()->flush();
-			throw std::exception(fmt::format(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...).c_str());
+			fmt::println(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
+			// GetLogger()->error(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
+			// GetLogger()->flush();
+			__debugbreak();
+			std::terminate();
 		}
 	}    // namespace Log
 }    // namespace CR::Engine::Core
+
+module :private;

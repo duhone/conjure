@@ -30,7 +30,6 @@ target_link_libraries(graphics PUBLIC
 	headerUnits
 	fmt
 	glm
-	spdlog
 	core
 	platform
 	Vulkan::Vulkan volk

@@ -27,7 +27,6 @@ settingsCR(assets)
 target_link_libraries(assets PUBLIC
 	headerUnits
 	fmt
-	spdlog
 	core
 	platform
 )

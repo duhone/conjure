@@ -42,15 +42,15 @@ int main(int, char*) {
 
 	auto& inputService = cecore::GetService<ceinput::Service>();
 	{
-		auto handleFxs = ceaud::GetHandleFXs();
-		auto music     = ceaud::GetHandleMusic();
+		// auto handleFxs = ceaud::GetHandleFXs();
+		// auto music     = ceaud::GetHandleMusic();
 
-		handleFxs.SetVolume(1.0f);
-		music.SetVolume(0.75f);
+		// handleFxs.SetVolume(1.0f);
+		// music.SetVolume(0.75f);
 
-		auto fanfareFX = ceaud::GetHandleFX(cecore::C_Hash64("FX/levelupfanfare.flac"));
+		// auto fanfareFX = ceaud::GetHandleFX(cecore::C_Hash64("FX/levelupfanfare.flac"));
 
-		music.Play(cecore::C_Hash64("Music/BGM_Menu.flac"));
+		// music.Play(cecore::C_Hash64("Music/BGM_Menu.flac"));
 
 		ceinput::Regions regions;
 		auto region = regions.Create({{0, 0}, {400, 300}});
@@ -59,7 +59,7 @@ int main(int, char*) {
 			window.UpdateInput();
 			inputService.Update();
 
-			if(regions.GetActive() == region && regions.WasActiveClicked()) { fanfareFX.Play(); }
+			// if(regions.GetActive() == region && regions.WasActiveClicked()) { fanfareFX.Play(); }
 
 			std::this_thread::sleep_for(16ms);
 		}

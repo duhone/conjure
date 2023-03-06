@@ -46,7 +46,6 @@ target_link_libraries(audio PUBLIC
 	glm
 	opus
 	samplerate
-	spdlog
 	core
 	platform
 	Rtworkq.lib

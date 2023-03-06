@@ -6,10 +6,10 @@ export module CR.Engine.Core.BinaryStream;
 
 import CR.Engine.Core.FileHandle;
 
-import<concepts>;
-import<cstddef>;
-import<type_traits>;
-import<vector>;
+import <concepts>;
+import <cstddef>;
+import <type_traits>;
+import <vector>;
 
 export namespace CR::Engine::Core {
 	// Returns offset in vector where argument was written
@@ -32,7 +32,7 @@ export namespace CR::Engine::Core {
 	template<std::semiregular T>
 	void Write(FileHandle& a_file, const T& a_arg) {
 		if constexpr(std::is_trivially_copyable_v<T>) {
-			fwrite(&a_arg, sizeof(T), 1, a_file);
+			fwrite(&a_arg, sizeof(T), 1, a_file.asFile());
 		} else {
 			Write(a_file, (uint32_t)a_arg.size());
 			fwrite(a_arg.data(), sizeof(T::value_type), a_arg.size(), a_file);
@@ -43,20 +43,22 @@ export namespace CR::Engine::Core {
 	struct BinaryReader final {
 		BinaryReader() = default;
 		// input stream must outlive the reader
-		BinaryReader(const std::vector<std::byte>& a_stream) : Data(a_stream.data()), Size((uint32_t)a_stream.size()) {}
+		BinaryReader(const std::vector<std::byte>& a_stream) :
+		    Data(a_stream.data()), Size((uint32_t)a_stream.size()) {}
 
 		const std::byte* Data{nullptr};
 		uint32_t Offset{0};
 		uint32_t Size{0};
 	};
 
-	// returns true if was able to read T, false other wise, which is not an error if the previous read ended at exactly
-	// the end of the stream.
+	// returns true if was able to read T, false other wise, which is not an error if the previous read ended
+	// at exactly the end of the stream.
 	template<std::semiregular T>
 	bool Read(BinaryReader& a_stream, T& a_out) {
 		if(a_stream.Offset == a_stream.Size) { return false; }
 		if constexpr(std::is_trivially_copyable_v<T>) {
-			CR_ASSERT_AUDIT(a_stream.Offset + sizeof(T) <= a_stream.Size, "Tried to read past the end of the buffer");
+			CR_ASSERT_AUDIT(a_stream.Offset + sizeof(T) <= a_stream.Size,
+			                "Tried to read past the end of the buffer");
 			memcpy(&a_out, a_stream.Data + a_stream.Offset, sizeof(T));
 			a_stream.Offset += sizeof(T);
 			return true;

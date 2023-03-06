@@ -1,9 +1,9 @@
-﻿import CR.Engine.Core.Table;
+﻿#include <doctest/doctest.h>
+
+import CR.Engine.Core.Table;
 
 import<type_traits>;
 import<utility>;
-
-#include <doctest/doctest.h>
 
 namespace {
 	struct PlayerHealth {
