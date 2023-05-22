@@ -2,7 +2,7 @@
 
 #include <fmt/compile.h>
 #include <fmt/format.h>
-// #include <spdlog/spdlog.h>
+#include <spdlog/spdlog.h>
 
 #include <cassert>
 
@@ -48,14 +48,14 @@ namespace CR::Engine::Core {
 	};
 
 	namespace Log {
-		// spdlog::logger* GetLogger();
+		spdlog::logger* GetLogger();
 
 		export template<typename... ArgTs>
 		inline void Info(const std::source_location& a_location, const char* a_fmt, ArgTs&&... a_args) {
 			char buffer[c_maxFmtStringSize];
 			PreFormat(buffer, a_fmt, a_location);
 			fmt::println(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
-			// GetLogger()->info(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
+			GetLogger()->info(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
 		}
 
 		export template<typename... ArgTs>
@@ -63,7 +63,7 @@ namespace CR::Engine::Core {
 			char buffer[c_maxFmtStringSize];
 			PreFormat(buffer, a_fmt, a_location);
 			fmt::println(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
-			// GetLogger()->warn(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
+			GetLogger()->warn(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
 		}
 
 		export template<typename... ArgTs>
@@ -71,8 +71,8 @@ namespace CR::Engine::Core {
 			char buffer[c_maxFmtStringSize];
 			PreFormat(buffer, a_fmt, a_location);
 			fmt::println(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
-			// GetLogger()->error(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
-			// GetLogger()->flush();
+			GetLogger()->error(fmt::runtime(buffer), std::forward<ArgTs>(a_args)...);
+			GetLogger()->flush();
 			__debugbreak();
 			std::terminate();
 		}

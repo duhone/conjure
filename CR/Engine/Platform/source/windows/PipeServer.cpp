@@ -1,7 +1,4 @@
-﻿/*
-crashing Visual studio 17.4. supposed to be fixed in 17.5
-
-module;
+﻿/*module;
 
 #include "core/Log.h"
 #include <concurrent_queue.h>
