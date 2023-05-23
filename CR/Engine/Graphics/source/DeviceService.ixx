@@ -36,6 +36,7 @@ namespace CR::Engine::Graphics {
 
 	  private:
 		VkPhysicalDevice FindDevice();
+		void BuildDevice(VkPhysicalDevice& selectedDevice);
 
 		ceplat::Window& m_window;
 		VkInstance m_instance;
@@ -48,6 +49,7 @@ namespace CR::Engine::Graphics {
 		VkQueue m_graphicsQueue;
 		VkQueue m_transferQueue;
 		VkQueue m_presentationQueue;
+		int32_t m_deviceMemoryIndex{-1};
 	};
 }    // namespace CR::Engine::Graphics
 
@@ -94,6 +96,7 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_win
 	vkCreateWin32SurfaceKHR(m_instance, &win32Surface, nullptr, &m_primarySurface);
 
 	VkPhysicalDevice selectedDevice = FindDevice();
+	BuildDevice(selectedDevice);
 }
 
 void cegraph::DeviceService::Stop() {
@@ -180,15 +183,13 @@ VkPhysicalDevice cegraph::DeviceService::FindDevice() {
 		bool supportsPresentation = false;
 
 		CR_LOG("Queue family: {}", i);
-		// This one should only be false for tesla compute cards and similiar
-		if((queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && queueProps[i].queueCount >= 1) {
+		// for now, assuming there will be a queue that supports graphics and compute.
+		if((queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
+		   (queueProps[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && queueProps[i].queueCount >= 1) {
 			supportsGraphics = true;
+			supportsCompute  = true;
 			graphicsQueues.push_back(i);
-			CR_LOG("  supports graphics");
-		}
-		if((queueProps[i].queueFlags & VK_QUEUE_COMPUTE_BIT) && queueProps[i].queueCount >= 1) {
-			supportsCompute = true;
-			CR_LOG("  supports compute");
+			CR_LOG("  supports graphics and compute");
 		}
 		if((queueProps[i].queueFlags & VK_QUEUE_TRANSFER_BIT) && queueProps[i].queueCount >= 1) {
 			supportsTransfer = true;
@@ -289,4 +290,40 @@ VkPhysicalDevice cegraph::DeviceService::FindDevice() {
 	CR_ASSERT(foundDevice != -1, "Could not find a valid vulkan 1.2 graphics device");
 
 	return physicalDevices[foundDevice];
+}
+
+void cegraph::DeviceService::BuildDevice(VkPhysicalDevice& selectedDevice) {
+	VkPhysicalDeviceMemoryProperties memProps;
+	vkGetPhysicalDeviceMemoryProperties(selectedDevice, &memProps);
+	for(uint32_t i = 0; i < memProps.memoryHeapCount; ++i) {
+		auto heapSize   = memProps.memoryHeaps[i].size / 1024 / 1024;
+		auto& heapFlags = memProps.memoryHeaps[i].flags;
+		if(heapFlags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
+			CR_LOG("Device Heap. Size {}MB", heapSize);
+		} else {
+			CR_LOG("Host Heap. Size {}MB", heapSize);
+		}
+	}
+	uint32_t heapSize{};
+	for(uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
+		auto& heapIndex = memProps.memoryTypes[i].heapIndex;
+		auto& heapFlags = memProps.memoryTypes[i].propertyFlags;
+		CR_LOG("\n");
+		CR_LOG("Device Heap:  {} Type Index: {}", heapIndex, i);
+		if(heapFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) { CR_LOG("  Device local"); }
+		if(heapFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) { CR_LOG("  Host visible"); }
+		if(heapFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) { CR_LOG("  Host cached"); }
+		if(heapFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) { CR_LOG("  Host coherent"); }
+
+		// Only going to support unified memory and rebar. This gives the fastest loading, but won't work on
+		// older GPU's
+		if((heapFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0 and
+		   (heapFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0 and
+		   (heapFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0 and
+		   (heapFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) == 0 and (m_deviceMemoryIndex == -1)) {
+			m_deviceMemoryIndex = i;
+			heapSize            = memProps.memoryHeaps[heapIndex].size / 1024 / 1024;
+		}
+	}
+	CR_LOG("Chosen evice Heap:  {} Size {}MB", m_deviceMemoryIndex, heapSize);
 }
