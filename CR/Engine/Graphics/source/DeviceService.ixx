@@ -8,8 +8,11 @@ export module CR.Engine.Graphics.DeviceService;
 
 import CR.Engine.Core;
 import CR.Engine.Platform;
+import CR.Engine.Graphics.Utils;
 
+import <algorithm>;
 import <optional>;
+import <ranges>;
 import <string>;
 import <typeindex>;
 import <vector>;
@@ -62,6 +65,7 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_win
 	CR_ASSERT(result == VK_SUCCESS, "Failed to initialize Volk");
 
 	VkApplicationInfo appInfo;
+	ClearStruct(appInfo);
 	appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pNext              = nullptr;
 	appInfo.pApplicationName   = CR_APP_NAME;
@@ -71,6 +75,7 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_win
 	appInfo.apiVersion         = VK_API_VERSION_1_2;
 
 	VkInstanceCreateInfo createInfo;
+	ClearStruct(createInfo);
 	createInfo.sType               = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.pNext               = nullptr;
 	createInfo.pApplicationInfo    = &appInfo;
@@ -90,6 +95,8 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_win
 	volkLoadInstance(m_instance);
 
 	VkWin32SurfaceCreateInfoKHR win32Surface;
+	ClearStruct(win32Surface);
+	win32Surface.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
 	win32Surface.hinstance = reinterpret_cast<HINSTANCE>(m_window.GetHInstance());
 	win32Surface.hwnd      = reinterpret_cast<HWND>(m_window.GetHWND());
 
@@ -100,6 +107,7 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_win
 }
 
 void cegraph::DeviceService::Stop() {
+	vkDestroyDevice(m_device, nullptr);
 	vkDestroySurfaceKHR(m_instance, m_primarySurface, nullptr);
 	vkDestroyInstance(m_instance, nullptr);
 }
@@ -147,7 +155,7 @@ VkPhysicalDevice cegraph::DeviceService::FindDevice() {
 	// Not going to support any other types of GPU's.
 	CR_ASSERT(foundDevice != -1, "Could not find a suitable GPU");
 
-	VkPhysicalDeviceProperties props = physicalDevicesProps[foundDevice];
+	VkPhysicalDeviceProperties& props = physicalDevicesProps[foundDevice];
 	CR_LOG("Device Name : {}", props.deviceName);
 	CR_ASSERT(props.apiVersion >= VK_API_VERSION_1_2,
 	          "Require Vulkan 1.2 or greater, check for newer drivers");
@@ -241,14 +249,17 @@ VkPhysicalDevice cegraph::DeviceService::FindDevice() {
 	       m_graphicsQueueIndex, m_transferQueueIndex, m_presentationQueueIndex);
 
 	VkPhysicalDeviceVulkan12Features features12;
+	ClearStruct(features12);
 	features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
 	features12.pNext = nullptr;
 
 	VkPhysicalDeviceVulkan11Features features11;
+	ClearStruct(features11);
 	features11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
 	features11.pNext = &features12;
 
 	VkPhysicalDeviceFeatures2 features;
+	ClearStruct(features);
 	features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 	features.pNext = &features11;
 	vkGetPhysicalDeviceFeatures2(physicalDevices[foundDevice], &features);
@@ -325,5 +336,75 @@ void cegraph::DeviceService::BuildDevice(VkPhysicalDevice& selectedDevice) {
 			heapSize            = memProps.memoryHeaps[heapIndex].size / 1024 / 1024;
 		}
 	}
-	CR_LOG("Chosen evice Heap:  {} Size {}MB", m_deviceMemoryIndex, heapSize);
+	CR_LOG("Chosen device Heap:  {} Size {}MB", m_deviceMemoryIndex, heapSize);
+
+	VkPhysicalDeviceFeatures2 requiredFeatures;
+	ClearStruct(requiredFeatures);
+	requiredFeatures.sType                         = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	requiredFeatures.features.sampleRateShading    = true;
+	requiredFeatures.features.textureCompressionBC = true;
+	requiredFeatures.features.fullDrawIndexUint32  = true;
+	requiredFeatures.features.shaderSampledImageArrayDynamicIndexing = true;
+
+	VkPhysicalDeviceVulkan12Features requiredFeatures12;
+	ClearStruct(requiredFeatures12);
+	requiredFeatures12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+	requiredFeatures12.descriptorBindingPartiallyBound              = true;
+	requiredFeatures12.descriptorBindingVariableDescriptorCount     = true;
+	requiredFeatures12.descriptorIndexing                           = true;
+	requiredFeatures12.shaderSampledImageArrayNonUniformIndexing    = true;
+	requiredFeatures12.shaderInputAttachmentArrayDynamicIndexing    = true;
+	requiredFeatures12.runtimeDescriptorArray                       = true;
+	requiredFeatures12.descriptorBindingSampledImageUpdateAfterBind = true;
+	requiredFeatures.pNext                                          = &requiredFeatures12;
+
+	int32_t graphicsQueueIndex     = 0;
+	int32_t presentationQueueIndex = 0;
+	int32_t transferQueueIndex     = 0;
+	int32_t queueIndexMap[256];    // surely no more than 256 queue families for all time
+	std::ranges::fill(queueIndexMap, -1);
+
+	float graphicsPriority = 1.0f;
+	float transferPriority = 0.0f;
+	VkDeviceQueueCreateInfo queueInfo;
+	ClearStruct(queueInfo);
+	queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queueInfo.pNext = nullptr;
+	std::vector<VkDeviceQueueCreateInfo> queueInfos;
+	queueInfos.reserve(3);
+	queueInfo.queueFamilyIndex = m_graphicsQueueIndex;
+	queueInfo.queueCount       = 1;
+	queueInfo.pQueuePriorities = &graphicsPriority;
+	queueInfos.push_back(queueInfo);
+	++queueIndexMap[m_graphicsQueueIndex];
+	graphicsQueueIndex = queueIndexMap[m_graphicsQueueIndex];
+	if(m_graphicsQueueIndex != m_presentationQueueIndex) {
+		queueInfo.queueFamilyIndex = m_presentationQueueIndex;
+		queueInfos.push_back(queueInfo);
+		++queueIndexMap[m_presentationQueueIndex];
+	}
+	presentationQueueIndex     = queueIndexMap[m_presentationQueueIndex];
+	queueInfo.queueFamilyIndex = m_transferQueueIndex;
+	queueInfo.pQueuePriorities = &transferPriority;
+	queueInfos.push_back(queueInfo);
+	++queueIndexMap[m_transferQueueIndex];
+	transferQueueIndex = queueIndexMap[m_transferQueueIndex];
+
+	std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+
+	VkDeviceCreateInfo createLogDevInfo;
+	ClearStruct(createLogDevInfo);
+	createLogDevInfo.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	createLogDevInfo.pNext                   = nullptr;
+	createLogDevInfo.queueCreateInfoCount    = (int)size(queueInfos);
+	createLogDevInfo.pQueueCreateInfos       = data(queueInfos);
+	createLogDevInfo.pEnabledFeatures        = &requiredFeatures.features;
+	createLogDevInfo.enabledLayerCount       = 0;
+	createLogDevInfo.ppEnabledLayerNames     = nullptr;
+	createLogDevInfo.enabledExtensionCount   = (uint32_t)size(deviceExtensions);
+	createLogDevInfo.ppEnabledExtensionNames = data(deviceExtensions);
+
+	if(vkCreateDevice(selectedDevice, &createLogDevInfo, nullptr, &m_device) != VK_SUCCESS) {
+		CR_ERROR("Failed to create a vulkan device");
+	}
 }

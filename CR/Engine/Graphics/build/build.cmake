@@ -10,6 +10,7 @@ set(INTERFACE_FILES
 
 set(SOURCE_FILES
     ${root}/Source/DeviceService.ixx
+    ${root}/Source/Utils.ixx
 )
 
 set(BUILD_FILES
