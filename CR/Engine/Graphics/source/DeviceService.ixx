@@ -3,6 +3,7 @@
 #include "core/Log.h"
 
 #include "volk.h"
+#include <vulkan/vk_enum_string_helper.h>
 
 export module CR.Engine.Graphics.DeviceService;
 
@@ -40,19 +41,25 @@ namespace CR::Engine::Graphics {
 	  private:
 		VkPhysicalDevice FindDevice();
 		void BuildDevice(VkPhysicalDevice& selectedDevice);
+		void CreateSwapChain(VkPhysicalDevice& selectedDevice);
 
 		ceplat::Window& m_window;
 		VkInstance m_instance;
 		VkSurfaceKHR m_primarySurface;
 
 		VkDevice m_device;
-		int32_t m_graphicsQueueIndex{-1};
-		int32_t m_transferQueueIndex{-1};
-		int32_t m_presentationQueueIndex{-1};
 		VkQueue m_graphicsQueue;
 		VkQueue m_transferQueue;
 		VkQueue m_presentationQueue;
+		int32_t m_graphicsQueueIndex{-1};
+		int32_t m_transferQueueIndex{-1};
+		int32_t m_presentationQueueIndex{-1};
 		int32_t m_deviceMemoryIndex{-1};
+
+		// MSAA
+		VkImage m_msaaImage;
+		VkImageView m_msaaView;
+		VkDeviceMemory m_msaaMemory;
 	};
 }    // namespace CR::Engine::Graphics
 
@@ -104,9 +111,14 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_win
 
 	VkPhysicalDevice selectedDevice = FindDevice();
 	BuildDevice(selectedDevice);
+	CreateSwapChain(selectedDevice);
 }
 
 void cegraph::DeviceService::Stop() {
+	vkDestroyImageView(m_device, m_msaaView, nullptr);
+	vkDestroyImage(m_device, m_msaaImage, nullptr);
+	vkFreeMemory(m_device, m_msaaMemory, nullptr);
+
 	vkDestroyDevice(m_device, nullptr);
 	vkDestroySurfaceKHR(m_instance, m_primarySurface, nullptr);
 	vkDestroyInstance(m_instance, nullptr);
@@ -406,5 +418,86 @@ void cegraph::DeviceService::BuildDevice(VkPhysicalDevice& selectedDevice) {
 
 	if(vkCreateDevice(selectedDevice, &createLogDevInfo, nullptr, &m_device) != VK_SUCCESS) {
 		CR_ERROR("Failed to create a vulkan device");
+	}
+
+	vkGetDeviceQueue(m_device, m_graphicsQueueIndex, graphicsQueueIndex, &m_graphicsQueue);
+	vkGetDeviceQueue(m_device, m_presentationQueueIndex, presentationQueueIndex, &m_presentationQueue);
+	vkGetDeviceQueue(m_device, m_transferQueueIndex, transferQueueIndex, &m_transferQueue);
+}
+
+void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
+	VkSurfaceCapabilitiesKHR surfaceCaps;
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(selectedDevice, m_primarySurface, &surfaceCaps);
+	CR_LOG("current surface resolution: {}x{}", surfaceCaps.maxImageExtent.width,
+	       surfaceCaps.maxImageExtent.height);
+	CR_LOG("Min image count: {} Max image count: {}", surfaceCaps.minImageCount, surfaceCaps.maxImageCount);
+
+	std::vector<VkSurfaceFormatKHR> surfaceFormats;
+	uint32_t numFormats{};
+	vkGetPhysicalDeviceSurfaceFormatsKHR(selectedDevice, m_primarySurface, &numFormats, nullptr);
+	surfaceFormats.resize(numFormats);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(selectedDevice, m_primarySurface, &numFormats,
+	                                     surfaceFormats.data());
+
+	CR_LOG("Supported surface formats:");
+	for(const auto& format : surfaceFormats) {
+		CR_LOG("    Format: {} ColorSpace {}", string_VkFormat(format.format),
+		       string_VkColorSpaceKHR(format.colorSpace));
+	}
+
+	std::vector<VkPresentModeKHR> presentModes;
+	uint32_t numPresModes{};
+	vkGetPhysicalDeviceSurfacePresentModesKHR(selectedDevice, m_primarySurface, &numPresModes, nullptr);
+	presentModes.resize(numPresModes);
+	vkGetPhysicalDeviceSurfacePresentModesKHR(selectedDevice, m_primarySurface, &numPresModes,
+	                                          presentModes.data());
+
+	CR_LOG("Presentation modes:");
+	for(const auto& mode : presentModes) {
+		CR_LOG("    Presentation Mode: {}", string_VkPresentModeKHR(mode));
+	}
+
+	{
+		// msaa image
+		VkImageCreateInfo msaaCreateInfo;
+		ClearStruct(msaaCreateInfo);
+		msaaCreateInfo.extent.width  = surfaceCaps.maxImageExtent.width;
+		msaaCreateInfo.extent.height = surfaceCaps.maxImageExtent.height;
+		msaaCreateInfo.extent.depth  = 1;
+		msaaCreateInfo.arrayLayers   = 1;
+		msaaCreateInfo.mipLevels     = 1;
+		msaaCreateInfo.samples       = VK_SAMPLE_COUNT_4_BIT;
+		msaaCreateInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
+		msaaCreateInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+		// TODO should be a transient attachment on mobile
+		msaaCreateInfo.usage         = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		msaaCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		msaaCreateInfo.imageType     = VK_IMAGE_TYPE_2D;
+		msaaCreateInfo.flags         = 0;
+		msaaCreateInfo.format        = VK_FORMAT_B8G8R8A8_SRGB;
+
+		vkCreateImage(m_device, &msaaCreateInfo, nullptr, &m_msaaImage);
+
+		VkMemoryRequirements imageRequirements;
+		vkGetImageMemoryRequirements(m_device, m_msaaImage, &imageRequirements);
+		VkMemoryAllocateInfo allocInfo;
+		ClearStruct(allocInfo);
+		allocInfo.memoryTypeIndex = m_deviceMemoryIndex;
+		allocInfo.allocationSize  = imageRequirements.size;
+		vkAllocateMemory(m_device, &allocInfo, nullptr, &m_msaaMemory);
+		vkBindImageMemory(m_device, m_msaaImage, m_msaaMemory, 0);
+
+		VkImageViewCreateInfo viewInfo;
+		ClearStruct(viewInfo);
+		viewInfo.image                           = m_msaaImage;
+		viewInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
+		viewInfo.format                          = VK_FORMAT_B8G8R8A8_SRGB;
+		viewInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+		viewInfo.subresourceRange.baseMipLevel   = 0;
+		viewInfo.subresourceRange.levelCount     = 1;
+		viewInfo.subresourceRange.baseArrayLayer = 0;
+		viewInfo.subresourceRange.layerCount     = 1;
+
+		vkCreateImageView(m_device, &viewInfo, nullptr, &m_msaaView);
 	}
 }
