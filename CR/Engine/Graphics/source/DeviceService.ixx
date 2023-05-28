@@ -3,6 +3,7 @@
 #include "core/Log.h"
 
 #include "volk.h"
+#include <glm/glm.hpp>
 #include <vulkan/vk_enum_string_helper.h>
 
 export module CR.Engine.Graphics.DeviceService;
@@ -44,8 +45,12 @@ namespace CR::Engine::Graphics {
 		void CreateSwapChain(VkPhysicalDevice& selectedDevice);
 
 		ceplat::Window& m_window;
+		glm::ivec2 m_WindowSize{0, 0};
 		VkInstance m_instance;
 		VkSurfaceKHR m_primarySurface;
+		VkSwapchainKHR m_primarySwapChain;
+		std::vector<VkImage> m_primarySwapChainImages;
+		std::vector<VkImageView> m_primarySwapChainImageViews;
 
 		VkDevice m_device;
 		VkQueue m_graphicsQueue;
@@ -115,6 +120,12 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_win
 }
 
 void cegraph::DeviceService::Stop() {
+	for(auto& imageView : m_primarySwapChainImageViews) { vkDestroyImageView(m_device, imageView, nullptr); }
+	m_primarySwapChainImageViews.clear();
+	for(auto& image : m_primarySwapChainImages) { vkDestroyImage(m_device, image, nullptr); }
+	m_primarySwapChainImages.clear();
+	vkDestroySwapchainKHR(m_device, m_primarySwapChain, nullptr);
+
 	vkDestroyImageView(m_device, m_msaaView, nullptr);
 	vkDestroyImage(m_device, m_msaaImage, nullptr);
 	vkFreeMemory(m_device, m_msaaMemory, nullptr);
@@ -431,6 +442,7 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 	CR_LOG("current surface resolution: {}x{}", surfaceCaps.maxImageExtent.width,
 	       surfaceCaps.maxImageExtent.height);
 	CR_LOG("Min image count: {} Max image count: {}", surfaceCaps.minImageCount, surfaceCaps.maxImageCount);
+	m_WindowSize = glm::ivec2(surfaceCaps.maxImageExtent.width, surfaceCaps.maxImageExtent.height);
 
 	std::vector<VkSurfaceFormatKHR> surfaceFormats;
 	uint32_t numFormats{};
@@ -461,6 +473,7 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 		// msaa image
 		VkImageCreateInfo msaaCreateInfo;
 		ClearStruct(msaaCreateInfo);
+		msaaCreateInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		msaaCreateInfo.extent.width  = surfaceCaps.maxImageExtent.width;
 		msaaCreateInfo.extent.height = surfaceCaps.maxImageExtent.height;
 		msaaCreateInfo.extent.depth  = 1;
@@ -482,6 +495,7 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 		vkGetImageMemoryRequirements(m_device, m_msaaImage, &imageRequirements);
 		VkMemoryAllocateInfo allocInfo;
 		ClearStruct(allocInfo);
+		allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		allocInfo.memoryTypeIndex = m_deviceMemoryIndex;
 		allocInfo.allocationSize  = imageRequirements.size;
 		vkAllocateMemory(m_device, &allocInfo, nullptr, &m_msaaMemory);
@@ -489,6 +503,7 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 
 		VkImageViewCreateInfo viewInfo;
 		ClearStruct(viewInfo);
+		viewInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		viewInfo.image                           = m_msaaImage;
 		viewInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
 		viewInfo.format                          = VK_FORMAT_B8G8R8A8_SRGB;
@@ -499,5 +514,54 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 		viewInfo.subresourceRange.layerCount     = 1;
 
 		vkCreateImageView(m_device, &viewInfo, nullptr, &m_msaaView);
+	}
+
+	VkSwapchainCreateInfoKHR swapCreateInfo;
+	ClearStruct(swapCreateInfo);
+	swapCreateInfo.sType           = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	swapCreateInfo.clipped         = true;
+	swapCreateInfo.compositeAlpha  = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	swapCreateInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+	swapCreateInfo.imageExtent     = surfaceCaps.maxImageExtent;
+	swapCreateInfo.imageFormat     = VK_FORMAT_B8G8R8A8_SRGB;
+	if(m_graphicsQueueIndex == m_presentationQueueIndex) {
+		swapCreateInfo.imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE;
+		swapCreateInfo.queueFamilyIndexCount = 0;
+		swapCreateInfo.pQueueFamilyIndices   = nullptr;
+
+	} else {
+		swapCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+		uint32_t queueFamilyIndices[] = {(uint32_t)m_graphicsQueueIndex, (uint32_t)m_presentationQueueIndex};
+		swapCreateInfo.queueFamilyIndexCount = (uint32_t)std::size(queueFamilyIndices);
+		swapCreateInfo.pQueueFamilyIndices   = std::data(queueFamilyIndices);
+	}
+	swapCreateInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	swapCreateInfo.minImageCount    = 2;
+	swapCreateInfo.presentMode      = VK_PRESENT_MODE_FIFO_KHR;
+	swapCreateInfo.preTransform     = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+	swapCreateInfo.surface          = m_primarySurface;
+	swapCreateInfo.imageArrayLayers = 1;
+
+	vkCreateSwapchainKHR(m_device, &swapCreateInfo, nullptr, &m_primarySwapChain);
+	uint32_t numSwapChainImages{};
+	vkGetSwapchainImagesKHR(m_device, m_primarySwapChain, &numSwapChainImages, nullptr);
+	m_primarySwapChainImages.resize(numSwapChainImages);
+	vkGetSwapchainImagesKHR(m_device, m_primarySwapChain, &numSwapChainImages,
+	                        m_primarySwapChainImages.data());
+
+	for(const auto& image : m_primarySwapChainImages) {
+		VkImageViewCreateInfo viewInfo;
+		ClearStruct(viewInfo);
+		viewInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		viewInfo.format                          = VK_FORMAT_B8G8R8A8_SRGB;
+		viewInfo.image                           = image;
+		viewInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
+		viewInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+		viewInfo.subresourceRange.baseArrayLayer = 0;
+		viewInfo.subresourceRange.layerCount     = 1;
+		viewInfo.subresourceRange.baseMipLevel   = 0;
+		viewInfo.subresourceRange.levelCount     = 1;
+		m_primarySwapChainImageViews.emplace_back();
+		vkCreateImageView(m_device, &viewInfo, nullptr, &m_primarySwapChainImageViews.back());
 	}
 }
