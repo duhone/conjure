@@ -78,8 +78,6 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_win
 
 	VkApplicationInfo appInfo;
 	ClearStruct(appInfo);
-	appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pNext              = nullptr;
 	appInfo.pApplicationName   = CR_APP_NAME;
 	appInfo.applicationVersion = CR_VERSION_APP;
 	appInfo.pEngineName        = CR_ENGINE_NAME;
@@ -88,8 +86,6 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_win
 
 	VkInstanceCreateInfo createInfo;
 	ClearStruct(createInfo);
-	createInfo.sType               = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	createInfo.pNext               = nullptr;
 	createInfo.pApplicationInfo    = &appInfo;
 	createInfo.enabledLayerCount   = 0;
 	createInfo.ppEnabledLayerNames = nullptr;
@@ -108,7 +104,6 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_win
 
 	VkWin32SurfaceCreateInfoKHR win32Surface;
 	ClearStruct(win32Surface);
-	win32Surface.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
 	win32Surface.hinstance = reinterpret_cast<HINSTANCE>(m_window.GetHInstance());
 	win32Surface.hwnd      = reinterpret_cast<HWND>(m_window.GetHWND());
 
@@ -273,17 +268,14 @@ VkPhysicalDevice cegraph::DeviceService::FindDevice() {
 
 	VkPhysicalDeviceVulkan12Features features12;
 	ClearStruct(features12);
-	features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
 	features12.pNext = nullptr;
 
 	VkPhysicalDeviceVulkan11Features features11;
 	ClearStruct(features11);
-	features11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
 	features11.pNext = &features12;
 
 	VkPhysicalDeviceFeatures2 features;
 	ClearStruct(features);
-	features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 	features.pNext = &features11;
 	vkGetPhysicalDeviceFeatures2(physicalDevices[foundDevice], &features);
 	CR_ASSERT(features.features.textureCompressionBC, "Require support for BC texture compression");
@@ -391,8 +383,6 @@ void cegraph::DeviceService::BuildDevice(VkPhysicalDevice& selectedDevice) {
 	float transferPriority = 0.0f;
 	VkDeviceQueueCreateInfo queueInfo;
 	ClearStruct(queueInfo);
-	queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queueInfo.pNext = nullptr;
 	std::vector<VkDeviceQueueCreateInfo> queueInfos;
 	queueInfos.reserve(3);
 	queueInfo.queueFamilyIndex = m_graphicsQueueIndex;
@@ -417,8 +407,6 @@ void cegraph::DeviceService::BuildDevice(VkPhysicalDevice& selectedDevice) {
 
 	VkDeviceCreateInfo createLogDevInfo;
 	ClearStruct(createLogDevInfo);
-	createLogDevInfo.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	createLogDevInfo.pNext                   = nullptr;
 	createLogDevInfo.queueCreateInfoCount    = (int)size(queueInfos);
 	createLogDevInfo.pQueueCreateInfos       = data(queueInfos);
 	createLogDevInfo.pEnabledFeatures        = &requiredFeatures.features;
@@ -495,7 +483,6 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 		vkGetImageMemoryRequirements(m_device, m_msaaImage, &imageRequirements);
 		VkMemoryAllocateInfo allocInfo;
 		ClearStruct(allocInfo);
-		allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		allocInfo.memoryTypeIndex = m_deviceMemoryIndex;
 		allocInfo.allocationSize  = imageRequirements.size;
 		vkAllocateMemory(m_device, &allocInfo, nullptr, &m_msaaMemory);
@@ -503,7 +490,6 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 
 		VkImageViewCreateInfo viewInfo;
 		ClearStruct(viewInfo);
-		viewInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		viewInfo.image                           = m_msaaImage;
 		viewInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
 		viewInfo.format                          = VK_FORMAT_B8G8R8A8_SRGB;
@@ -518,7 +504,6 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 
 	VkSwapchainCreateInfoKHR swapCreateInfo;
 	ClearStruct(swapCreateInfo);
-	swapCreateInfo.sType           = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 	swapCreateInfo.clipped         = true;
 	swapCreateInfo.compositeAlpha  = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 	swapCreateInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;

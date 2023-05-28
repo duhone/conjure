@@ -21,6 +21,18 @@ export namespace CR::Engine::Core {
 	template<typename... Rest>
 	inline constexpr bool is_one_of_v = is_one_of<Rest...>::value;
 
+	template<class T>
+	struct always_false : std::false_type {};
+
+	template<class T>
+	inline constexpr bool always_false_v = always_false<T>::value;
+
+	template<class T>
+	struct always_true : std::true_type {};
+
+	template<class T>
+	inline constexpr bool always_true_v = always_true<T>::value;
+
 	template<typename... Rest>
 	struct is_unique;
 
@@ -32,7 +44,8 @@ export namespace CR::Engine::Core {
 
 	template<class First, class Second, class... Rest>
 	struct is_unique<First, Second, Rest...>
-	    : std::conjunction<is_unique<First, Second>, is_unique<First, Rest...>, is_unique<Second, Rest...>> {};
+	    : std::conjunction<is_unique<First, Second>, is_unique<First, Rest...>, is_unique<Second, Rest...>> {
+	};
 
 	template<typename... Rest>
 	using is_unique_t = typename is_unique<Rest...>::type;
@@ -52,4 +65,4 @@ export namespace CR::Engine::Core {
 
 	template<typename T>
 	using GetFunctionPtrType_t = typename GetFunctionPtrType<T>::type;
-}    // namespace CR::Core
+}    // namespace CR::Engine::Core
