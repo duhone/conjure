@@ -39,18 +39,25 @@ namespace CR::Engine::Graphics {
 
 		void Stop();
 
+		void SetClearColor(glm::vec4 a_color) { m_clearColor = a_color; }
+		void ResetClearColor() { m_clearColor = std::nullopt; }
+
 	  private:
 		VkPhysicalDevice FindDevice();
 		void BuildDevice(VkPhysicalDevice& selectedDevice);
 		void CreateSwapChain(VkPhysicalDevice& selectedDevice);
 
 		ceplat::Window& m_window;
-		glm::ivec2 m_WindowSize{0, 0};
+		glm::ivec2 m_windowSize{0, 0};
 		VkInstance m_instance;
 		VkSurfaceKHR m_primarySurface;
 		VkSwapchainKHR m_primarySwapChain;
 		std::vector<VkImage> m_primarySwapChainImages;
 		std::vector<VkImageView> m_primarySwapChainImageViews;
+		VkRenderPass m_renderPass;    // only 1 currently, and only 1 subpass to go with it
+		std::vector<VkFramebuffer> m_frameBuffers;
+		VkSemaphore m_renderingFinished;    // need to block presenting until all rendering has completed
+		VkFence m_frameFence;
 
 		VkDevice m_device;
 		VkQueue m_graphicsQueue;
@@ -65,6 +72,8 @@ namespace CR::Engine::Graphics {
 		VkImage m_msaaImage;
 		VkImageView m_msaaView;
 		VkDeviceMemory m_msaaMemory;
+
+		std::optional<glm::vec4> m_clearColor;
 	};
 }    // namespace CR::Engine::Graphics
 
@@ -115,6 +124,11 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_win
 }
 
 void cegraph::DeviceService::Stop() {
+	vkDestroyFence(m_device, m_frameFence, nullptr);
+	vkDestroySemaphore(m_device, m_renderingFinished, nullptr);
+	for(auto& framebuffer : m_frameBuffers) { vkDestroyFramebuffer(m_device, framebuffer, nullptr); }
+
+	vkDestroyRenderPass(m_device, m_renderPass, nullptr);
 	for(auto& imageView : m_primarySwapChainImageViews) { vkDestroyImageView(m_device, imageView, nullptr); }
 	m_primarySwapChainImageViews.clear();
 	for(auto& image : m_primarySwapChainImages) { vkDestroyImage(m_device, image, nullptr); }
@@ -430,7 +444,7 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 	CR_LOG("current surface resolution: {}x{}", surfaceCaps.maxImageExtent.width,
 	       surfaceCaps.maxImageExtent.height);
 	CR_LOG("Min image count: {} Max image count: {}", surfaceCaps.minImageCount, surfaceCaps.maxImageCount);
-	m_WindowSize = glm::ivec2(surfaceCaps.maxImageExtent.width, surfaceCaps.maxImageExtent.height);
+	m_windowSize = glm::ivec2(surfaceCaps.maxImageExtent.width, surfaceCaps.maxImageExtent.height);
 
 	std::vector<VkSurfaceFormatKHR> surfaceFormats;
 	uint32_t numFormats{};
@@ -549,4 +563,77 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 		m_primarySwapChainImageViews.emplace_back();
 		vkCreateImageView(m_device, &viewInfo, nullptr, &m_primarySwapChainImageViews.back());
 	}
+
+	VkAttachmentDescription attatchDescs[2];
+	ClearStruct(attatchDescs[0]);
+	ClearStruct(attatchDescs[1]);
+	attatchDescs[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	attatchDescs[0].finalLayout   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	attatchDescs[0].format        = VK_FORMAT_B8G8R8A8_SRGB;
+	if(m_clearColor.has_value()) {
+		attatchDescs[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	} else {
+		attatchDescs[0].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	}
+	// TODO should be dont care for mobile, would be transient and never need to be stored to memory
+	attatchDescs[0].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+	attatchDescs[0].samples        = VK_SAMPLE_COUNT_4_BIT;
+	attatchDescs[0].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	attatchDescs[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	attatchDescs[1].initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+	attatchDescs[1].finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	attatchDescs[1].format         = VK_FORMAT_B8G8R8A8_SRGB;
+	attatchDescs[1].loadOp         = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	// TODO should be dont care for mobile
+	attatchDescs[1].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+	attatchDescs[1].samples        = VK_SAMPLE_COUNT_1_BIT;
+	attatchDescs[1].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	attatchDescs[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+	VkAttachmentReference attachRefs[2];
+	ClearStruct(attachRefs[0]);
+	ClearStruct(attachRefs[1]);
+	attachRefs[0].attachment = 0;
+	attachRefs[0].layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	attachRefs[1].attachment = 1;
+	attachRefs[1].layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkSubpassDescription subpassDesc;
+	ClearStruct(subpassDesc);
+	subpassDesc.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpassDesc.colorAttachmentCount = 1;
+	subpassDesc.pColorAttachments    = &attachRefs[0];
+	subpassDesc.pResolveAttachments  = &attachRefs[1];
+
+	VkRenderPassCreateInfo renderPassInfo;
+	ClearStruct(renderPassInfo);
+	renderPassInfo.attachmentCount = 2;
+	renderPassInfo.pAttachments    = attatchDescs;
+	renderPassInfo.subpassCount    = 1;
+	renderPassInfo.pSubpasses      = &subpassDesc;
+
+	vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass);
+
+	for(auto& imageView : m_primarySwapChainImageViews) {
+		VkFramebufferCreateInfo framebufferInfo;
+		ClearStruct(framebufferInfo);
+		const VkImageView attachments[] = {m_msaaView, imageView};
+		framebufferInfo.attachmentCount = 2;
+		framebufferInfo.pAttachments    = attachments;
+		framebufferInfo.width           = m_windowSize.x;
+		framebufferInfo.height          = m_windowSize.y;
+		framebufferInfo.renderPass      = m_renderPass;
+		framebufferInfo.layers          = 1;
+
+		m_frameBuffers.emplace_back();
+		vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_frameBuffers.back());
+	}
+
+	VkSemaphoreCreateInfo semInfo;
+	ClearStruct(semInfo);
+	vkCreateSemaphore(m_device, &semInfo, nullptr, &m_renderingFinished);
+
+	VkFenceCreateInfo fenceInfo;
+	ClearStruct(fenceInfo);
+	vkCreateFence(m_device, &fenceInfo, nullptr, &m_frameFence);
 }

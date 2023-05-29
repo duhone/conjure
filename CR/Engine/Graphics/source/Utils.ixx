@@ -39,6 +39,20 @@ namespace CR::Engine::Graphics {
 			value.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		} else if constexpr(std::is_same_v<T, VkSwapchainCreateInfoKHR>) {
 			value.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+		} else if constexpr(std::is_same_v<T, VkAttachmentDescription>) {
+			// no sType on this one
+		} else if constexpr(std::is_same_v<T, VkAttachmentReference>) {
+			// no sType on this one
+		} else if constexpr(std::is_same_v<T, VkSubpassDescription>) {
+			// no sType on this one
+		} else if constexpr(std::is_same_v<T, VkRenderPassCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkFramebufferCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkSemaphoreCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkFenceCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		} else {
 			static_assert(Core::always_false_v<T>, "unsuported Vulkan struct type in ClearStruct");
 		}
