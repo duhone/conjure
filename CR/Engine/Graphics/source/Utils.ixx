@@ -53,6 +53,10 @@ namespace CR::Engine::Graphics {
 			value.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 		} else if constexpr(std::is_same_v<T, VkFenceCreateInfo>) {
 			value.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkSubmitInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		} else if constexpr(std::is_same_v<T, VkPresentInfoKHR>) {
+			value.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 		} else {
 			static_assert(Core::always_false_v<T>, "unsuported Vulkan struct type in ClearStruct");
 		}

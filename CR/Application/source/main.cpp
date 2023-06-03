@@ -40,7 +40,8 @@ int main(int, char*) {
 	cecore::AddService<ceinput::Service>(window);
 	cecore::AddService<cegraph::Service>(window);
 
-	auto& inputService = cecore::GetService<ceinput::Service>();
+	auto& inputService    = cecore::GetService<ceinput::Service>();
+	auto& graphicsService = cecore::GetService<cegraph::Service>();
 	{
 		auto handleFxs = ceaud::GetHandleFXs();
 		auto music     = ceaud::GetHandleMusic();
@@ -61,7 +62,7 @@ int main(int, char*) {
 
 			if(regions.GetActive() == region && regions.WasActiveClicked()) { fanfareFX.Play(); }
 
-			std::this_thread::sleep_for(16ms);
+			graphicsService.Update();
 		}
 	}
 

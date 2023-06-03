@@ -73,6 +73,7 @@ namespace CR::Engine::Graphics {
 		VkImageView m_msaaView;
 		VkDeviceMemory m_msaaMemory;
 
+		uint32_t m_currentFrameBuffer{0};
 		std::optional<glm::vec4> m_clearColor;
 	};
 }    // namespace CR::Engine::Graphics
@@ -124,6 +125,8 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_win
 }
 
 void cegraph::DeviceService::Stop() {
+	vkDeviceWaitIdle(m_device);
+
 	vkDestroyFence(m_device, m_frameFence, nullptr);
 	vkDestroySemaphore(m_device, m_renderingFinished, nullptr);
 	for(auto& framebuffer : m_frameBuffers) { vkDestroyFramebuffer(m_device, framebuffer, nullptr); }
@@ -133,18 +136,48 @@ void cegraph::DeviceService::Stop() {
 	m_primarySwapChainImageViews.clear();
 	for(auto& image : m_primarySwapChainImages) { vkDestroyImage(m_device, image, nullptr); }
 	m_primarySwapChainImages.clear();
-	vkDestroySwapchainKHR(m_device, m_primarySwapChain, nullptr);
 
 	vkDestroyImageView(m_device, m_msaaView, nullptr);
 	vkDestroyImage(m_device, m_msaaImage, nullptr);
 	vkFreeMemory(m_device, m_msaaMemory, nullptr);
 
+	// can't destroy swap chain yet, fix later. graphics engine needs to be last thing to be shutdown
+	// vkDestroySwapchainKHR(m_device, m_primarySwapChain, nullptr);
 	vkDestroyDevice(m_device, nullptr);
 	vkDestroySurfaceKHR(m_instance, m_primarySurface, nullptr);
 	vkDestroyInstance(m_instance, nullptr);
 }
 
-void cegraph::DeviceService::Update() {}
+void cegraph::DeviceService::Update() {
+	vkAcquireNextImageKHR(m_device, m_primarySwapChain, UINT64_MAX, VK_NULL_HANDLE, m_frameFence,
+	                      &m_currentFrameBuffer);
+
+	vkWaitForFences(m_device, 1, &m_frameFence, VK_TRUE, UINT64_MAX);
+	vkResetFences(m_device, 1, &m_frameFence);
+
+	VkSubmitInfo subInfo;
+	ClearStruct(subInfo);
+	subInfo.commandBufferCount = 0;
+	// subInfo.commandBufferCount   = 1;
+	// subInfo.pCommandBuffers      = &engine->m_commandBuffer.GetHandle();
+	subInfo.waitSemaphoreCount   = 0;
+	subInfo.signalSemaphoreCount = 1;
+	subInfo.pSignalSemaphores    = &m_renderingFinished;
+	vkQueueSubmit(m_graphicsQueue, 1, &subInfo, VK_NULL_HANDLE);
+
+	VkPresentInfoKHR presInfo;
+	ClearStruct(presInfo);
+	presInfo.waitSemaphoreCount = 1;
+	presInfo.pWaitSemaphores    = &m_renderingFinished;
+	presInfo.swapchainCount     = 1;
+	presInfo.pSwapchains        = &m_primarySwapChain;
+	presInfo.pImageIndices      = &m_currentFrameBuffer;
+	vkQueuePresentKHR(m_presentationQueue, &presInfo);
+
+	// Don't allow gpu to get behind, sacrifice performance for minimal latency.
+	vkQueueWaitIdle(m_graphicsQueue);
+	vkQueueWaitIdle(m_presentationQueue);
+}
 
 VkPhysicalDevice cegraph::DeviceService::FindDevice() {
 	std::vector<VkPhysicalDevice> physicalDevices;
