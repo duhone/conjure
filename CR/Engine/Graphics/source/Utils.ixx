@@ -57,6 +57,12 @@ namespace CR::Engine::Graphics {
 			value.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		} else if constexpr(std::is_same_v<T, VkPresentInfoKHR>) {
 			value.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		} else if constexpr(std::is_same_v<T, VkCommandPoolCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkCommandBufferAllocateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkCommandBufferBeginInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		} else {
 			static_assert(Core::always_false_v<T>, "unsuported Vulkan struct type in ClearStruct");
 		}
