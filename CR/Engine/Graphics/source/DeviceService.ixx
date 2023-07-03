@@ -10,6 +10,7 @@ export module CR.Engine.Graphics.DeviceService;
 
 import CR.Engine.Core;
 import CR.Engine.Platform;
+import CR.Engine.Graphics.CommandPool;
 import CR.Engine.Graphics.Utils;
 
 import <algorithm>;
@@ -67,6 +68,7 @@ namespace CR::Engine::Graphics {
 		int32_t m_transferQueueIndex{-1};
 		int32_t m_presentationQueueIndex{-1};
 		int32_t m_deviceMemoryIndex{-1};
+		int32_t m_sharedMemoryIndex{-1};
 
 		// MSAA
 		VkImage m_msaaImage;
@@ -75,6 +77,8 @@ namespace CR::Engine::Graphics {
 
 		uint32_t m_currentFrameBuffer{0};
 		std::optional<glm::vec4> m_clearColor;
+
+		CommandPool m_commandPool;
 	};
 }    // namespace CR::Engine::Graphics
 
@@ -104,7 +108,7 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_win
 	std::vector<const char*> extensions;
 	extensions.emplace_back(VK_KHR_SURFACE_EXTENSION_NAME);
 	extensions.emplace_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-	createInfo.enabledExtensionCount   = extensions.size();
+	createInfo.enabledExtensionCount   = (uint32_t)extensions.size();
 	createInfo.ppEnabledExtensionNames = extensions.data();
 
 	result = vkCreateInstance(&createInfo, nullptr, &m_instance);
@@ -122,10 +126,14 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_win
 	VkPhysicalDevice selectedDevice = FindDevice();
 	BuildDevice(selectedDevice);
 	CreateSwapChain(selectedDevice);
+
+	m_commandPool = CommandPool(m_device, m_graphicsQueueIndex);
 }
 
 void cegraph::DeviceService::Stop() {
 	vkDeviceWaitIdle(m_device);
+
+	m_commandPool = CommandPool();
 
 	vkDestroyFence(m_device, m_frameFence, nullptr);
 	vkDestroySemaphore(m_device, m_renderingFinished, nullptr);
@@ -134,7 +142,6 @@ void cegraph::DeviceService::Stop() {
 	vkDestroyRenderPass(m_device, m_renderPass, nullptr);
 	for(auto& imageView : m_primarySwapChainImageViews) { vkDestroyImageView(m_device, imageView, nullptr); }
 	m_primarySwapChainImageViews.clear();
-	for(auto& image : m_primarySwapChainImages) { vkDestroyImage(m_device, image, nullptr); }
 	m_primarySwapChainImages.clear();
 
 	vkDestroyImageView(m_device, m_msaaView, nullptr);
@@ -142,7 +149,7 @@ void cegraph::DeviceService::Stop() {
 	vkFreeMemory(m_device, m_msaaMemory, nullptr);
 
 	// can't destroy swap chain yet, fix later. graphics engine needs to be last thing to be shutdown
-	// vkDestroySwapchainKHR(m_device, m_primarySwapChain, nullptr);
+	vkDestroySwapchainKHR(m_device, m_primarySwapChain, nullptr);
 	vkDestroyDevice(m_device, nullptr);
 	vkDestroySurfaceKHR(m_instance, m_primarySurface, nullptr);
 	vkDestroyInstance(m_instance, nullptr);
@@ -155,11 +162,15 @@ void cegraph::DeviceService::Update() {
 	vkWaitForFences(m_device, 1, &m_frameFence, VK_TRUE, UINT64_MAX);
 	vkResetFences(m_device, 1, &m_frameFence);
 
+	m_commandPool.ResetAll();
+	auto commandBuffer = m_commandPool.Begin();
+	m_commandPool.End(commandBuffer);
+
 	VkSubmitInfo subInfo;
 	ClearStruct(subInfo);
 	subInfo.commandBufferCount = 0;
-	// subInfo.commandBufferCount   = 1;
-	// subInfo.pCommandBuffers      = &engine->m_commandBuffer.GetHandle();
+	subInfo.commandBufferCount   = 1;
+	subInfo.pCommandBuffers      = &commandBuffer;
 	subInfo.waitSemaphoreCount   = 0;
 	subInfo.signalSemaphoreCount = 1;
 	subInfo.pSignalSemaphores    = &m_renderingFinished;
@@ -377,7 +388,8 @@ void cegraph::DeviceService::BuildDevice(VkPhysicalDevice& selectedDevice) {
 			CR_LOG("Host Heap. Size {}MB", heapSize);
 		}
 	}
-	uint32_t heapSize{};
+	uint32_t deviceHeapSize{};
+	uint32_t sharedHeapSize{};
 	for(uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
 		auto& heapIndex = memProps.memoryTypes[i].heapIndex;
 		auto& heapFlags = memProps.memoryTypes[i].propertyFlags;
@@ -387,18 +399,25 @@ void cegraph::DeviceService::BuildDevice(VkPhysicalDevice& selectedDevice) {
 		if(heapFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) { CR_LOG("  Host visible"); }
 		if(heapFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) { CR_LOG("  Host cached"); }
 		if(heapFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) { CR_LOG("  Host coherent"); }
+		
+		if((heapFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0 and
+		   (heapFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0 and (m_deviceMemoryIndex == -1)) {
+			m_deviceMemoryIndex = i;
+			deviceHeapSize      = (uint32_t)(memProps.memoryHeaps[heapIndex].size / 1024 / 1024);
+		}
 
 		// Only going to support unified memory and rebar. This gives the fastest loading, but won't work on
 		// older GPU's
 		if((heapFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0 and
 		   (heapFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0 and
 		   (heapFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0 and
-		   (heapFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) == 0 and (m_deviceMemoryIndex == -1)) {
-			m_deviceMemoryIndex = i;
-			heapSize            = memProps.memoryHeaps[heapIndex].size / 1024 / 1024;
+		   (heapFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) == 0 and (m_sharedMemoryIndex == -1)) {
+			m_sharedMemoryIndex = i;
+			sharedHeapSize      = (uint32_t)(memProps.memoryHeaps[heapIndex].size / 1024 / 1024);
 		}
 	}
-	CR_LOG("Chosen device Heap:  {} Size {}MB", m_deviceMemoryIndex, heapSize);
+	CR_LOG("Chosen device Heap:  {} Size {}MB", m_deviceMemoryIndex, deviceHeapSize);
+	CR_LOG("Chosen shared Heap:  {} Size {}MB", m_sharedMemoryIndex, sharedHeapSize);
 
 	VkPhysicalDeviceFeatures2 requiredFeatures;
 	ClearStruct(requiredFeatures);

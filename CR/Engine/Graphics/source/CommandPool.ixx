@@ -12,21 +12,17 @@ import CR.Engine.Graphics.Utils;
 import <vector>;
 
 namespace CR::Engine::Graphics {
-	struct CommandBuffer : public CR::Engine::Core::Handle<CommandBuffer> {
-		using CR::Engine::Core::Handle<CommandBuffer>::Handle;
-	};
-
 	// Secondary buffers aren't supported. they perform poorly on some mobile platforms.
 	// Only resetting the entire pool is supported.
-	class CommandPool {
+	export class CommandPool {
 	  public:
 		CommandPool() = default;
 		CommandPool(VkDevice a_device, uint32_t a_queueFamily);
 		~CommandPool();
 		CommandPool(const CommandPool&)               = delete;
-		CommandPool(CommandPool&& a_other)            = delete;
+		CommandPool(CommandPool&& a_other);
 		CommandPool& operator=(const CommandPool&)    = delete;
-		CommandPool& operator=(CommandPool&& a_other) = delete;
+		CommandPool& operator=(CommandPool&& a_other);
 
 		[[nodiscard]] VkCommandBuffer Begin();
 		void End(VkCommandBuffer a_buffer);
@@ -41,6 +37,21 @@ namespace CR::Engine::Graphics {
 		std::vector<VkCommandBuffer> m_availableBuffers;
 		std::vector<VkCommandBuffer> m_inUseBuffers;
 	};
+
+	inline CommandPool::CommandPool(CommandPool&& a_other) {
+		*this = std::move(a_other);
+	}
+		
+	CommandPool& CommandPool::operator=(CommandPool&& a_other) {
+		this->~CommandPool();
+		m_device = a_other.m_device;
+		m_commandPool = a_other.m_commandPool;
+		m_availableBuffers = std::move(a_other.m_availableBuffers);
+		m_inUseBuffers     = std::move(a_other.m_inUseBuffers);
+
+		a_other.m_commandPool = nullptr;
+		return *this;
+	}
 
 }    // namespace CR::Engine::Graphics
 
