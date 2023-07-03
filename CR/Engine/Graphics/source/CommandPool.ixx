@@ -87,7 +87,7 @@ void cegraph::CommandPool::AllocateBuffers() {
 	bufferInfo.commandPool        = m_commandPool;
 	bufferInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-	uint32_t newBufferOffset = m_availableBuffers.size();
+	uint32_t newBufferOffset = (uint32_t)m_availableBuffers.size();
 	m_availableBuffers.resize(m_availableBuffers.size() + c_bufferGrowth);
 	auto result =
 	    vkAllocateCommandBuffers(m_device, &bufferInfo, m_availableBuffers.data() + newBufferOffset);

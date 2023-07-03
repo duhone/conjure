@@ -11,6 +11,7 @@ set(INTERFACE_FILES
 set(SOURCE_FILES
     ${root}/Source/DeviceService.ixx
     ${root}/Source/CommandPool.ixx
+    ${root}/Source/Commands.ixx
     ${root}/Source/Utils.ixx
 )
 

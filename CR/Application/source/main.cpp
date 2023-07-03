@@ -1,5 +1,7 @@
 #include <function2/function2.hpp>
 
+#include <glm/glm.hpp>
+
 import CR.Engine.Assets;
 import CR.Engine.Audio;
 import CR.Engine.Core;
@@ -10,6 +12,7 @@ import CR.Engine.Platform;
 import <chrono>;
 import <cstdlib>;
 import <filesystem>;
+import <optional>;
 import <thread>;
 
 namespace ceassets = CR::Engine::Assets;
@@ -38,7 +41,8 @@ int main(int, char*) {
 	cecore::AddService<ceassets::Service>(assetsPath);
 	cecore::AddService<ceaud::Service>(false);
 	cecore::AddService<ceinput::Service>(window);
-	cecore::AddService<cegraph::Service>(window);
+	cecore::AddService<cegraph::Service>(
+	    window, std::optional<glm::vec4>(std::in_place, 0.0f, 1.0f, 0.0f, 1.0f));
 
 	auto& inputService    = cecore::GetService<ceinput::Service>();
 	auto& graphicsService = cecore::GetService<cegraph::Service>();

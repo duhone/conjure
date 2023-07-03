@@ -11,6 +11,7 @@ export module CR.Engine.Graphics.DeviceService;
 import CR.Engine.Core;
 import CR.Engine.Platform;
 import CR.Engine.Graphics.CommandPool;
+import CR.Engine.Graphics.Commands;
 import CR.Engine.Graphics.Utils;
 
 import <algorithm>;
@@ -28,7 +29,7 @@ namespace CR::Engine::Graphics {
 	  public:
 		static inline constexpr uint64_t s_typeIndex = CR::Engine::Core::EightCC("EGraDevc");
 
-		DeviceService(ceplat::Window& a_window);
+		DeviceService(ceplat::Window& a_window, std::optional<glm::vec4> a_clearColor);
 		~DeviceService()                    = default;
 		DeviceService(const DeviceService&) = delete;
 		DeviceService(DeviceService&&)      = delete;
@@ -39,9 +40,6 @@ namespace CR::Engine::Graphics {
 		void Update();
 
 		void Stop();
-
-		void SetClearColor(glm::vec4 a_color) { m_clearColor = a_color; }
-		void ResetClearColor() { m_clearColor = std::nullopt; }
 
 	  private:
 		VkPhysicalDevice FindDevice();
@@ -86,7 +84,8 @@ module :private;
 
 namespace cegraph = CR::Engine::Graphics;
 
-cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_window) {
+cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<glm::vec4> a_clearColor) :
+    m_window(a_window), m_clearColor(a_clearColor) {
 	[[maybe_unused]] auto result = volkInitialize();
 	CR_ASSERT(result == VK_SUCCESS, "Failed to initialize Volk");
 
@@ -133,6 +132,7 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window) : m_window(a_win
 void cegraph::DeviceService::Stop() {
 	vkDeviceWaitIdle(m_device);
 
+	m_commandPool.ResetAll();
 	m_commandPool = CommandPool();
 
 	vkDestroyFence(m_device, m_frameFence, nullptr);
@@ -148,7 +148,6 @@ void cegraph::DeviceService::Stop() {
 	vkDestroyImage(m_device, m_msaaImage, nullptr);
 	vkFreeMemory(m_device, m_msaaMemory, nullptr);
 
-	// can't destroy swap chain yet, fix later. graphics engine needs to be last thing to be shutdown
 	vkDestroySwapchainKHR(m_device, m_primarySwapChain, nullptr);
 	vkDestroyDevice(m_device, nullptr);
 	vkDestroySurfaceKHR(m_instance, m_primarySurface, nullptr);
@@ -164,6 +163,9 @@ void cegraph::DeviceService::Update() {
 
 	m_commandPool.ResetAll();
 	auto commandBuffer = m_commandPool.Begin();
+	Commands::RenderPassBegin(commandBuffer, m_renderPass, m_frameBuffers[m_currentFrameBuffer], m_windowSize,
+	                          m_clearColor);
+	Commands::RenderPassEnd(commandBuffer);
 	m_commandPool.End(commandBuffer);
 
 	VkSubmitInfo subInfo;
