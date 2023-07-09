@@ -2,9 +2,7 @@
 
 #include "core/Log.h"
 
-#include "volk.h"
-#include <glm/glm.hpp>
-#include <vulkan/vk_enum_string_helper.h>
+#include "Core.h"
 
 export module CR.Engine.Graphics.DeviceService;
 
@@ -65,13 +63,13 @@ namespace CR::Engine::Graphics {
 		int32_t m_graphicsQueueIndex{-1};
 		int32_t m_transferQueueIndex{-1};
 		int32_t m_presentationQueueIndex{-1};
-		int32_t m_deviceMemoryIndex{-1};
-		int32_t m_sharedMemoryIndex{-1};
+				
+		VmaAllocator m_vkAllocator;
 
 		// MSAA
 		VkImage m_msaaImage;
 		VkImageView m_msaaView;
-		VkDeviceMemory m_msaaMemory;
+		VmaAllocation m_msaaAlloc;
 
 		uint32_t m_currentFrameBuffer{0};
 		std::optional<glm::vec4> m_clearColor;
@@ -124,6 +122,17 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 
 	VkPhysicalDevice selectedDevice = FindDevice();
 	BuildDevice(selectedDevice);
+	volkLoadDevice(m_device);
+
+	VmaAllocatorCreateInfo allocatorCreateInfo;
+	memset(&allocatorCreateInfo, 0, sizeof(VmaAllocatorCreateInfo));
+	allocatorCreateInfo.vulkanApiVersion       = VK_API_VERSION_1_2;
+	allocatorCreateInfo.physicalDevice         = selectedDevice;
+	allocatorCreateInfo.device                 = m_device;
+	allocatorCreateInfo.instance               = m_instance;
+
+	vmaCreateAllocator(&allocatorCreateInfo, &m_vkAllocator);
+
 	CreateSwapChain(selectedDevice);
 
 	m_commandPool = CommandPool(m_device, m_graphicsQueueIndex);
@@ -145,10 +154,12 @@ void cegraph::DeviceService::Stop() {
 	m_primarySwapChainImages.clear();
 
 	vkDestroyImageView(m_device, m_msaaView, nullptr);
-	vkDestroyImage(m_device, m_msaaImage, nullptr);
-	vkFreeMemory(m_device, m_msaaMemory, nullptr);
+	vmaDestroyImage(m_vkAllocator, m_msaaImage, m_msaaAlloc);
 
 	vkDestroySwapchainKHR(m_device, m_primarySwapChain, nullptr);
+	
+	vmaDestroyAllocator(m_vkAllocator);
+
 	vkDestroyDevice(m_device, nullptr);
 	vkDestroySurfaceKHR(m_instance, m_primarySurface, nullptr);
 	vkDestroyInstance(m_instance, nullptr);
@@ -390,8 +401,7 @@ void cegraph::DeviceService::BuildDevice(VkPhysicalDevice& selectedDevice) {
 			CR_LOG("Host Heap. Size {}MB", heapSize);
 		}
 	}
-	uint32_t deviceHeapSize{};
-	uint32_t sharedHeapSize{};
+
 	for(uint32_t i = 0; i < memProps.memoryTypeCount; ++i) {
 		auto& heapIndex = memProps.memoryTypes[i].heapIndex;
 		auto& heapFlags = memProps.memoryTypes[i].propertyFlags;
@@ -401,25 +411,9 @@ void cegraph::DeviceService::BuildDevice(VkPhysicalDevice& selectedDevice) {
 		if(heapFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) { CR_LOG("  Host visible"); }
 		if(heapFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) { CR_LOG("  Host cached"); }
 		if(heapFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) { CR_LOG("  Host coherent"); }
-		
-		if((heapFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0 and
-		   (heapFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0 and (m_deviceMemoryIndex == -1)) {
-			m_deviceMemoryIndex = i;
-			deviceHeapSize      = (uint32_t)(memProps.memoryHeaps[heapIndex].size / 1024 / 1024);
-		}
-
-		// Only going to support unified memory and rebar. This gives the fastest loading, but won't work on
-		// older GPU's
-		if((heapFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0 and
-		   (heapFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0 and
-		   (heapFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0 and
-		   (heapFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) == 0 and (m_sharedMemoryIndex == -1)) {
-			m_sharedMemoryIndex = i;
-			sharedHeapSize      = (uint32_t)(memProps.memoryHeaps[heapIndex].size / 1024 / 1024);
-		}
+		auto heapSize = (uint32_t)(memProps.memoryHeaps[heapIndex].size / 1024 / 1024);
+		CR_LOG("  Heap Size: {}", heapSize);
 	}
-	CR_LOG("Chosen device Heap:  {} Size {}MB", m_deviceMemoryIndex, deviceHeapSize);
-	CR_LOG("Chosen shared Heap:  {} Size {}MB", m_sharedMemoryIndex, sharedHeapSize);
 
 	VkPhysicalDeviceFeatures2 requiredFeatures;
 	ClearStruct(requiredFeatures);
@@ -545,16 +539,14 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 		msaaCreateInfo.flags         = 0;
 		msaaCreateInfo.format        = VK_FORMAT_B8G8R8A8_SRGB;
 
-		vkCreateImage(m_device, &msaaCreateInfo, nullptr, &m_msaaImage);
+		VmaAllocationCreateInfo allocCreateInfo = {};
+		allocCreateInfo.usage                   = VMA_MEMORY_USAGE_AUTO;
+		allocCreateInfo.flags                   = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+		allocCreateInfo.priority                = 1.0f;
 
-		VkMemoryRequirements imageRequirements;
-		vkGetImageMemoryRequirements(m_device, m_msaaImage, &imageRequirements);
-		VkMemoryAllocateInfo allocInfo;
-		ClearStruct(allocInfo);
-		allocInfo.memoryTypeIndex = m_deviceMemoryIndex;
-		allocInfo.allocationSize  = imageRequirements.size;
-		vkAllocateMemory(m_device, &allocInfo, nullptr, &m_msaaMemory);
-		vkBindImageMemory(m_device, m_msaaImage, m_msaaMemory, 0);
+		VkImage img;
+		VmaAllocation alloc;
+		vmaCreateImage(m_vkAllocator, &msaaCreateInfo, &allocCreateInfo, &m_msaaImage, &m_msaaAlloc, nullptr);
 
 		VkImageViewCreateInfo viewInfo;
 		ClearStruct(viewInfo);

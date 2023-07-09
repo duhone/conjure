@@ -9,10 +9,12 @@ set(INTERFACE_FILES
 )
 
 set(SOURCE_FILES
+    ${root}/Source/Core.h
     ${root}/Source/DeviceService.ixx
     ${root}/Source/CommandPool.ixx
     ${root}/Source/Commands.ixx
     ${root}/Source/Utils.ixx
+    ${root}/Source/VkMemAllocator.cpp
 )
 
 set(BUILD_FILES
