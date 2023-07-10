@@ -6,6 +6,9 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     message(FATAL_ERROR "Do not build in-source.")
 endif()
 
+set(conjure_root "${CMAKE_CURRENT_LIST_DIR}")
+set(assets_root "${CMAKE_CURRENT_LIST_DIR}/CR/Assets")
+
 # WORKAROUND
 # This is added so that CMake can recognize the .ixx extension as a module interface.
 set(CMAKE_CXX_SYSROOT_FLAG_CODE "list(APPEND CMAKE_CXX_SOURCE_FILE_EXTENSIONS ixx)")

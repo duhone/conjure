@@ -21,13 +21,22 @@ set(BUILD_FILES
     ${root}/build/build.cmake
 )
 
+set(SHADER_FILES
+    ${assets_root}/Shaders/sprite.comp
+    ${assets_root}/Shaders/sprite.vert
+    ${assets_root}/Shaders/sprite.frag
+)
+
 add_library(graphics 
   ${INTERFACE_FILES} 
   ${SOURCE_FILES} 
   ${BUILD_FILES}
+  ${SHADER_FILES}
 )
 
 settingsCR(graphics)
+source_group(TREE ${assets_root} FILES ${SHADER_FILES})
+
 #microsoft bug see https://developercommunity.visualstudio.com/t/warning-C4005:-Outptr:-macro-redefinit/1546919
 target_compile_options(graphics PRIVATE /WX-)
 
