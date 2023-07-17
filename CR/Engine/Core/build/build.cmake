@@ -10,6 +10,7 @@ set(INTERFACE_FILES
     ${root}/interface/BitSet.ixx
     ${root}/interface/Core.ixx
     ${root}/interface/EightCC.ixx
+    ${root}/interface/Embedded.ixx
     ${root}/interface/FileHandle.ixx
     ${root}/interface/Function.ixx
     ${root}/interface/Guid.ixx

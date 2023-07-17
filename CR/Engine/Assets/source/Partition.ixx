@@ -96,7 +96,7 @@ void ceassets::Partition::Load(const fs::path& a_subFolder, std::string_view a_e
 		currentFolder       = &currentFolder->Folders[newFolderIndex];
 	}
 	for(int i = 0; i < currentFolder->Extensions.size(); ++i) {
-		if(currentFolder->Extensions[i] == a_extensionFilter) {
+		if(a_extensionFilter.empty() || currentFolder->Extensions[i] == a_extensionFilter) {
 			ceplat::MemoryMappedFile file(currentFolder->FilePaths[i]);
 			a_loadCallback(currentFolder->Hashes[i], currentFolder->DebugFiles[i], file.GetData());
 		}

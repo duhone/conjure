@@ -19,7 +19,7 @@ namespace CR::Engine::Assets {
 	  public:
 		static inline constexpr uint64_t s_typeIndex = CR::Engine::Core::EightCC("EAstServ");
 
-		enum Partitions { Audio };
+		enum Partitions { Audio, Graphics };
 
 		Service(std::filesystem::path a_assetsFolder);
 		Service(const Service&) = delete;
@@ -30,6 +30,7 @@ namespace CR::Engine::Assets {
 
 		using LoadCallbackT =
 		    std::function<void(uint64_t a_hash, std::string_view a_path, const std::span<std::byte> a_data)>;
+		// if a_extensionFilter is empty, then all files will be returned
 		void Load(Partitions a_partition, const std::filesystem::path& a_subFolder,
 		          std::string_view a_extensionFilter, LoadCallbackT a_loadCallback);
 
@@ -46,7 +47,7 @@ namespace ceassets = CR::Engine::Assets;
 namespace fs = std::filesystem;
 
 namespace {
-	constexpr std::string_view c_partitionFolders[] = {"Audio"};
+	constexpr std::string_view c_partitionFolders[] = {"Audio", "Graphics"};
 }
 
 ceassets::Service::Service(std::filesystem::path a_assetsFolder) {

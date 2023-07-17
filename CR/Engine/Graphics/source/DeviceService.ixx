@@ -10,6 +10,7 @@ import CR.Engine.Core;
 import CR.Engine.Platform;
 import CR.Engine.Graphics.CommandPool;
 import CR.Engine.Graphics.Commands;
+import CR.Engine.Graphics.Shaders;
 import CR.Engine.Graphics.Utils;
 
 import <algorithm>;
@@ -63,7 +64,7 @@ namespace CR::Engine::Graphics {
 		int32_t m_graphicsQueueIndex{-1};
 		int32_t m_transferQueueIndex{-1};
 		int32_t m_presentationQueueIndex{-1};
-				
+
 		VmaAllocator m_vkAllocator;
 
 		// MSAA
@@ -75,6 +76,7 @@ namespace CR::Engine::Graphics {
 		std::optional<glm::vec4> m_clearColor;
 
 		CommandPool m_commandPool;
+		cecore::Embedded<Shaders> m_shaders;
 	};
 }    // namespace CR::Engine::Graphics
 
@@ -126,20 +128,23 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 
 	VmaAllocatorCreateInfo allocatorCreateInfo;
 	memset(&allocatorCreateInfo, 0, sizeof(VmaAllocatorCreateInfo));
-	allocatorCreateInfo.vulkanApiVersion       = VK_API_VERSION_1_2;
-	allocatorCreateInfo.physicalDevice         = selectedDevice;
-	allocatorCreateInfo.device                 = m_device;
-	allocatorCreateInfo.instance               = m_instance;
+	allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_2;
+	allocatorCreateInfo.physicalDevice   = selectedDevice;
+	allocatorCreateInfo.device           = m_device;
+	allocatorCreateInfo.instance         = m_instance;
 
 	vmaCreateAllocator(&allocatorCreateInfo, &m_vkAllocator);
 
 	CreateSwapChain(selectedDevice);
 
 	m_commandPool = CommandPool(m_device, m_graphicsQueueIndex);
+	m_shaders.emplace(m_device);
 }
 
 void cegraph::DeviceService::Stop() {
 	vkDeviceWaitIdle(m_device);
+
+	m_shaders.reset();
 
 	m_commandPool.ResetAll();
 	m_commandPool = CommandPool();
@@ -157,7 +162,7 @@ void cegraph::DeviceService::Stop() {
 	vmaDestroyImage(m_vkAllocator, m_msaaImage, m_msaaAlloc);
 
 	vkDestroySwapchainKHR(m_device, m_primarySwapChain, nullptr);
-	
+
 	vmaDestroyAllocator(m_vkAllocator);
 
 	vkDestroyDevice(m_device, nullptr);
@@ -181,7 +186,7 @@ void cegraph::DeviceService::Update() {
 
 	VkSubmitInfo subInfo;
 	ClearStruct(subInfo);
-	subInfo.commandBufferCount = 0;
+	subInfo.commandBufferCount   = 0;
 	subInfo.commandBufferCount   = 1;
 	subInfo.pCommandBuffers      = &commandBuffer;
 	subInfo.waitSemaphoreCount   = 0;
@@ -544,8 +549,6 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 		allocCreateInfo.flags                   = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		allocCreateInfo.priority                = 1.0f;
 
-		VkImage img;
-		VmaAllocation alloc;
 		vmaCreateImage(m_vkAllocator, &msaaCreateInfo, &allocCreateInfo, &m_msaaImage, &m_msaaAlloc, nullptr);
 
 		VkImageViewCreateInfo viewInfo;

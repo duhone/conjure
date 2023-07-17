@@ -13,6 +13,8 @@ set(SOURCE_FILES
     ${root}/Source/DeviceService.ixx
     ${root}/Source/CommandPool.ixx
     ${root}/Source/Commands.ixx
+    ${root}/Source/GraphicsPipeline.ixx
+    ${root}/Source/Shaders.ixx
     ${root}/Source/Utils.ixx
     ${root}/Source/VkMemAllocator.cpp
 )
@@ -22,9 +24,9 @@ set(BUILD_FILES
 )
 
 set(SHADER_FILES
-    ${assets_root}/Shaders/sprite.comp
-    ${assets_root}/Shaders/sprite.vert
-    ${assets_root}/Shaders/sprite.frag
+    ${assets_root}/Graphics/Shaders/sprite.comp
+    ${assets_root}/Graphics/Shaders/sprite.vert
+    ${assets_root}/Graphics/Shaders/sprite.frag
 )
 
 add_library(graphics 
@@ -35,13 +37,14 @@ add_library(graphics
 )
 
 settingsCR(graphics)
-source_group(TREE ${assets_root} FILES ${SHADER_FILES})
+source_group(TREE ${assets_root}/Graphics FILES ${SHADER_FILES})
 
 #microsoft bug see https://developercommunity.visualstudio.com/t/warning-C4005:-Outptr:-macro-redefinit/1546919
 target_compile_options(graphics PRIVATE /WX-)
 
 target_link_libraries(graphics PUBLIC
 	headerUnits
+    assets
 	fmt
 	glm
 	core

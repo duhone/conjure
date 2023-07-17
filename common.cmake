@@ -74,6 +74,7 @@ function(settingsCR target)
 		
 	target_compile_options(${target} PRIVATE /W4)
 	target_compile_options(${target} PRIVATE /WX)
+	target_compile_options(${target} PRIVATE /wd4324)
 	
 	# Version can be packed into a single 32 bit int
 	# the max major version is 31. the max minor version is 255. patch can be up to 512K
