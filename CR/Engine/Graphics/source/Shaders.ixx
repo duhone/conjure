@@ -30,6 +30,13 @@ namespace CR::Engine::Graphics {
 		Shaders& operator=(const Shaders&)    = delete;
 		Shaders& operator=(Shaders&& a_other) = delete;
 
+		VkShaderModule GetShader(uint64_t a_shaderHash) const {
+			auto shader = m_shaderModules.find(a_shaderHash);
+			if(shader != m_shaderModules.end()) { return shader->second; }
+			CR_ERROR("Could not find shader");
+			return nullptr;
+		}
+
 	  private:
 		VkDevice m_device;
 

@@ -67,8 +67,10 @@ namespace CR::Engine::Graphics {
 			value.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		} else if constexpr(std::is_same_v<T, VkShaderModuleCreateInfo>) {
 			value.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkPipelineShaderStageCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		} else {
-			static_assert(Core::always_false_v<T>, "unsuported Vulkan struct type in ClearStruct");
+			static_assert(Core::always_false_v<T>, "unsupported Vulkan struct type in ClearStruct");
 		}
 	}
 }    // namespace CR::Engine::Graphics

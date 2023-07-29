@@ -10,6 +10,8 @@ set(INTERFACE_FILES
 
 set(SOURCE_FILES
     ${root}/Source/Core.h
+    ${root}/Source/Constants.ixx
+    ${root}/Source/Context.ixx
     ${root}/Source/DeviceService.ixx
     ${root}/Source/CommandPool.ixx
     ${root}/Source/Commands.ixx

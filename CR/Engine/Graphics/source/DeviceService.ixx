@@ -10,6 +10,7 @@ import CR.Engine.Core;
 import CR.Engine.Platform;
 import CR.Engine.Graphics.CommandPool;
 import CR.Engine.Graphics.Commands;
+import CR.Engine.Graphics.Context;
 import CR.Engine.Graphics.Shaders;
 import CR.Engine.Graphics.Utils;
 
@@ -41,9 +42,11 @@ namespace CR::Engine::Graphics {
 		void Stop();
 
 	  private:
-		VkPhysicalDevice FindDevice();
-		void BuildDevice(VkPhysicalDevice& selectedDevice);
-		void CreateSwapChain(VkPhysicalDevice& selectedDevice);
+		void FindDevice();
+		void BuildDevice();
+		void CreateSwapChain();
+
+		Context m_context;
 
 		ceplat::Window& m_window;
 		glm::ivec2 m_windowSize{0, 0};
@@ -57,15 +60,12 @@ namespace CR::Engine::Graphics {
 		VkSemaphore m_renderingFinished;    // need to block presenting until all rendering has completed
 		VkFence m_frameFence;
 
-		VkDevice m_device;
 		VkQueue m_graphicsQueue;
 		VkQueue m_transferQueue;
 		VkQueue m_presentationQueue;
 		int32_t m_graphicsQueueIndex{-1};
 		int32_t m_transferQueueIndex{-1};
 		int32_t m_presentationQueueIndex{-1};
-
-		VmaAllocator m_vkAllocator;
 
 		// MSAA
 		VkImage m_msaaImage;
@@ -122,60 +122,62 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 
 	vkCreateWin32SurfaceKHR(m_instance, &win32Surface, nullptr, &m_primarySurface);
 
-	VkPhysicalDevice selectedDevice = FindDevice();
-	BuildDevice(selectedDevice);
-	volkLoadDevice(m_device);
+	FindDevice();
+	BuildDevice();
+	volkLoadDevice(m_context.Device);
 
 	VmaAllocatorCreateInfo allocatorCreateInfo;
 	memset(&allocatorCreateInfo, 0, sizeof(VmaAllocatorCreateInfo));
 	allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_2;
-	allocatorCreateInfo.physicalDevice   = selectedDevice;
-	allocatorCreateInfo.device           = m_device;
+	allocatorCreateInfo.physicalDevice   = m_context.PhysicalDevice;
+	allocatorCreateInfo.device           = m_context.Device;
 	allocatorCreateInfo.instance         = m_instance;
 
-	vmaCreateAllocator(&allocatorCreateInfo, &m_vkAllocator);
+	vmaCreateAllocator(&allocatorCreateInfo, &m_context.Allocator);
 
-	CreateSwapChain(selectedDevice);
+	CreateSwapChain();
 
-	m_commandPool = CommandPool(m_device, m_graphicsQueueIndex);
-	m_shaders.emplace(m_device);
+	m_commandPool = CommandPool(m_context.Device, m_graphicsQueueIndex);
+	m_shaders.emplace(m_context.Device);
 }
 
 void cegraph::DeviceService::Stop() {
-	vkDeviceWaitIdle(m_device);
+	vkDeviceWaitIdle(m_context.Device);
 
 	m_shaders.reset();
 
 	m_commandPool.ResetAll();
 	m_commandPool = CommandPool();
 
-	vkDestroyFence(m_device, m_frameFence, nullptr);
-	vkDestroySemaphore(m_device, m_renderingFinished, nullptr);
-	for(auto& framebuffer : m_frameBuffers) { vkDestroyFramebuffer(m_device, framebuffer, nullptr); }
+	vkDestroyFence(m_context.Device, m_frameFence, nullptr);
+	vkDestroySemaphore(m_context.Device, m_renderingFinished, nullptr);
+	for(auto& framebuffer : m_frameBuffers) { vkDestroyFramebuffer(m_context.Device, framebuffer, nullptr); }
 
-	vkDestroyRenderPass(m_device, m_renderPass, nullptr);
-	for(auto& imageView : m_primarySwapChainImageViews) { vkDestroyImageView(m_device, imageView, nullptr); }
+	vkDestroyRenderPass(m_context.Device, m_renderPass, nullptr);
+	for(auto& imageView : m_primarySwapChainImageViews) {
+		vkDestroyImageView(m_context.Device, imageView, nullptr);
+	}
 	m_primarySwapChainImageViews.clear();
 	m_primarySwapChainImages.clear();
 
-	vkDestroyImageView(m_device, m_msaaView, nullptr);
-	vmaDestroyImage(m_vkAllocator, m_msaaImage, m_msaaAlloc);
+	vkDestroyImageView(m_context.Device, m_msaaView, nullptr);
+	vmaDestroyImage(m_context.Allocator, m_msaaImage, m_msaaAlloc);
 
-	vkDestroySwapchainKHR(m_device, m_primarySwapChain, nullptr);
+	vkDestroySwapchainKHR(m_context.Device, m_primarySwapChain, nullptr);
 
-	vmaDestroyAllocator(m_vkAllocator);
+	vmaDestroyAllocator(m_context.Allocator);
 
-	vkDestroyDevice(m_device, nullptr);
+	vkDestroyDevice(m_context.Device, nullptr);
 	vkDestroySurfaceKHR(m_instance, m_primarySurface, nullptr);
 	vkDestroyInstance(m_instance, nullptr);
 }
 
 void cegraph::DeviceService::Update() {
-	vkAcquireNextImageKHR(m_device, m_primarySwapChain, UINT64_MAX, VK_NULL_HANDLE, m_frameFence,
+	vkAcquireNextImageKHR(m_context.Device, m_primarySwapChain, UINT64_MAX, VK_NULL_HANDLE, m_frameFence,
 	                      &m_currentFrameBuffer);
 
-	vkWaitForFences(m_device, 1, &m_frameFence, VK_TRUE, UINT64_MAX);
-	vkResetFences(m_device, 1, &m_frameFence);
+	vkWaitForFences(m_context.Device, 1, &m_frameFence, VK_TRUE, UINT64_MAX);
+	vkResetFences(m_context.Device, 1, &m_frameFence);
 
 	m_commandPool.ResetAll();
 	auto commandBuffer = m_commandPool.Begin();
@@ -208,7 +210,7 @@ void cegraph::DeviceService::Update() {
 	vkQueueWaitIdle(m_presentationQueue);
 }
 
-VkPhysicalDevice cegraph::DeviceService::FindDevice() {
+void cegraph::DeviceService::FindDevice() {
 	std::vector<VkPhysicalDevice> physicalDevices;
 	uint32_t deviceCount{};
 	[[maybe_unused]] auto result = vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
@@ -391,12 +393,12 @@ VkPhysicalDevice cegraph::DeviceService::FindDevice() {
 
 	CR_ASSERT(foundDevice != -1, "Could not find a valid vulkan 1.2 graphics device");
 
-	return physicalDevices[foundDevice];
+	m_context.PhysicalDevice = physicalDevices[foundDevice];
 }
 
-void cegraph::DeviceService::BuildDevice(VkPhysicalDevice& selectedDevice) {
+void cegraph::DeviceService::BuildDevice() {
 	VkPhysicalDeviceMemoryProperties memProps;
-	vkGetPhysicalDeviceMemoryProperties(selectedDevice, &memProps);
+	vkGetPhysicalDeviceMemoryProperties(m_context.PhysicalDevice, &memProps);
 	for(uint32_t i = 0; i < memProps.memoryHeapCount; ++i) {
 		auto heapSize   = memProps.memoryHeaps[i].size / 1024 / 1024;
 		auto& heapFlags = memProps.memoryHeaps[i].flags;
@@ -482,18 +484,20 @@ void cegraph::DeviceService::BuildDevice(VkPhysicalDevice& selectedDevice) {
 	createLogDevInfo.enabledExtensionCount   = (uint32_t)size(deviceExtensions);
 	createLogDevInfo.ppEnabledExtensionNames = data(deviceExtensions);
 
-	if(vkCreateDevice(selectedDevice, &createLogDevInfo, nullptr, &m_device) != VK_SUCCESS) {
+	if(vkCreateDevice(m_context.PhysicalDevice, &createLogDevInfo, nullptr, &m_context.Device) !=
+	   VK_SUCCESS) {
 		CR_ERROR("Failed to create a vulkan device");
 	}
 
-	vkGetDeviceQueue(m_device, m_graphicsQueueIndex, graphicsQueueIndex, &m_graphicsQueue);
-	vkGetDeviceQueue(m_device, m_presentationQueueIndex, presentationQueueIndex, &m_presentationQueue);
-	vkGetDeviceQueue(m_device, m_transferQueueIndex, transferQueueIndex, &m_transferQueue);
+	vkGetDeviceQueue(m_context.Device, m_graphicsQueueIndex, graphicsQueueIndex, &m_graphicsQueue);
+	vkGetDeviceQueue(m_context.Device, m_presentationQueueIndex, presentationQueueIndex,
+	                 &m_presentationQueue);
+	vkGetDeviceQueue(m_context.Device, m_transferQueueIndex, transferQueueIndex, &m_transferQueue);
 }
 
-void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
+void cegraph::DeviceService::CreateSwapChain() {
 	VkSurfaceCapabilitiesKHR surfaceCaps;
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(selectedDevice, m_primarySurface, &surfaceCaps);
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_context.PhysicalDevice, m_primarySurface, &surfaceCaps);
 	CR_LOG("current surface resolution: {}x{}", surfaceCaps.maxImageExtent.width,
 	       surfaceCaps.maxImageExtent.height);
 	CR_LOG("Min image count: {} Max image count: {}", surfaceCaps.minImageCount, surfaceCaps.maxImageCount);
@@ -501,9 +505,9 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 
 	std::vector<VkSurfaceFormatKHR> surfaceFormats;
 	uint32_t numFormats{};
-	vkGetPhysicalDeviceSurfaceFormatsKHR(selectedDevice, m_primarySurface, &numFormats, nullptr);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(m_context.PhysicalDevice, m_primarySurface, &numFormats, nullptr);
 	surfaceFormats.resize(numFormats);
-	vkGetPhysicalDeviceSurfaceFormatsKHR(selectedDevice, m_primarySurface, &numFormats,
+	vkGetPhysicalDeviceSurfaceFormatsKHR(m_context.PhysicalDevice, m_primarySurface, &numFormats,
 	                                     surfaceFormats.data());
 
 	CR_LOG("Supported surface formats:");
@@ -514,9 +518,10 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 
 	std::vector<VkPresentModeKHR> presentModes;
 	uint32_t numPresModes{};
-	vkGetPhysicalDeviceSurfacePresentModesKHR(selectedDevice, m_primarySurface, &numPresModes, nullptr);
+	vkGetPhysicalDeviceSurfacePresentModesKHR(m_context.PhysicalDevice, m_primarySurface, &numPresModes,
+	                                          nullptr);
 	presentModes.resize(numPresModes);
-	vkGetPhysicalDeviceSurfacePresentModesKHR(selectedDevice, m_primarySurface, &numPresModes,
+	vkGetPhysicalDeviceSurfacePresentModesKHR(m_context.PhysicalDevice, m_primarySurface, &numPresModes,
 	                                          presentModes.data());
 
 	CR_LOG("Presentation modes:");
@@ -549,7 +554,8 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 		allocCreateInfo.flags                   = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		allocCreateInfo.priority                = 1.0f;
 
-		vmaCreateImage(m_vkAllocator, &msaaCreateInfo, &allocCreateInfo, &m_msaaImage, &m_msaaAlloc, nullptr);
+		vmaCreateImage(m_context.Allocator, &msaaCreateInfo, &allocCreateInfo, &m_msaaImage, &m_msaaAlloc,
+		               nullptr);
 
 		VkImageViewCreateInfo viewInfo;
 		ClearStruct(viewInfo);
@@ -562,7 +568,7 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount     = 1;
 
-		vkCreateImageView(m_device, &viewInfo, nullptr, &m_msaaView);
+		vkCreateImageView(m_context.Device, &viewInfo, nullptr, &m_msaaView);
 	}
 
 	VkSwapchainCreateInfoKHR swapCreateInfo;
@@ -590,11 +596,11 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 	swapCreateInfo.surface          = m_primarySurface;
 	swapCreateInfo.imageArrayLayers = 1;
 
-	vkCreateSwapchainKHR(m_device, &swapCreateInfo, nullptr, &m_primarySwapChain);
+	vkCreateSwapchainKHR(m_context.Device, &swapCreateInfo, nullptr, &m_primarySwapChain);
 	uint32_t numSwapChainImages{};
-	vkGetSwapchainImagesKHR(m_device, m_primarySwapChain, &numSwapChainImages, nullptr);
+	vkGetSwapchainImagesKHR(m_context.Device, m_primarySwapChain, &numSwapChainImages, nullptr);
 	m_primarySwapChainImages.resize(numSwapChainImages);
-	vkGetSwapchainImagesKHR(m_device, m_primarySwapChain, &numSwapChainImages,
+	vkGetSwapchainImagesKHR(m_context.Device, m_primarySwapChain, &numSwapChainImages,
 	                        m_primarySwapChainImages.data());
 
 	for(const auto& image : m_primarySwapChainImages) {
@@ -610,7 +616,7 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 		viewInfo.subresourceRange.baseMipLevel   = 0;
 		viewInfo.subresourceRange.levelCount     = 1;
 		m_primarySwapChainImageViews.emplace_back();
-		vkCreateImageView(m_device, &viewInfo, nullptr, &m_primarySwapChainImageViews.back());
+		vkCreateImageView(m_context.Device, &viewInfo, nullptr, &m_primarySwapChainImageViews.back());
 	}
 
 	VkAttachmentDescription attatchDescs[2];
@@ -661,7 +667,7 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 	renderPassInfo.subpassCount    = 1;
 	renderPassInfo.pSubpasses      = &subpassDesc;
 
-	vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass);
+	vkCreateRenderPass(m_context.Device, &renderPassInfo, nullptr, &m_renderPass);
 
 	for(auto& imageView : m_primarySwapChainImageViews) {
 		VkFramebufferCreateInfo framebufferInfo;
@@ -675,14 +681,14 @@ void cegraph::DeviceService::CreateSwapChain(VkPhysicalDevice& selectedDevice) {
 		framebufferInfo.layers          = 1;
 
 		m_frameBuffers.emplace_back();
-		vkCreateFramebuffer(m_device, &framebufferInfo, nullptr, &m_frameBuffers.back());
+		vkCreateFramebuffer(m_context.Device, &framebufferInfo, nullptr, &m_frameBuffers.back());
 	}
 
 	VkSemaphoreCreateInfo semInfo;
 	ClearStruct(semInfo);
-	vkCreateSemaphore(m_device, &semInfo, nullptr, &m_renderingFinished);
+	vkCreateSemaphore(m_context.Device, &semInfo, nullptr, &m_renderingFinished);
 
 	VkFenceCreateInfo fenceInfo;
 	ClearStruct(fenceInfo);
-	vkCreateFence(m_device, &fenceInfo, nullptr, &m_frameFence);
+	vkCreateFence(m_context.Device, &fenceInfo, nullptr, &m_frameFence);
 }
