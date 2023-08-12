@@ -4,7 +4,7 @@ module;
 
 #include "Core.h"
 
-export module CR.Engine.Graphics.GraphicsPipeline;
+export module CR.Engine.Graphics.Materials;
 
 import CR.Engine.Graphics.Constants;
 import CR.Engine.Graphics.Context;
@@ -16,16 +16,15 @@ import CR.Engine.Core;
 import <vector>;
 
 namespace CR::Engine::Graphics {
-	export class GraphicsPipeline {
+	export class Materials {
 	  public:
-		GraphicsPipeline() = default;
-		GraphicsPipeline(const Context& a_context, const Shaders& a_shaders, uint64_t a_vertShader,
-		                 uint64_t a_fragShader);
-		~GraphicsPipeline();
-		GraphicsPipeline(const GraphicsPipeline&)               = delete;
-		GraphicsPipeline(GraphicsPipeline&& a_other)            = delete;
-		GraphicsPipeline& operator=(const GraphicsPipeline&)    = delete;
-		GraphicsPipeline& operator=(GraphicsPipeline&& a_other) = delete;
+		Materials() = default;
+		Materials(const Context& a_context, const Shaders& a_shaders);
+		~Materials();
+		Materials(const Materials&)               = delete;
+		Materials(Materials&& a_other)            = delete;
+		Materials& operator=(const Materials&)    = delete;
+		Materials& operator=(Materials&& a_other) = delete;
 
 	  private:
 		const Context& m_context;
@@ -44,10 +43,8 @@ module :private;
 namespace cecore  = CR::Engine::Core;
 namespace cegraph = CR::Engine::Graphics;
 
-cegraph::GraphicsPipeline::GraphicsPipeline(const Context& a_context, const Shaders& a_shaders,
-                                            uint64_t a_vertShader, uint64_t a_fragShader) :
-    m_context(a_context) {
-	VkShaderModule vertShader = a_shaders.GetShader(a_vertShader);
+cegraph::Materials::Materials(const Context& a_context, const Shaders& a_shaders) : m_context(a_context) {
+	/* VkShaderModule vertShader = a_shaders.GetShader(a_vertShader);
 	VkShaderModule fragShader = a_shaders.GetShader(a_fragShader);
 
 	VkSpecializationMapEntry fragSpecInfoEntrys;
@@ -71,7 +68,7 @@ cegraph::GraphicsPipeline::GraphicsPipeline(const Context& a_context, const Shad
 	shaderPipeInfo[1].module              = fragShader;
 	shaderPipeInfo[1].pName               = "main";
 	shaderPipeInfo[1].stage               = VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
-	shaderPipeInfo[1].pSpecializationInfo = &fragSpecInfo;
+	shaderPipeInfo[1].pSpecializationInfo = &fragSpecInfo;*/
 }
 
-cegraph::GraphicsPipeline::~GraphicsPipeline() {}
+cegraph::Materials::~Materials() {}

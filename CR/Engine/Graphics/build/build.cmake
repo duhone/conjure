@@ -15,7 +15,7 @@ set(SOURCE_FILES
     ${root}/Source/DeviceService.ixx
     ${root}/Source/CommandPool.ixx
     ${root}/Source/Commands.ixx
-    ${root}/Source/GraphicsPipeline.ixx
+    ${root}/Source/Materials.ixx
     ${root}/Source/Shaders.ixx
     ${root}/Source/Utils.ixx
     ${root}/Source/VkMemAllocator.cpp
