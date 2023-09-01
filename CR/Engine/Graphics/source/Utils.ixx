@@ -69,6 +69,26 @@ namespace CR::Engine::Graphics {
 			value.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		} else if constexpr(std::is_same_v<T, VkPipelineShaderStageCreateInfo>) {
 			value.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkPipelineViewportStateCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkPipelineDynamicStateCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkPipelineRasterizationStateCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkPipelineMultisampleStateCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkPipelineColorBlendStateCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkSamplerCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkDescriptorSetLayoutCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkPipelineLayoutCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkGraphicsPipelineCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkPipelineInputAssemblyStateCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 		} else {
 			static_assert(Core::always_false_v<T>, "unsupported Vulkan struct type in ClearStruct");
 		}

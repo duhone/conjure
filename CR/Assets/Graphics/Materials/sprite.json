@@ -1,0 +1,4 @@
+{
+    "shader_vertex" : "sprite.vert",
+    "shader_fragment" : "sprite.frag"
+}

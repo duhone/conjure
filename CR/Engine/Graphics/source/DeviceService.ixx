@@ -11,6 +11,7 @@ import CR.Engine.Platform;
 import CR.Engine.Graphics.CommandPool;
 import CR.Engine.Graphics.Commands;
 import CR.Engine.Graphics.Context;
+import CR.Engine.Graphics.Materials;
 import CR.Engine.Graphics.Shaders;
 import CR.Engine.Graphics.Utils;
 
@@ -77,6 +78,7 @@ namespace CR::Engine::Graphics {
 
 		CommandPool m_commandPool;
 		cecore::Embedded<Shaders> m_shaders;
+		cecore::Embedded<Materials> m_materials;
 	};
 }    // namespace CR::Engine::Graphics
 
@@ -139,11 +141,13 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 
 	m_commandPool = CommandPool(m_context.Device, m_graphicsQueueIndex);
 	m_shaders.emplace(m_context.Device);
+	m_materials.emplace(m_context, *m_shaders, m_renderPass);
 }
 
 void cegraph::DeviceService::Stop() {
 	vkDeviceWaitIdle(m_context.Device);
 
+	m_materials.reset();
 	m_shaders.reset();
 
 	m_commandPool.ResetAll();

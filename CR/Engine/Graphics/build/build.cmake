@@ -46,6 +46,7 @@ target_compile_options(graphics PRIVATE /WX-)
 
 target_link_libraries(graphics PUBLIC
 	headerUnits
+    simdjson
     assets
 	fmt
 	glm
