@@ -52,6 +52,7 @@ namespace CR::Engine::Audio {
 		void BuildChannelWeights(WAVEFORMATEXTENSIBLE* a_waveFormatDevice);
 		ChannelWeights NormalizeChannelWeight(const ChannelWeights a_weight);
 
+		bool m_disabled{false};
 		CComPtr<IAudioClient3> m_audioClient;
 		CComPtr<IAudioRenderClient> m_audioRenderClient;
 		uint32_t m_frameSamples = 0;
@@ -160,6 +161,10 @@ cea::AudioDeviceImpl::AudioDeviceImpl(AudioDevice::DeviceCallback_t a_callback) 
 	m_sampleRate   = waveFormatDevice->Format.nSamplesPerSec;
 	hr = m_audioClient->InitializeSharedAudioStream(AUDCLNT_STREAMFLAGS_EVENTCALLBACK, m_frameSamples,
 	                                                &waveFormatDevice->Format, nullptr);
+	if(hr != S_OK) {
+		m_disabled = true;
+		return;
+	}
 	CR_ASSERT(hr == S_OK, "Failed to set initialize wasapi audio stream");
 
 	m_audioEvent = CreateEventA(nullptr, FALSE, FALSE, nullptr);
@@ -194,6 +199,7 @@ cea::AudioDeviceImpl::AudioDeviceImpl(AudioDevice::DeviceCallback_t a_callback) 
 }
 
 cea::AudioDeviceImpl::~AudioDeviceImpl() {
+	if(m_disabled) { return; }
 	HRESULT hr;
 
 	m_finish.store(true, std::memory_order_release);
