@@ -48,6 +48,22 @@ namespace CR::Engine::Core {
 		return hash;
 	}
 
+	export inline constexpr uint64_t Hash64(const char* a_data) {
+		constexpr uint64_t c_offsetBias = 0xcbf29ce484222325ull;
+		constexpr uint64_t c_prime      = 0x00000100000001B3ull;
+
+		uint64_t hash = c_offsetBias;
+
+		static_assert(sizeof(a_data[0]) == 1, "Hash only works with bytes currently");
+		int i = 0;
+		while(a_data[i] != 0) {
+			hash ^= a_data[i++];
+			hash *= c_prime;
+		}
+
+		return hash;
+	}
+
 	export inline consteval uint64_t C_Hash64(std::ranges::range auto a_data) {
 		return Hash64(a_data);
 	}
