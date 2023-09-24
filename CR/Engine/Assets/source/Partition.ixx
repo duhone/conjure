@@ -29,6 +29,7 @@ namespace CR::Engine::Assets {
 		    std::function<void(uint64_t a_hash, std::string_view a_path, const std::span<std::byte>)>;
 		void Load(const std::filesystem::path& a_subFolder, std::string_view a_extensionFilter,
 		          LoadCallbackT a_loadCallback);
+		void LoadSingle(uint64_t a_hash, LoadCallbackT a_loadCallback);
 
 	  private:
 		struct Folder {
@@ -97,6 +98,16 @@ void ceassets::Partition::Load(const fs::path& a_subFolder, std::string_view a_e
 	}
 	for(int i = 0; i < currentFolder->Extensions.size(); ++i) {
 		if(a_extensionFilter.empty() || currentFolder->Extensions[i] == a_extensionFilter) {
+			ceplat::MemoryMappedFile file(currentFolder->FilePaths[i]);
+			a_loadCallback(currentFolder->Hashes[i], currentFolder->DebugFiles[i], file.GetData());
+		}
+	}
+}
+
+void ceassets::Partition::LoadSingle(uint64_t a_hash, LoadCallbackT a_loadCallback) {
+	const Folder* currentFolder = &m_rootFolder;
+	for(int i = 0; i < currentFolder->Hashes.size(); ++i) {
+		if(a_hash == currentFolder->Hashes[i]) {
 			ceplat::MemoryMappedFile file(currentFolder->FilePaths[i]);
 			a_loadCallback(currentFolder->Hashes[i], currentFolder->DebugFiles[i], file.GetData());
 		}

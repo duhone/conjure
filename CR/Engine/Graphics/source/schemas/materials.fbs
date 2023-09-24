@@ -1,0 +1,13 @@
+namespace CR.Engine.Graphics.Flatbuffers;
+
+table Material{
+	name:string;
+	vertex_shader:string;
+	fragment_shader:string;
+}
+ 
+table Materials {
+  mats:[Material];
+}
+ 
+root_type Materials;

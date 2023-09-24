@@ -33,6 +33,7 @@ namespace CR::Engine::Assets {
 		// if a_extensionFilter is empty, then all files will be returned
 		void Load(Partitions a_partition, const std::filesystem::path& a_subFolder,
 		          std::string_view a_extensionFilter, LoadCallbackT a_loadCallback);
+		void LoadSingle(Partitions a_partition, uint64_t a_hash, LoadCallbackT a_loadCallback);
 
 	  private:
 		std::vector<Partition> m_partitions;
@@ -61,4 +62,9 @@ void ceassets::Service::Load(Partitions a_partition, const std::filesystem::path
                              std::string_view a_extensionFilter, LoadCallbackT a_loadCallback) {
 	CR_ASSERT(a_partition < m_partitions.size(), "Invalid partition");
 	m_partitions[a_partition].Load(a_subFolder, a_extensionFilter, std::move(a_loadCallback));
+}
+
+void ceassets::Service::LoadSingle(Partitions a_partition, uint64_t a_hash, LoadCallbackT a_loadCallback) {
+	CR_ASSERT(a_partition < m_partitions.size(), "Invalid partition");
+	m_partitions[a_partition].LoadSingle(a_hash, std::move(a_loadCallback));
 }

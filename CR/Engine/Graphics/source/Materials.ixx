@@ -1,10 +1,12 @@
 module;
 
+#include "generated/graphics/materials_generated.h"
+
+#include "flatbuffers/idl.h"
+
 #include "core/Log.h"
 
 #include "Core.h"
-
-#include "simdjson.h"
 
 export module CR.Engine.Graphics.Materials;
 
@@ -15,6 +17,7 @@ import CR.Engine.Graphics.Utils;
 
 import CR.Engine.Assets;
 import CR.Engine.Core;
+import CR.Engine.Platform;
 
 import <vector>;
 
@@ -45,13 +48,13 @@ module :private;
 
 namespace ceasset = CR::Engine::Assets;
 namespace cecore  = CR::Engine::Core;
+namespace ceplat  = CR::Engine::Platform;
 namespace cegraph = CR::Engine::Graphics;
 
 cegraph::Materials::Materials(const Context& a_context, const Shaders& a_shaders, VkRenderPass a_renderPass) :
     m_context(a_context) {
 	auto& assetService = cecore::GetService<ceasset::Service>();
 
-	simdjson::ondemand::parser parser;
 	VkSpecializationMapEntry fragSpecInfoEntrys;
 	fragSpecInfoEntrys.constantID = 0;
 	fragSpecInfoEntrys.offset     = 0;
@@ -150,54 +153,52 @@ cegraph::Materials::Materials(const Context& a_context, const Shaders& a_shaders
 	ClearStruct(vertAssemblyInfo);
 	vertAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
-	assetService.Load(ceasset::Service::Partitions::Graphics, "Materials", "mat",
-	                  [&](uint64_t a_hash, std::string_view a_path, const std::span<std::byte> a_data) {
-		                  simdjson::padded_string paddedMat((const char*)a_data.data(), a_data.size());
-		                  auto doc                          = parser.iterate(paddedMat);
-		                  simdjson::ondemand::object object = doc.get_object();
-		                  VkShaderModule vertShader{};
-		                  VkShaderModule fragShader{};
-		                  for(auto field : object) {
-			                  auto keyv = field.key();
-			                  if(keyv.value_unsafe() == "shader_vertex") {
-				                  auto vertShaderName = field.value().get_string();
-				                  vertShader = a_shaders.GetShader(cecore::Hash64(vertShaderName.value()));
-			                  }
-			                  if(keyv.value_unsafe() == "shader_frag") {
-				                  auto fragShaderName = field.value().get_string();
-				                  fragShader = a_shaders.GetShader(cecore::Hash64(fragShaderName.value()));
-			                  }
-		                  }
+	assetService.LoadSingle(
+	    ceasset::Service::Partitions::Graphics, cecore::C_Hash64("materials.json"),
+	    [&](uint64_t a_hash, std::string_view a_path, const std::span<std::byte> a_data) {
+		    flatbuffers::Parser parser;
+		    ceplat::MemoryMappedFile schemaFile(SCHEMAS_MATERIALS);
+		    std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
+		    parser.Parse(schemaData.c_str());
+		    std::string flatbufferJson((const char*)a_data.data(), a_data.size());
+		    parser.ParseJson(flatbufferJson.c_str());
+		    CR_ASSERT(parser.BytesConsumed() <= a_data.size(), "buffer overrun loading materials.json");
+		    auto materials = Flatbuffers::GetMaterials(parser.builder_.GetBufferPointer());
 
-		                  VkPipelineShaderStageCreateInfo shaderPipeInfo[2];
-		                  ClearStruct(shaderPipeInfo[0]);
-		                  ClearStruct(shaderPipeInfo[1]);
-		                  shaderPipeInfo[0].module = vertShader;
-		                  shaderPipeInfo[0].pName  = "main";
-		                  shaderPipeInfo[0].stage  = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
-		                  shaderPipeInfo[0].pSpecializationInfo = nullptr;
-		                  shaderPipeInfo[1].module              = fragShader;
-		                  shaderPipeInfo[1].pName               = "main";
-		                  shaderPipeInfo[1].stage = VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
-		                  shaderPipeInfo[1].pSpecializationInfo = &fragSpecInfo;
+		    for(const auto& mat : *materials->mats()) {
+			    auto vertShader = a_shaders.GetShader(cecore::Hash64(mat->vertex_shader()->c_str()));
+			    auto fragShader = a_shaders.GetShader(cecore::Hash64(mat->fragment_shader()->c_str()));
 
-		                  VkGraphicsPipelineCreateInfo pipeInfo;
-		                  ClearStruct(pipeInfo);
-		                  pipeInfo.layout              = m_pipeLineLayout;
-		                  pipeInfo.pColorBlendState    = &blendStateInfo;
-		                  pipeInfo.pInputAssemblyState = &vertAssemblyInfo;
-		                  pipeInfo.pMultisampleState   = &multisampleInfo;
-		                  pipeInfo.pRasterizationState = &rasterInfo;
-		                  // pipeInfo.pVertexInputState   = &vertInputInfo;
-		                  pipeInfo.pViewportState = &viewPortInfo;
-		                  pipeInfo.stageCount     = 2;
-		                  pipeInfo.pStages        = shaderPipeInfo;
-		                  pipeInfo.renderPass     = a_renderPass;
+			    VkPipelineShaderStageCreateInfo shaderPipeInfo[2];
+			    ClearStruct(shaderPipeInfo[0]);
+			    ClearStruct(shaderPipeInfo[1]);
+			    shaderPipeInfo[0].module              = vertShader;
+			    shaderPipeInfo[0].pName               = "main";
+			    shaderPipeInfo[0].stage               = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
+			    shaderPipeInfo[0].pSpecializationInfo = nullptr;
+			    shaderPipeInfo[1].module              = fragShader;
+			    shaderPipeInfo[1].pName               = "main";
+			    shaderPipeInfo[1].stage               = VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
+			    shaderPipeInfo[1].pSpecializationInfo = &fragSpecInfo;
 
-		                  result = vkCreateGraphicsPipelines(m_context.Device, VK_NULL_HANDLE, 1, &pipeInfo,
-		                                                     nullptr, &m_pipelines.emplace_back());
-		                  CR_ASSERT(result == VK_SUCCESS, "failed to create a graphics pipeline");
-	                  });
+			    VkGraphicsPipelineCreateInfo pipeInfo;
+			    ClearStruct(pipeInfo);
+			    pipeInfo.layout              = m_pipeLineLayout;
+			    pipeInfo.pColorBlendState    = &blendStateInfo;
+			    pipeInfo.pInputAssemblyState = &vertAssemblyInfo;
+			    pipeInfo.pMultisampleState   = &multisampleInfo;
+			    pipeInfo.pRasterizationState = &rasterInfo;
+			    // pipeInfo.pVertexInputState   = &vertInputInfo;
+			    pipeInfo.pViewportState = &viewPortInfo;
+			    pipeInfo.stageCount     = 2;
+			    pipeInfo.pStages        = shaderPipeInfo;
+			    pipeInfo.renderPass     = a_renderPass;
+
+			    result = vkCreateGraphicsPipelines(m_context.Device, VK_NULL_HANDLE, 1, &pipeInfo, nullptr,
+			                                       &m_pipelines.emplace_back());
+			    CR_ASSERT(result == VK_SUCCESS, "failed to create a graphics pipeline");
+		    }
+	    });
 }
 
 cegraph::Materials::~Materials() {

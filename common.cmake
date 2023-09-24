@@ -8,6 +8,8 @@ endif()
 
 set(conjure_root "${CMAKE_CURRENT_LIST_DIR}")
 set(assets_root "${CMAKE_CURRENT_LIST_DIR}/CR/Assets")
+set(generated_include "${CMAKE_BINARY_DIR}/generated")
+set(generated_root "${CMAKE_BINARY_DIR}/generated/generated")
 
 # WORKAROUND
 # This is added so that CMake can recognize the .ixx extension as a module interface.
@@ -48,6 +50,8 @@ function(addCommon target)
 	set_target_properties(${target} PROPERTIES INTERPROCEDURAL_OPTIMIZATION_PROFILE TRUE)
 	set_target_properties(${target} PROPERTIES INTERPROCEDURAL_OPTIMIZATION_FINAL TRUE)	
 	
+	target_include_directories(${target} SYSTEM PUBLIC "${generated_include}")
+
 	target_link_options(${target} PRIVATE $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>>:/Debug:fastlink>)		
 endfunction()
 

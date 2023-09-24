@@ -1,0 +1,9 @@
+{
+    "mats" : [
+            {
+                "name" : "sprite",
+                "vertex_shader" : "Shaders/sprite.vert",
+                "fragment_shader" : "Shaders/sprite.frag"
+            }
+        ]
+}
