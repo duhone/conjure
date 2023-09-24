@@ -7,6 +7,8 @@ set(INTERFACE_FILES
 )
 
 set(SOURCE_FILES
+    ${root}/flatbuffers/src/idl_parser.cpp
+    ${root}/flatbuffers/src/util.cpp
 )
 
 set(BUILD_FILES
@@ -23,4 +25,5 @@ settings3rdParty(flatbuffers)
 set_property(TARGET flatbuffers APPEND PROPERTY LINKER_LANGUAGE CPP)
 
 target_include_directories(flatbuffers SYSTEM PUBLIC "${root}/flatbuffers/include")
+target_compile_definitions(flatbuffers PUBLIC FLATC_PATH=${FLATC})
 
