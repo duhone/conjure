@@ -69,7 +69,6 @@ add_custom_command(
 target_link_libraries(graphics PUBLIC
 	headerUnits
     flatbuffers
-    simdjson
     assets
 	fmt
 	glm
