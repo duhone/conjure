@@ -51,6 +51,89 @@ namespace cecore  = CR::Engine::Core;
 namespace ceplat  = CR::Engine::Platform;
 namespace cegraph = CR::Engine::Graphics;
 
+namespace {
+	VkFormat toVkFormat(cegraph::Flatbuffers::VertAttrFormat a_arg) {
+		switch(a_arg) {
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::f32x1:
+				return VK_FORMAT_R32_SFLOAT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::f32x2:
+				return VK_FORMAT_R32G32_SFLOAT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::f32x3:
+				return VK_FORMAT_R32G32B32_SFLOAT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::f32x4:
+				return VK_FORMAT_R32G32B32A32_SFLOAT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::unorm16x1:
+				return VK_FORMAT_R16_UNORM;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::unorm16x2:
+				return VK_FORMAT_R16G16_UNORM;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::unorm16x3:
+				return VK_FORMAT_R16G16B16_UNORM;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::unorm16x4:
+				return VK_FORMAT_R16G16B16A16_UNORM;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::unorm8x1:
+				return VK_FORMAT_R8_UNORM;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::unorm8x2:
+				return VK_FORMAT_R8G8_UNORM;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::unorm8x3:
+				return VK_FORMAT_R8G8B8_UNORM;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::unorm8x4:
+				return VK_FORMAT_R8G8B8A8_UNORM;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::snorm16x1:
+				return VK_FORMAT_R16_SNORM;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::snorm16x2:
+				return VK_FORMAT_R16G16_SNORM;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::snorm16x3:
+				return VK_FORMAT_R16G16B16_SNORM;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::snorm16x4:
+				return VK_FORMAT_R16G16B16A16_SNORM;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::snorm8x1:
+				return VK_FORMAT_R8_SNORM;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::snorm8x2:
+				return VK_FORMAT_R8G8_SNORM;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::snorm8x3:
+				return VK_FORMAT_R8G8B8_SNORM;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::snorm8x4:
+				return VK_FORMAT_R8G8B8A8_SNORM;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::uint16x1:
+				return VK_FORMAT_R16_UINT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::uint16x2:
+				return VK_FORMAT_R16G16_UINT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::uint16x3:
+				return VK_FORMAT_R16G16B16_UINT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::uint16x4:
+				return VK_FORMAT_R16G16B16A16_UINT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::uint8x1:
+				return VK_FORMAT_R8_UINT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::uint8x2:
+				return VK_FORMAT_R8G8_UINT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::uint8x3:
+				return VK_FORMAT_R8G8B8_UINT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::uint8x4:
+				return VK_FORMAT_R8G8B8A8_UINT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::sint16x1:
+				return VK_FORMAT_R16_SINT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::sint16x2:
+				return VK_FORMAT_R16G16_SINT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::sint16x3:
+				return VK_FORMAT_R16G16B16_SINT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::sint16x4:
+				return VK_FORMAT_R16G16B16A16_SINT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::sint8x1:
+				return VK_FORMAT_R8_SINT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::sint8x2:
+				return VK_FORMAT_R8G8_SINT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::sint8x3:
+				return VK_FORMAT_R8G8B8_SINT;
+			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::sint8x4:
+				return VK_FORMAT_R8G8B8A8_SINT;
+			default:
+				CR_ERROR("Unknown Vertex attrib format: {}", (int)a_arg);
+				return VK_FORMAT_UNDEFINED;
+				break;
+		}
+	}
+}    // namespace
+
 cegraph::Materials::Materials(const Context& a_context, const Shaders& a_shaders, VkRenderPass a_renderPass) :
     m_context(a_context) {
 	auto& assetService = cecore::GetService<ceasset::Service>();
@@ -72,9 +155,9 @@ cegraph::Materials::Materials(const Context& a_context, const Shaders& a_shaders
 	VkPipelineViewportStateCreateInfo viewPortInfo;
 	ClearStruct(viewPortInfo);
 	viewPortInfo.pViewports    = nullptr;
-	viewPortInfo.viewportCount = 0;
+	viewPortInfo.viewportCount = 1;
 	viewPortInfo.pScissors     = nullptr;
-	viewPortInfo.scissorCount  = 0;
+	viewPortInfo.scissorCount  = 1;
 
 	VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
 	VkPipelineDynamicStateCreateInfo dynamicState;
@@ -97,8 +180,10 @@ cegraph::Materials::Materials(const Context& a_context, const Shaders& a_shaders
 	multisampleInfo.minSampleShading      = 1.0f;
 
 	VkPipelineColorBlendAttachmentState blendAttachState;
-	blendAttachState.blendEnable    = false;
-	blendAttachState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+	ClearStruct(blendAttachState);
+	blendAttachState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+	blendAttachState.blendEnable         = false;
+	blendAttachState.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
 	                                  VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
 	VkPipelineColorBlendStateCreateInfo blendStateInfo;
@@ -125,6 +210,7 @@ cegraph::Materials::Materials(const Context& a_context, const Shaders& a_shaders
 	for(int32_t i = 0; i < c_maxTextures; ++i) { samplers.push_back(m_sampler); }
 
 	VkDescriptorSetLayoutBinding dslBinding[1];
+	ClearStruct(dslBinding[0]);
 	dslBinding[0].binding            = 0;
 	dslBinding[0].descriptorCount    = c_maxTextures;
 	dslBinding[0].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -155,14 +241,16 @@ cegraph::Materials::Materials(const Context& a_context, const Shaders& a_shaders
 
 	assetService.LoadSingle(
 	    ceasset::Service::Partitions::Graphics, cecore::C_Hash64("materials.json"),
-	    [&](uint64_t a_hash, std::string_view a_path, const std::span<std::byte> a_data) {
+	    [&]([[maybe_unused]] uint64_t a_hash, [[maybe_unused]] std::string_view a_path,
+	        const std::span<std::byte> a_data) {
 		    flatbuffers::Parser parser;
 		    ceplat::MemoryMappedFile schemaFile(SCHEMAS_MATERIALS);
 		    std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
 		    parser.Parse(schemaData.c_str());
 		    std::string flatbufferJson((const char*)a_data.data(), a_data.size());
 		    parser.ParseJson(flatbufferJson.c_str());
-		    CR_ASSERT(parser.BytesConsumed() <= a_data.size(), "buffer overrun loading materials.json");
+		    CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)a_data.size(),
+		              "buffer overrun loading materials.json");
 		    auto materials = Flatbuffers::GetMaterials(parser.builder_.GetBufferPointer());
 
 		    for(const auto& mat : *materials->mats()) {
@@ -181,6 +269,40 @@ cegraph::Materials::Materials(const Context& a_context, const Shaders& a_shaders
 			    shaderPipeInfo[1].stage               = VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
 			    shaderPipeInfo[1].pSpecializationInfo = &fragSpecInfo;
 
+			    VkPipelineVertexInputStateCreateInfo vertInputInfo;
+			    ClearStruct(vertInputInfo);
+			    std::vector<VkVertexInputBindingDescription> vertBindings;
+			    vertBindings.reserve(mat->bindings()->size());
+			    for(const auto& binding : *mat->bindings()) {
+				    auto& newBinding   = vertBindings.emplace_back();
+				    newBinding.binding = binding->binding();
+				    newBinding.stride  = binding->stride();
+				    switch(binding->rate()) {
+					    case Flatbuffers::VertInputRate::PerVertex:
+						    newBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+						    break;
+					    case Flatbuffers::VertInputRate::PerInstance:
+						    newBinding.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+						    break;
+					    default:
+						    break;
+				    }
+			    }
+			    vertInputInfo.vertexBindingDescriptionCount = (uint32_t)vertBindings.size();
+			    vertInputInfo.pVertexBindingDescriptions    = vertBindings.data();
+
+			    std::vector<VkVertexInputAttributeDescription> vertAttribs;
+			    vertAttribs.reserve(mat->attr_descs()->size());
+			    for(const auto& desc : *mat->attr_descs()) {
+				    auto& newDesc    = vertAttribs.emplace_back();
+				    newDesc.location = desc->location();
+				    newDesc.binding  = desc->binding();
+				    newDesc.offset   = desc->offset();
+				    newDesc.format   = toVkFormat(desc->format());
+			    }
+			    vertInputInfo.vertexAttributeDescriptionCount = (uint32_t)vertAttribs.size();
+			    vertInputInfo.pVertexAttributeDescriptions    = vertAttribs.data();
+
 			    VkGraphicsPipelineCreateInfo pipeInfo;
 			    ClearStruct(pipeInfo);
 			    pipeInfo.layout              = m_pipeLineLayout;
@@ -188,11 +310,12 @@ cegraph::Materials::Materials(const Context& a_context, const Shaders& a_shaders
 			    pipeInfo.pInputAssemblyState = &vertAssemblyInfo;
 			    pipeInfo.pMultisampleState   = &multisampleInfo;
 			    pipeInfo.pRasterizationState = &rasterInfo;
-			    // pipeInfo.pVertexInputState   = &vertInputInfo;
-			    pipeInfo.pViewportState = &viewPortInfo;
-			    pipeInfo.stageCount     = 2;
-			    pipeInfo.pStages        = shaderPipeInfo;
-			    pipeInfo.renderPass     = a_renderPass;
+			    pipeInfo.pDynamicState       = &dynamicState;
+			    pipeInfo.pVertexInputState   = &vertInputInfo;
+			    pipeInfo.pViewportState      = &viewPortInfo;
+			    pipeInfo.stageCount          = 2;
+			    pipeInfo.pStages             = shaderPipeInfo;
+			    pipeInfo.renderPass          = a_renderPass;
 
 			    result = vkCreateGraphicsPipelines(m_context.Device, VK_NULL_HANDLE, 1, &pipeInfo, nullptr,
 			                                       &m_pipelines.emplace_back());

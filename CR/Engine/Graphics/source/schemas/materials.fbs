@@ -1,9 +1,36 @@
 namespace CR.Engine.Graphics.Flatbuffers;
 
+enum VertInputRate : byte { PerVertex , PerInstance }
+
+enum VertAttrFormat : byte { f32x1, f32x2, f32x3, f32x4, 
+							 unorm16x1, unorm16x2, unorm16x3, unorm16x4,
+							 unorm8x1, unorm8x2, unorm8x3, unorm8x4, 
+							 snorm16x1, snorm16x2, snorm16x3, snorm16x4,
+							 snorm8x1, snorm8x2, snorm8x3, snorm8x4, 
+							 uint16x1, uint16x2, uint16x3, uint16x4,
+							 uint8x1, uint8x2, uint8x3, uint8x4, 
+							 sint16x1, sint16x2, sint16x3, sint16x4,
+							 sint8x1, sint8x2, sint8x3, sint8x4}
+
+struct VertexBinding {
+  binding:ubyte;
+  stride:ubyte;
+  rate:VertInputRate;
+}
+
+struct AttrDesc {
+  binding:ubyte;
+  location:ubyte;
+  offset:ubyte;
+  format:VertAttrFormat;
+}
+
 table Material{
 	name:string;
 	vertex_shader:string;
 	fragment_shader:string;
+	bindings:[VertexBinding];
+	attr_descs:[AttrDesc];
 }
  
 table Materials {

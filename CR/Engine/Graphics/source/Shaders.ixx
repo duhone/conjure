@@ -16,6 +16,7 @@ import CR.Engine.Platform;
 
 import <chrono>;
 import <filesystem>;
+import <span>;
 import <string_view>;
 import <unordered_map>;
 
