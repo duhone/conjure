@@ -1,0 +1,12 @@
+namespace CR.Engine.Graphics.Flatbuffers;
+
+table ComputePipeline{
+	name:string;
+	compute_shader:string;
+}
+ 
+table ComputePipelines {
+  pipelines:[ComputePipeline];
+}
+ 
+root_type ComputePipelines;

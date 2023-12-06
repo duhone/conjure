@@ -91,6 +91,8 @@ namespace CR::Engine::Graphics {
 			value.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 		} else if constexpr(std::is_same_v<T, VkPipelineVertexInputStateCreateInfo>) {
 			value.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		} else if constexpr(std::is_same_v<T, VkComputePipelineCreateInfo>) {
+			value.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 		}
 	}
 }    // namespace CR::Engine::Graphics

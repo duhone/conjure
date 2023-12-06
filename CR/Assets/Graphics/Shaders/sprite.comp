@@ -2,6 +2,40 @@
 
 layout (local_size_x = 64) in;
 
+layout(set = 0, binding = 0) uniform Scene {
+    vec2 invScreenSize;
+    vec2 cameraPos;
+} sceneData;
+
+layout(set = 0, binding = 1, rgba32f) uniform imageBuffer rotations;
+layout(set = 0, binding = 2, rg16ui) uniform uimageBuffer frameSizes;
+layout(set = 0, binding = 3, rg16i) uniform iimageBuffer positions;
+
+layout(set = 0, binding = 4) buffer OutputVerts{
+    vec2 verts[];
+} outputVerts;
+
+const vec2 Vertices[4] = vec2[4](vec2(0.0, 0.0), vec2(1.0, 0.0), vec2(0.0, 1.0), vec2(1.0, 1.0));
+
 void main()
 {
+    uint index = gl_GlobalInvocationID.x;
+    
+    vec4 rotSample = imageLoad(rotations, int(index));
+    uvec4 frameSize = imageLoad(frameSizes, int(index));
+    uint offset = imageLoad(positions, int(index)).r;
+    mat2 rot = mat2(rotSample.x, rotSample.y, rotSample.z, rotSample.w);
+
+    for(int i = 0;i < 4; ++i) {
+        vec2 position = Vertices[i];
+  
+        position = rot * (position-0.5);
+        position += 0.5;
+
+        position *= vec2(frameSize.xy);
+        position += offset;
+
+        // from pixel coords to -1to1
+        outputVerts.verts[index*4+i] = (position * vec2(2.0) * sceneData.invScreenSize) - vec2(1.0);
+    }
 }
