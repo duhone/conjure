@@ -95,4 +95,10 @@ namespace CR::Engine::Graphics {
 			value.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 		}
 	}
+
+	export template<typename T, int SIZE>
+	inline void ClearStruct(T a_values[SIZE]) {
+		for(const T& val : a_values) { ClearStruct(val); }
+	}
+
 }    // namespace CR::Engine::Graphics

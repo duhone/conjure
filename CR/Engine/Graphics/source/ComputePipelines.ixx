@@ -56,11 +56,7 @@ cegraph::ComputePipelines::ComputePipelines(const Context& a_context, const Shad
 	// fixed window size, instead of using dynamic states.
 
 	VkDescriptorSetLayoutBinding dslBinding[5];
-	ClearStruct(dslBinding[0]);
-	ClearStruct(dslBinding[1]);
-	ClearStruct(dslBinding[2]);
-	ClearStruct(dslBinding[3]);
-	ClearStruct(dslBinding[4]);
+	ClearStruct(dslBinding);
 	dslBinding[0].binding         = 0;
 	dslBinding[0].descriptorCount = 1;
 	dslBinding[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
