@@ -367,7 +367,6 @@ void cegraph::DeviceService::FindDevice() {
 	CR_ASSERT(features.features.textureCompressionBC, "Require support for BC texture compression");
 	CR_ASSERT(features.features.multiDrawIndirect, "Require support for multi draw indirect");
 	CR_ASSERT(features11.uniformAndStorageBuffer16BitAccess, "Require support for 16 bit types in buffers");
-	CR_ASSERT(features11.storagePushConstant16, "Require support for 16 bit types in push constants");
 	CR_ASSERT(features12.drawIndirectCount, "Require support for multi draw indirect");
 	CR_ASSERT(features12.descriptorIndexing, "Require support for descriptor indexing");
 	CR_ASSERT(features12.shaderUniformTexelBufferArrayDynamicIndexing,
