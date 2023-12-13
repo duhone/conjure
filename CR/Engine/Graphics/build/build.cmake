@@ -16,6 +16,7 @@ set(SOURCE_FILES
     ${root}/source/CommandPool.ixx
     ${root}/source/Commands.ixx
     ${root}/source/ComputePipelines.ixx
+    ${root}/source/GraphicsThread.ixx
     ${root}/source/Materials.ixx
     ${root}/source/Shaders.ixx
     ${root}/source/Utils.ixx

@@ -12,6 +12,7 @@ import CR.Engine.Graphics.CommandPool;
 import CR.Engine.Graphics.Commands;
 import CR.Engine.Graphics.ComputePipelines;
 import CR.Engine.Graphics.Context;
+import CR.Engine.Graphics.GraphicsThread;
 import CR.Engine.Graphics.Materials;
 import CR.Engine.Graphics.Shaders;
 import CR.Engine.Graphics.Utils;
@@ -81,6 +82,7 @@ namespace CR::Engine::Graphics {
 		cecore::Embedded<Shaders> m_shaders;
 		cecore::Embedded<Materials> m_materials;
 		cecore::Embedded<ComputePipelines> m_computePipelines;
+		cecore::Embedded<GraphicsThread> m_graphicsThread;
 	};
 }    // namespace CR::Engine::Graphics
 
@@ -142,6 +144,7 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 	CreateSwapChain();
 
 	m_commandPool = CommandPool(m_context.Device, m_graphicsQueueIndex);
+	m_graphicsThread.emplace(m_context.Device, m_transferQueue, m_transferQueueIndex);
 	m_shaders.emplace(m_context.Device);
 	m_materials.emplace(m_context, *m_shaders, m_renderPass);
 	m_computePipelines.emplace(m_context, *m_shaders);
@@ -153,6 +156,7 @@ void cegraph::DeviceService::Stop() {
 	m_computePipelines.reset();
 	m_materials.reset();
 	m_shaders.reset();
+	m_graphicsThread.reset();
 
 	m_commandPool.ResetAll();
 	m_commandPool = CommandPool();

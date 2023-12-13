@@ -8,6 +8,7 @@ module;
 
 export module CR.Engine.Graphics.Shaders;
 
+import CR.Engine.Graphics.GraphicsThread;
 import CR.Engine.Graphics.Utils;
 
 import CR.Engine.Assets;
