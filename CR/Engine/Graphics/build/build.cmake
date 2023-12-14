@@ -87,7 +87,9 @@ target_link_libraries(graphics PUBLIC
 	glm
 	core
 	platform
-	Vulkan::Vulkan volk
+	volk
+    vulkan_utilities
+    vulkan_vma
 )
 
 set_property(TARGET graphics APPEND PROPERTY FOLDER Engine)

@@ -1,7 +1,5 @@
 set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 
-find_package(Vulkan REQUIRED)
-
 set(INTERFACE_FILES
     ${root}/volk/volk.h
 )
@@ -27,5 +25,5 @@ target_compile_definitions(volk PUBLIC VK_USE_PLATFORM_WIN32_KHR)
 target_include_directories(volk SYSTEM PUBLIC "${root}/volk")
 
 target_link_libraries(volk PUBLIC
-	Vulkan::Headers
+	vulkan_headers
 )
