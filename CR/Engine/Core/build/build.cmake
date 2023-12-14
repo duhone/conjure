@@ -5,6 +5,7 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 ###############################################
 set(INTERFACE_FILES
     ${root}/interface/core/Log.h
+    ${root}/interface/core/Reflection.h
     ${root}/interface/Algorithm.ixx
     ${root}/interface/BinaryStream.ixx
     ${root}/interface/BitSet.ixx
