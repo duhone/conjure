@@ -9,7 +9,6 @@ set(INTERFACE_FILES
 )
 
 set(SOURCE_FILES
-    ${root}/source/Partition.ixx
 )
 
 set(BUILD_FILES

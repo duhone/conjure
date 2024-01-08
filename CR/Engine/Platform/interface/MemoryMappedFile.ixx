@@ -38,6 +38,8 @@ namespace CR::Engine::Platform {
 		[[nodiscard]] std::span<std::byte> GetData() { return {data(), size()}; }
 		[[nodiscard]] const std::span<const std::byte> GetData() const { return {data(), size()}; }
 
+		[[nodiscard]] bool isValid() const { return m_fileData.get() != nullptr; }
+
 	  private:
 		std::unique_ptr<struct MemoryMappedFileData> m_fileData;
 	};
