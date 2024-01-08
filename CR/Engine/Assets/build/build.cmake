@@ -27,6 +27,7 @@ settingsCR(assets)
 target_link_libraries(assets PUBLIC
 	headerUnits
 	fmt
+	unordered_dense
 	core
 	platform
 )

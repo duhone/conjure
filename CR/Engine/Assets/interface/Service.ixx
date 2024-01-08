@@ -2,24 +2,23 @@ module;
 
 #include "core/Log.h"
 
+#include "ankerl/unordered_dense.h"
+
 export module CR.Engine.Assets.Service;
 
 import CR.Engine.Core;
-
-import CR.Engine.Assets.Partition;
 
 import <filesystem>;
 import <functional>;
 import <span>;
 import <string_view>;
 import <typeindex>;
+import <vector>;
 
 namespace CR::Engine::Assets {
 	export class Service {
 	  public:
 		static inline constexpr uint64_t s_typeIndex = CR::Engine::Core::EightCC("EAstServ");
-
-		enum Partitions { Audio, Graphics };
 
 		Service(std::filesystem::path a_assetsFolder);
 		Service(const Service&) = delete;
@@ -28,15 +27,24 @@ namespace CR::Engine::Assets {
 		Service& operator=(const Service&) = delete;
 		Service& operator=(Service&&)      = delete;
 
-		using LoadCallbackT =
-		    std::function<void(uint64_t a_hash, std::string_view a_path, const std::span<std::byte> a_data)>;
-		// if a_extensionFilter is empty, then all files will be returned
-		void Load(Partitions a_partition, const std::filesystem::path& a_subFolder,
-		          std::string_view a_extensionFilter, LoadCallbackT a_loadCallback);
-		void LoadSingle(Partitions a_partition, uint64_t a_hash, LoadCallbackT a_loadCallback);
+		// Not if the asset is bulk, then this will return an empty span unless you have the asset open
+		std::span<std::byte> GetData(uint64_t a_hash);
+
+		// a no-op if this isn't a bulk asset. You must call close as many times as you called open.
+		void Open(uint64_t a_hash);
+		void Close(uint64_t a_hash);
 
 	  private:
-		std::vector<Partition> m_partitions;
+		ankerl::unordered_dense::map<uint64_t, uint16_t> m_handleLookup;
+
+		std::vector<bool> m_isBulk;
+		std::vector<std::string> m_debugFiles;
+		// For non bulk assets, these spans are aways valid, for bulk, they will only be valid when the asset
+		// is open.
+		std::vector<std::span<std::byte>> m_spans;
+
+		// non bulk files will be all put into this buffer, when using source instead of packed.
+		std::vector<std::byte> m_looseData;
 	};
 }    // namespace CR::Engine::Assets
 
@@ -48,7 +56,7 @@ namespace ceassets = CR::Engine::Assets;
 namespace fs = std::filesystem;
 
 namespace {
-	constexpr std::string_view c_partitionFolders[] = {"Audio", "Graphics"};
+	constexpr std::string_view c_bulkExtensions[] = {"flac", "jxl"};
 }
 
 ceassets::Service::Service(std::filesystem::path a_assetsFolder) {

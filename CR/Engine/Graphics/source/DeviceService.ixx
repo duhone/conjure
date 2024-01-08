@@ -146,7 +146,7 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 	m_commandPool = CommandPool(m_context.Device, m_graphicsQueueIndex);
 	m_graphicsThread.emplace(m_context.Device, m_transferQueue, m_transferQueueIndex);
 	m_shaders.emplace(m_context.Device);
-	m_materials.emplace(m_context, *m_shaders, m_renderPass);
+	m_materials.emplace(m_context, *m_shaders, *m_graphicsThread, m_renderPass);
 	m_computePipelines.emplace(m_context, *m_shaders);
 }
 

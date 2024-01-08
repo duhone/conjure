@@ -36,10 +36,12 @@ namespace CR::Engine::Graphics {
 		GraphicsThread& operator=(GraphicsThread&&)      = delete;
 
 		// For simple tasks that don't need to issue GPU commands. Compile a shader/ect.
-		std::shared_ptr<std::atomic_bool> EnqueueTask(taskSimple_t&& a_task);
-		// For tasks that need to issue GPU commands. The result won't be set until after the task has
-		// completed on the GPU.
-		std::shared_ptr<std::atomic_bool> EnqueueTask(taskGPUCommands_t&& a_task);
+		// a_completed will be set to true once the task has finished. It is callers responsibility to ensure
+		// a_completed is still alive until the task completes.
+		void EnqueueTask(taskSimple_t&& a_task, std::atomic_bool& a_completed);
+		// For tasks that need to issue GPU commands. a_completed won't be set until after all GPU commands
+		// added to the command buffer have completed on the GPU as well.
+		void EnqueueTask(taskGPUCommands_t&& a_task, std::atomic_bool& a_completed);
 
 	  private:
 		void ThreadMain();
@@ -55,7 +57,7 @@ namespace CR::Engine::Graphics {
 			// This is either the complete task, or if ComplexTask exists then this is the completion task.
 			taskSimple_t SimpleTask;
 			taskGPUCommands_t ComplexTask;
-			std::shared_ptr<std::atomic_bool> Completed;
+			std::atomic_bool* Completed{nullptr};
 		};
 		std::deque<Request> m_requests;
 	};
@@ -64,10 +66,6 @@ namespace CR::Engine::Graphics {
 module :private;
 
 namespace cegraph = CR::Engine::Graphics;
-
-namespace {
-
-}
 
 cegraph::GraphicsThread::GraphicsThread(VkDevice a_device, VkQueue& a_transferQueue,
                                         uint32_t a_transferQueueFamily) :
@@ -98,6 +96,7 @@ void cegraph::GraphicsThread::ThreadMain() {
 			}
 		}
 		if(request.ComplexTask) {
+			// CR_ASSERT(request.Completed != nullptr, "Completed should never be null");
 			VkCommandBuffer buffer = m_commandPool.Begin();
 			request.ComplexTask(buffer);
 			m_commandPool.End(buffer);
@@ -114,6 +113,7 @@ void cegraph::GraphicsThread::ThreadMain() {
 			request = Request{};
 
 		} else if(request.SimpleTask) {
+			// CR_ASSERT(request.Completed != nullptr, "Completed should never be null");
 			request.SimpleTask();
 			request.Completed->store(true, std::memory_order_release);
 			request = Request{};
@@ -122,24 +122,18 @@ void cegraph::GraphicsThread::ThreadMain() {
 	m_requests.clear();
 }
 
-std::shared_ptr<std::atomic_bool> cegraph::GraphicsThread::EnqueueTask(taskSimple_t&& a_task) {
-	std::shared_ptr<std::atomic_bool> result = std::make_shared<std::atomic_bool>(false);
-
+void cegraph::GraphicsThread::EnqueueTask(taskSimple_t&& a_task, std::atomic_bool& a_completed) {
 	{
 		std::unique_lock<std::mutex> lock(m_requestMutex);
-		m_requests.push_back({std::move(a_task), nullptr, result});
+		m_requests.push_back({std::move(a_task), nullptr, &a_completed});
 	}
 	m_notify.notify_one();
-	return result;
 }
 
-std::shared_ptr<std::atomic_bool> cegraph::GraphicsThread::EnqueueTask(taskGPUCommands_t&& a_task) {
-	std::shared_ptr<std::atomic_bool> result = std::make_shared<std::atomic_bool>(false);
-
+void cegraph::GraphicsThread::EnqueueTask(taskGPUCommands_t&& a_task, std::atomic_bool& a_completed) {
 	{
 		std::unique_lock<std::mutex> lock(m_requestMutex);
-		m_requests.push_back({nullptr, std::move(a_task), result});
+		m_requests.push_back({nullptr, std::move(a_task), &a_completed});
 	}
 	m_notify.notify_one();
-	return result;
 }

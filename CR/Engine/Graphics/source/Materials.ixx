@@ -12,6 +12,7 @@ export module CR.Engine.Graphics.Materials;
 
 import CR.Engine.Graphics.Constants;
 import CR.Engine.Graphics.Context;
+import CR.Engine.Graphics.GraphicsThread;
 import CR.Engine.Graphics.Shaders;
 import CR.Engine.Graphics.Utils;
 
@@ -25,7 +26,8 @@ namespace CR::Engine::Graphics {
 	export class Materials {
 	  public:
 		Materials() = default;
-		Materials(const Context& a_context, const Shaders& a_shaders, VkRenderPass a_renderPass);
+		Materials(const Context& a_context, const Shaders& a_shaders, GraphicsThread& a_thread,
+		          VkRenderPass a_renderPass);
 		~Materials();
 		Materials(const Materials&)               = delete;
 		Materials(Materials&& a_other)            = delete;
@@ -134,7 +136,8 @@ namespace {
 	}
 }    // namespace
 
-cegraph::Materials::Materials(const Context& a_context, const Shaders& a_shaders, VkRenderPass a_renderPass) :
+cegraph::Materials::Materials(const Context& a_context, const Shaders& a_shaders, GraphicsThread& a_thread,
+                              VkRenderPass a_renderPass) :
     m_context(a_context) {
 	auto& assetService = cecore::GetService<ceasset::Service>();
 
