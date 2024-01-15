@@ -2,7 +2,7 @@
     "pipelines" : [
             {
                 "name" : "sprite",
-                "compute_shader" : "Shaders/sprite.comp"
+                "compute_shader" : "sprite_compute"
             }
         ]
 }

@@ -96,40 +96,37 @@ cegraph::ComputePipelines::ComputePipelines(const Context& a_context, const Shad
 	result = vkCreatePipelineLayout(m_context.Device, &layoutInfo, nullptr, &m_pipeLineLayout);
 	CR_ASSERT(result == VK_SUCCESS, "failed to create a pipeline layout");
 
-	/*assetService.LoadSingle(
-	    ceasset::Service::Partitions::Graphics, cecore::C_Hash64("computePipelines.json"),
-	    [&]([[maybe_unused]] uint64_t a_hash, [[maybe_unused]] std::string_view a_path,
-	        const std::span<std::byte> a_data) {
-	        flatbuffers::Parser parser;
-	        ceplat::MemoryMappedFile schemaFile(SCHEMAS_COMPUTE_PIPELINES);
-	        std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
-	        parser.Parse(schemaData.c_str());
-	        std::string flatbufferJson((const char*)a_data.data(), a_data.size());
-	        parser.ParseJson(flatbufferJson.c_str());
-	        CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)a_data.size(),
-	                  "buffer overrun loading compute pipelines.json");
-	        auto computePipelines = Flatbuffers::GetComputePipelines(parser.builder_.GetBufferPointer());
+	auto pipelinesData = assetService.GetData(cecore::C_Hash64("Graphics/computePipelines.json"));
 
-	        for(const auto& pipe : *computePipelines->pipelines()) {
-	            auto compShader = a_shaders.GetShader(cecore::Hash64(pipe->compute_shader()->c_str()));
+	flatbuffers::Parser parser;
+	ceplat::MemoryMappedFile schemaFile(SCHEMAS_COMPUTE_PIPELINES);
+	std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
+	parser.Parse(schemaData.c_str());
+	std::string flatbufferJson((const char*)pipelinesData.data(), pipelinesData.size());
+	parser.ParseJson(flatbufferJson.c_str());
+	CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)pipelinesData.size(),
+	          "buffer overrun loading compute pipelines.json");
+	auto computePipelines = Flatbuffers::GetComputePipelines(parser.builder_.GetBufferPointer());
 
-	            VkPipelineShaderStageCreateInfo shaderPipeInfo;
-	            ClearStruct(shaderPipeInfo);
-	            shaderPipeInfo.module              = compShader;
-	            shaderPipeInfo.pName               = "main";
-	            shaderPipeInfo.stage               = VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT;
-	            shaderPipeInfo.pSpecializationInfo = nullptr;
+	for(const auto& pipe : *computePipelines->pipelines()) {
+		auto compShader = a_shaders.GetShader(cecore::Hash64(pipe->compute_shader()->c_str()));
 
-	            VkComputePipelineCreateInfo pipeInfo;
-	            ClearStruct(pipeInfo);
-	            pipeInfo.layout = m_pipeLineLayout;
-	            pipeInfo.stage  = shaderPipeInfo;
+		VkPipelineShaderStageCreateInfo shaderPipeInfo;
+		ClearStruct(shaderPipeInfo);
+		shaderPipeInfo.module              = compShader;
+		shaderPipeInfo.pName               = "main";
+		shaderPipeInfo.stage               = VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT;
+		shaderPipeInfo.pSpecializationInfo = nullptr;
 
-	            result = vkCreateComputePipelines(m_context.Device, VK_NULL_HANDLE, 1, &pipeInfo, nullptr,
-	                                              &m_pipelines.emplace_back());
-	            CR_ASSERT(result == VK_SUCCESS, "failed to create a graphics pipeline");
-	        }
-	    });*/
+		VkComputePipelineCreateInfo pipeInfo;
+		ClearStruct(pipeInfo);
+		pipeInfo.layout = m_pipeLineLayout;
+		pipeInfo.stage  = shaderPipeInfo;
+
+		result = vkCreateComputePipelines(m_context.Device, VK_NULL_HANDLE, 1, &pipeInfo, nullptr,
+		                                  &m_pipelines.emplace_back());
+		CR_ASSERT(result == VK_SUCCESS, "failed to create a graphics pipeline");
+	}
 }
 
 cegraph::ComputePipelines::~ComputePipelines() {
