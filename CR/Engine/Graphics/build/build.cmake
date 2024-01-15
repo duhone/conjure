@@ -36,11 +36,13 @@ set(SHADER_FILES
 set(SCHEMA_FILES
     ${root}/source/schemas/computePipelines.fbs
     ${root}/source/schemas/materials.fbs
+    ${root}/source/schemas/shaders.fbs
 )
 
 set(GENERATED_FILES
   ${generated_root}/graphics/computePipelines_generated.h
   ${generated_root}/graphics/materials_generated.h
+  ${generated_root}/graphics/shaders_generated.h
 )
 
 add_library(graphics 
@@ -79,6 +81,15 @@ add_custom_command(
     VERBATIM
 )
 
+add_custom_command(
+    OUTPUT ${generated_root}/graphics/shaders_generated.h
+    COMMAND ${FLATC}
+    ARGS --cpp --cpp-std C++17
+    ARGS -o ${generated_root}/graphics/ ${root}/source/schemas/shaders.fbs
+    DEPENDS ${root}/source/schemas/shaders.fbs
+    VERBATIM
+)
+
 target_link_libraries(graphics PUBLIC
 	headerUnits
     flatbuffers
@@ -96,3 +107,4 @@ set_property(TARGET graphics APPEND PROPERTY FOLDER Engine)
 
 target_compile_definitions(graphics PUBLIC SCHEMAS_COMPUTE_PIPELINES="${root}/source/schemas/computePipelines.fbs")
 target_compile_definitions(graphics PUBLIC SCHEMAS_MATERIALS="${root}/source/schemas/materials.fbs")
+target_compile_definitions(graphics PUBLIC SCHEMAS_SHADERS="${root}/source/schemas/shaders.fbs")

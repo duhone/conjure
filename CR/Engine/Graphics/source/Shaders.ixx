@@ -1,5 +1,9 @@
 module;
 
+#include "generated/graphics/shaders_generated.h"
+
+#include "flatbuffers/idl.h"
+
 #include "core/Log.h"
 
 #include "Core.h"
@@ -61,19 +65,8 @@ using namespace std::literals;
 namespace {
 	constexpr std::string_view shaderCompileFolder = "conjure_shaders"sv;
 
-	ceplat::MemoryMappedFile CompileShader(const std::string_view a_srcPath, const fs::path& a_workingFolder,
-	                                       const std::span<std::byte> a_data) {
-		fs::path tempPathInput  = a_workingFolder / a_srcPath;
-		fs::path tempPathOutput = tempPathInput;
-		tempPathOutput += ".spirv";
-		fs::create_directories(fs::path(tempPathInput).remove_filename());
-
-		{
-			cecore::FileHandle inputFile(tempPathInput, true);
-			fwrite(a_data.data(), 1, a_data.size(), inputFile.asFile());
-		}
-
-		std::string cliArgs = fmt::format("{} -o {}", tempPathInput.string(), tempPathOutput.string());
+	ceplat::MemoryMappedFile CompileShader(const fs::path a_srcPath, const fs::path& a_workingFile) {
+		std::string cliArgs = fmt::format("{} -o {}", a_srcPath.string(), a_workingFile.string());
 
 		ceplat::Process glslc("glslc.exe", cliArgs.c_str());
 		if(!glslc.WaitForClose(60s)) {
@@ -83,22 +76,33 @@ namespace {
 		auto exitCode = glslc.GetExitCode();
 
 		if(!exitCode.has_value() || exitCode.value() != 0) {
-			CR_ERROR("failed to compile shader {}", a_srcPath);
+			CR_ERROR("failed to compile shader {}", a_srcPath.string());
 			return {};
 		}
 
-		return ceplat::MemoryMappedFile(tempPathOutput);
+		return ceplat::MemoryMappedFile(a_workingFile);
 	}
 }    // namespace
 
 cegraph::Shaders::Shaders(VkDevice a_device) : m_device(a_device) {
-	// auto& assetService = cecore::GetService<ceasset::Service>();
+	auto& assetService   = cecore::GetService<ceasset::Service>();
+	const auto& rootPath = assetService.GetRootPath();
 
-	fs::path workingFolder = fs::temp_directory_path() /= shaderCompileFolder;
-	fs::create_directory(workingFolder);
+	fs::path workingFile = fs::temp_directory_path() / "conjure_compiled_shader.spirv";
 
-	auto loadShader = [&](uint64_t a_hash, std::string_view a_path, const std::span<std::byte> a_data) {
-		auto spirvFile = CompileShader(a_path, workingFolder, a_data);
+	flatbuffers::Parser parser;
+	ceplat::MemoryMappedFile schemaFile(SCHEMAS_SHADERS);
+	std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
+	parser.Parse(schemaData.c_str());
+
+	auto shadersData = assetService.GetData(cecore::C_Hash64("Graphics/shaders.json"));
+	std::string flatbufferJson((const char*)shadersData.data(), shadersData.size());
+	parser.ParseJson(flatbufferJson.c_str());
+	CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)shadersData.size(), "buffer overrun loading shaders.json");
+	auto shaders = Flatbuffers::GetShaders(parser.builder_.GetBufferPointer());
+
+	for(const auto& shader : *shaders->shaders()) {
+		auto spirvFile = CompileShader(rootPath / shader->path()->string_view(), workingFile);
 		VkShaderModuleCreateInfo shaderInfo;
 		ClearStruct(shaderInfo);
 		shaderInfo.pCode    = (uint32_t*)spirvFile.data();
@@ -106,15 +110,11 @@ cegraph::Shaders::Shaders(VkDevice a_device) : m_device(a_device) {
 
 		VkShaderModule shaderModule;
 		auto result = vkCreateShaderModule(m_device, &shaderInfo, nullptr, &shaderModule);
-		CR_ASSERT(result == VK_SUCCESS, "failed to load shader {}", a_path);
-		m_shaderModules.emplace(a_hash, shaderModule);
-	};
+		CR_ASSERT(result == VK_SUCCESS, "failed to load shader {}", shader->path()->string_view());
+		m_shaderModules.emplace(cecore::Hash64(shader->name()->string_view()), shaderModule);
+	}
 
-	/*assetService.Load(ceasset::Service::Partitions::Graphics, "Shaders", "comp", loadShader);
-	assetService.Load(ceasset::Service::Partitions::Graphics, "Shaders", "vert", loadShader);
-	assetService.Load(ceasset::Service::Partitions::Graphics, "Shaders", "frag", loadShader);
-	*/
-	fs::remove_all(workingFolder);
+	fs::remove(workingFile);
 }
 
 cegraph::Shaders::~Shaders() {

@@ -1,0 +1,16 @@
+{
+    "shaders" : [
+            {
+                "name" : "sprite_vertex",
+                "path" : "Graphics/Shaders/sprite.vert"
+            },
+            {
+                "name" : "sprite_fragment",
+                "path" : "Graphics/Shaders/sprite.frag"
+            },
+            {
+                "name" : "sprite_compute",
+                "path" : "Graphics/Shaders/sprite.comp"
+            }
+        ]
+}

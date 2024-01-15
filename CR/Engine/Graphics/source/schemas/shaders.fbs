@@ -1,0 +1,12 @@
+namespace CR.Engine.Graphics.Flatbuffers;
+
+table Shader{
+	name:string;
+	path:string;
+}
+ 
+table Shaders {
+  shaders:[Shader];
+}
+ 
+root_type Shaders;
