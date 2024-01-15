@@ -205,7 +205,7 @@ int main(int argc, char** argv) {
 	paddingBytes          = paddingBytes == 0 ? 0 : totalFrameSize - paddingBytes;
 	pcmData.Data.resize(pcmData.Data.size() + encoderDelay + paddingBytes);
 
-	cec::FileHandle outFile(outputPath);
+	cec::FileHandle outFile(outputPath, true);
 	{
 		CRAUDHeader header;
 		header.EncoderDelaySamples = (uint16_t)encoderDelay;

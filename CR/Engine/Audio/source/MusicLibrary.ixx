@@ -1,5 +1,9 @@
 module;
 
+#include "generated/audio/music_generated.h"
+
+#include "flatbuffers/idl.h"
+
 #include "core/Log.h"
 
 #include <dr_flac.h>
@@ -8,6 +12,7 @@ export module CR.Engine.Audio.MusicLibrary;
 
 import CR.Engine.Assets;
 import CR.Engine.Core;
+import CR.Engine.Platform;
 
 import CR.Engine.Audio.Constants;
 import CR.Engine.Audio.Sample;
@@ -54,6 +59,7 @@ namespace CR::Engine::Audio {
 		}
 
 		std::unordered_map<uint64_t, uint16_t> m_lookup;
+		std::vector<std::string> m_names;
 		std::vector<std::string> m_paths;
 		std::vector<std::vector<std::byte>> m_flacData;
 
@@ -75,20 +81,35 @@ module :private;
 
 namespace ceasset = CR::Engine::Assets;
 namespace cecore  = CR::Engine::Core;
+namespace ceplat  = CR::Engine::Platform;
 namespace cea     = CR::Engine::Audio;
 
 namespace fs = std::filesystem;
 
 cea::MusicLibrary::MusicLibrary() {
 	auto& assetService = cecore::GetService<ceasset::Service>();
-	assetService.Load(ceasset::Service::Partitions::Audio, "Music", "flac",
-	                  [&](uint64_t a_hash, std::string_view a_path, const std::span<std::byte> a_data) {
-		                  CR_ASSERT(m_flacData.size() < std::numeric_limits<uint16_t>::max(),
-		                            "Too many music files, max supported is 64K");
-		                  m_lookup[a_hash] = (uint16_t)m_flacData.size();
-		                  m_paths.push_back(std::string(a_path));
-		                  m_flacData.emplace_back(a_data.begin(), a_data.end());
-	                  });
+
+	flatbuffers::Parser parser;
+	ceplat::MemoryMappedFile schemaFile(SCHEMAS_MUSIC);
+	std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
+	parser.Parse(schemaData.c_str());
+
+	auto musicData = assetService.GetData(cecore::C_Hash64("Audio/music.json"));
+	std::string flatbufferJson((const char*)musicData.data(), musicData.size());
+	parser.ParseJson(flatbufferJson.c_str());
+	CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)musicData.size(), "buffer overrun loading music.json");
+	auto music = Flatbuffers::GetMusic(parser.builder_.GetBufferPointer());
+	for(const auto& song : *music->music()) {
+		m_lookup[cecore::Hash64(song->name()->c_str())] = (uint16_t)m_flacData.size();
+		m_names.push_back(song->name()->c_str());
+		m_paths.push_back(song->path()->c_str());
+
+		auto songHandle = assetService.GetHandle(cecore::Hash64(m_paths.back()));
+		assetService.Open(songHandle);
+		auto songData = assetService.GetData(songHandle);
+		m_flacData.emplace_back(songData.begin(), songData.end());
+		assetService.Close(songHandle);
+	}
 }
 
 void cea::MusicLibrary::Stop() {

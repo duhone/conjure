@@ -35,13 +35,21 @@ namespace CR::Engine::Assets {
 
 		// Note, if the asset is bulk, then this will return an empty span unless you have the asset open
 		std::span<std::byte> GetData(AssetHandle a_handle) { return m_spans[a_handle.asInt()]; }
+		// convenience, so dont need to call both gethandle and getData. If your going to call GetData more
+		// than once for the same hash, it will be faster to call the 2 separate functions rather than this
+		// convenience function.
+		std::span<std::byte> GetData(uint64_t a_hash) { return m_spans[GetHandle(a_hash).asInt()]; }
 
 		// a no-op if this isn't a bulk asset. You must call close as many times as you called open.
 		void Open(AssetHandle a_handle);
 		void Close(AssetHandle a_handle);
 
+		const std::filesystem::path& GetRootPath() const { return m_assetsFolder; }
+
 	  private:
 		bool isBulkFile(std::string_view ext);
+
+		std::filesystem::path m_assetsFolder;
 
 		ankerl::unordered_dense::map<uint64_t, AssetHandle> m_handleLookup;
 
@@ -72,7 +80,7 @@ namespace {
 	constexpr std::string_view c_bulkExtensions[] = {"flac", "jxl"};
 }
 
-ceassets::Service::Service(std::filesystem::path a_assetsFolder) {
+ceassets::Service::Service(std::filesystem::path a_assetsFolder) : m_assetsFolder(a_assetsFolder) {
 	std::vector<std::pair<size_t, size_t>> spanOffsets;
 	for(const auto& dirEntry : fs::recursive_directory_iterator(a_assetsFolder)) {
 		auto relativePath = fs::relative(dirEntry.path(), a_assetsFolder);
@@ -85,7 +93,7 @@ ceassets::Service::Service(std::filesystem::path a_assetsFolder) {
 			auto pathToHash = relativePath.string();
 			// we always use posix seperators
 			std::ranges::replace(pathToHash, '\\', '/');
-			m_debugFiles.emplace_back(std::move(pathToHash));
+			m_debugFiles.emplace_back(pathToHash);
 			m_openCount.emplace_back();
 
 			auto ext = relativePath.extension().string();
@@ -100,11 +108,11 @@ ceassets::Service::Service(std::filesystem::path a_assetsFolder) {
 				// not much to do, just mark it an unavailable.
 				spanOffsets.emplace_back();
 			} else {
-				size_t fileSize = fs::file_size(dirEntry.path());
+				size_t fileSize = dirEntry.file_size();
 				size_t newSize  = m_looseData.size() + fileSize;
 				m_looseData.prepare(newSize);
 
-				cecore::FileHandle fileHandle(dirEntry.path());
+				cecore::FileHandle fileHandle(dirEntry.path(), false);
 				fread(m_looseData.data() + m_looseData.size(), 1, fileSize, fileHandle.asFile());
 				spanOffsets.emplace_back(m_looseData.size(), fileSize);
 				m_looseData.commit(newSize);
@@ -119,6 +127,8 @@ ceassets::Service::Service(std::filesystem::path a_assetsFolder) {
 			m_spans.emplace_back(m_looseData.data() + spanOffsets[i].first, spanOffsets[i].second);
 		}
 	}
+
+	m_bulkData.resize(m_isBulk.size());
 }
 
 ceassets::Service::AssetHandle ceassets::Service::GetHandle(uint64_t a_hash) {
@@ -148,7 +158,7 @@ void ceassets::Service::Open(AssetHandle a_handle) {
 void ceassets::Service::Close(AssetHandle a_handle) {
 	CR_ASSERT(a_handle.isValid(), "can't close an invalid asset");
 	CR_ASSERT(m_isBulk[a_handle.asInt()], "can only close bulk assets");
-	CR_ASSERT(m_openCount[a_handle.asInt()] == 0, "can only close files that are open");
+	CR_ASSERT(m_openCount[a_handle.asInt()] != 0, "can only close files that are open");
 
 	if(m_openCount[a_handle.asInt()] == 1) {
 		m_bulkData[a_handle.asInt()] = ceplat::MemoryMappedFile{};

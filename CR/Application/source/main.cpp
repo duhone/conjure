@@ -41,8 +41,8 @@ int main(int, char*) {
 	cecore::AddService<ceassets::Service>(assetsPath);
 	cecore::AddService<ceaud::Service>(false);
 	cecore::AddService<ceinput::Service>(window);
-	cecore::AddService<cegraph::Service>(
-	    window, std::optional<glm::vec4>(std::in_place, 0.0f, 1.0f, 0.0f, 1.0f));
+	cecore::AddService<cegraph::Service>(window,
+	                                     std::optional<glm::vec4>(std::in_place, 0.0f, 1.0f, 0.0f, 1.0f));
 
 	auto& inputService    = cecore::GetService<ceinput::Service>();
 	auto& graphicsService = cecore::GetService<cegraph::Service>();
@@ -53,9 +53,9 @@ int main(int, char*) {
 		handleFxs.SetVolume(1.0f);
 		music.SetVolume(0.75f);
 
-		auto fanfareFX = ceaud::GetHandleFX(cecore::C_Hash64("FX/levelupfanfare.flac"));
+		auto fanfareFX = ceaud::GetHandleFX(cecore::C_Hash64("levelupfanfare"));
 
-		music.Play(cecore::C_Hash64("Music/BGM_Menu.flac"));
+		music.Play(cecore::C_Hash64("bgmMenu"));
 
 		ceinput::Regions regions;
 		auto region = regions.Create({{0, 0}, {400, 300}});

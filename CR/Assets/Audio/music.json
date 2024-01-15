@@ -1,0 +1,8 @@
+{
+    "music" : [
+            {
+                "name" : "bgmMenu",
+                "path" : "Audio/Music/BGM_Menu.flac"
+            }
+        ]
+}

@@ -242,89 +242,89 @@ cegraph::Materials::Materials(const Context& a_context, const Shaders& a_shaders
 	ClearStruct(vertAssemblyInfo);
 	vertAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
-	assetService.LoadSingle(
+	/*assetService.LoadSingle(
 	    ceasset::Service::Partitions::Graphics, cecore::C_Hash64("materials.json"),
 	    [&]([[maybe_unused]] uint64_t a_hash, [[maybe_unused]] std::string_view a_path,
 	        const std::span<std::byte> a_data) {
-		    flatbuffers::Parser parser;
-		    ceplat::MemoryMappedFile schemaFile(SCHEMAS_MATERIALS);
-		    std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
-		    parser.Parse(schemaData.c_str());
-		    std::string flatbufferJson((const char*)a_data.data(), a_data.size());
-		    parser.ParseJson(flatbufferJson.c_str());
-		    CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)a_data.size(),
-		              "buffer overrun loading materials.json");
-		    auto materials = Flatbuffers::GetMaterials(parser.builder_.GetBufferPointer());
+	        flatbuffers::Parser parser;
+	        ceplat::MemoryMappedFile schemaFile(SCHEMAS_MATERIALS);
+	        std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
+	        parser.Parse(schemaData.c_str());
+	        std::string flatbufferJson((const char*)a_data.data(), a_data.size());
+	        parser.ParseJson(flatbufferJson.c_str());
+	        CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)a_data.size(),
+	                  "buffer overrun loading materials.json");
+	        auto materials = Flatbuffers::GetMaterials(parser.builder_.GetBufferPointer());
 
-		    for(const auto& mat : *materials->mats()) {
-			    auto vertShader = a_shaders.GetShader(cecore::Hash64(mat->vertex_shader()->c_str()));
-			    auto fragShader = a_shaders.GetShader(cecore::Hash64(mat->fragment_shader()->c_str()));
+	        for(const auto& mat : *materials->mats()) {
+	            auto vertShader = a_shaders.GetShader(cecore::Hash64(mat->vertex_shader()->c_str()));
+	            auto fragShader = a_shaders.GetShader(cecore::Hash64(mat->fragment_shader()->c_str()));
 
-			    VkPipelineShaderStageCreateInfo shaderPipeInfo[2];
-			    ClearStruct(shaderPipeInfo[0]);
-			    ClearStruct(shaderPipeInfo[1]);
-			    shaderPipeInfo[0].module              = vertShader;
-			    shaderPipeInfo[0].pName               = "main";
-			    shaderPipeInfo[0].stage               = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
-			    shaderPipeInfo[0].pSpecializationInfo = nullptr;
-			    shaderPipeInfo[1].module              = fragShader;
-			    shaderPipeInfo[1].pName               = "main";
-			    shaderPipeInfo[1].stage               = VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
-			    shaderPipeInfo[1].pSpecializationInfo = &fragSpecInfo;
+	            VkPipelineShaderStageCreateInfo shaderPipeInfo[2];
+	            ClearStruct(shaderPipeInfo[0]);
+	            ClearStruct(shaderPipeInfo[1]);
+	            shaderPipeInfo[0].module              = vertShader;
+	            shaderPipeInfo[0].pName               = "main";
+	            shaderPipeInfo[0].stage               = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
+	            shaderPipeInfo[0].pSpecializationInfo = nullptr;
+	            shaderPipeInfo[1].module              = fragShader;
+	            shaderPipeInfo[1].pName               = "main";
+	            shaderPipeInfo[1].stage               = VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
+	            shaderPipeInfo[1].pSpecializationInfo = &fragSpecInfo;
 
-			    VkPipelineVertexInputStateCreateInfo vertInputInfo;
-			    ClearStruct(vertInputInfo);
-			    std::vector<VkVertexInputBindingDescription> vertBindings;
-			    vertBindings.reserve(mat->bindings()->size());
-			    for(const auto& binding : *mat->bindings()) {
-				    auto& newBinding   = vertBindings.emplace_back();
-				    newBinding.binding = binding->binding();
-				    newBinding.stride  = binding->stride();
-				    switch(binding->rate()) {
-					    case Flatbuffers::VertInputRate::PerVertex:
-						    newBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-						    break;
-					    case Flatbuffers::VertInputRate::PerInstance:
-						    newBinding.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
-						    break;
-					    default:
-						    break;
-				    }
-			    }
-			    vertInputInfo.vertexBindingDescriptionCount = (uint32_t)vertBindings.size();
-			    vertInputInfo.pVertexBindingDescriptions    = vertBindings.data();
+	            VkPipelineVertexInputStateCreateInfo vertInputInfo;
+	            ClearStruct(vertInputInfo);
+	            std::vector<VkVertexInputBindingDescription> vertBindings;
+	            vertBindings.reserve(mat->bindings()->size());
+	            for(const auto& binding : *mat->bindings()) {
+	                auto& newBinding   = vertBindings.emplace_back();
+	                newBinding.binding = binding->binding();
+	                newBinding.stride  = binding->stride();
+	                switch(binding->rate()) {
+	                    case Flatbuffers::VertInputRate::PerVertex:
+	                        newBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+	                        break;
+	                    case Flatbuffers::VertInputRate::PerInstance:
+	                        newBinding.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+	                        break;
+	                    default:
+	                        break;
+	                }
+	            }
+	            vertInputInfo.vertexBindingDescriptionCount = (uint32_t)vertBindings.size();
+	            vertInputInfo.pVertexBindingDescriptions    = vertBindings.data();
 
-			    std::vector<VkVertexInputAttributeDescription> vertAttribs;
-			    vertAttribs.reserve(mat->attr_descs()->size());
-			    for(const auto& desc : *mat->attr_descs()) {
-				    auto& newDesc    = vertAttribs.emplace_back();
-				    newDesc.location = desc->location();
-				    newDesc.binding  = desc->binding();
-				    newDesc.offset   = desc->offset();
-				    newDesc.format   = toVkFormat(desc->format());
-			    }
-			    vertInputInfo.vertexAttributeDescriptionCount = (uint32_t)vertAttribs.size();
-			    vertInputInfo.pVertexAttributeDescriptions    = vertAttribs.data();
+	            std::vector<VkVertexInputAttributeDescription> vertAttribs;
+	            vertAttribs.reserve(mat->attr_descs()->size());
+	            for(const auto& desc : *mat->attr_descs()) {
+	                auto& newDesc    = vertAttribs.emplace_back();
+	                newDesc.location = desc->location();
+	                newDesc.binding  = desc->binding();
+	                newDesc.offset   = desc->offset();
+	                newDesc.format   = toVkFormat(desc->format());
+	            }
+	            vertInputInfo.vertexAttributeDescriptionCount = (uint32_t)vertAttribs.size();
+	            vertInputInfo.pVertexAttributeDescriptions    = vertAttribs.data();
 
-			    VkGraphicsPipelineCreateInfo pipeInfo;
-			    ClearStruct(pipeInfo);
-			    pipeInfo.layout              = m_pipeLineLayout;
-			    pipeInfo.pColorBlendState    = &blendStateInfo;
-			    pipeInfo.pInputAssemblyState = &vertAssemblyInfo;
-			    pipeInfo.pMultisampleState   = &multisampleInfo;
-			    pipeInfo.pRasterizationState = &rasterInfo;
-			    pipeInfo.pDynamicState       = &dynamicState;
-			    pipeInfo.pVertexInputState   = &vertInputInfo;
-			    pipeInfo.pViewportState      = &viewPortInfo;
-			    pipeInfo.stageCount          = 2;
-			    pipeInfo.pStages             = shaderPipeInfo;
-			    pipeInfo.renderPass          = a_renderPass;
+	            VkGraphicsPipelineCreateInfo pipeInfo;
+	            ClearStruct(pipeInfo);
+	            pipeInfo.layout              = m_pipeLineLayout;
+	            pipeInfo.pColorBlendState    = &blendStateInfo;
+	            pipeInfo.pInputAssemblyState = &vertAssemblyInfo;
+	            pipeInfo.pMultisampleState   = &multisampleInfo;
+	            pipeInfo.pRasterizationState = &rasterInfo;
+	            pipeInfo.pDynamicState       = &dynamicState;
+	            pipeInfo.pVertexInputState   = &vertInputInfo;
+	            pipeInfo.pViewportState      = &viewPortInfo;
+	            pipeInfo.stageCount          = 2;
+	            pipeInfo.pStages             = shaderPipeInfo;
+	            pipeInfo.renderPass          = a_renderPass;
 
-			    result = vkCreateGraphicsPipelines(m_context.Device, VK_NULL_HANDLE, 1, &pipeInfo, nullptr,
-			                                       &m_pipelines.emplace_back());
-			    CR_ASSERT(result == VK_SUCCESS, "failed to create a graphics pipeline");
-		    }
-	    });
+	            result = vkCreateGraphicsPipelines(m_context.Device, VK_NULL_HANDLE, 1, &pipeInfo, nullptr,
+	                                               &m_pipelines.emplace_back());
+	            CR_ASSERT(result == VK_SUCCESS, "failed to create a graphics pipeline");
+	        }
+	    });*/
 }
 
 cegraph::Materials::~Materials() {

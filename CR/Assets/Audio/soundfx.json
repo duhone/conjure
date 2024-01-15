@@ -1,0 +1,8 @@
+{
+    "soundfx" : [
+            {
+                "name" : "levelupfanfare",
+                "path" : "Audio/FX/levelupfanfare.flac"
+            }
+        ]
+}

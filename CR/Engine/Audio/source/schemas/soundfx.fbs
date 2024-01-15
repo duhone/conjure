@@ -1,0 +1,12 @@
+namespace CR.Engine.Audio.Flatbuffers;
+
+table SoundFX{
+	name:string;
+	path:string;
+}
+ 
+table SoundFXs {
+  soundfx:[SoundFX];
+}
+ 
+root_type SoundFXs;

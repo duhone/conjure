@@ -4,10 +4,10 @@ import <cstdio>;
 import <filesystem>;
 
 namespace CR::Engine::Core {
-	// Currently only for writing files, for reading use memory mapped files.
+	// Currently only for binary files
 	export class FileHandle final {
 	  public:
-		FileHandle(const std::filesystem::path& a_path);
+		FileHandle(const std::filesystem::path& a_path, bool a_forWriting);
 		~FileHandle();
 
 		FileHandle(const FileHandle&)            = delete;
@@ -24,8 +24,8 @@ namespace CR::Engine::Core {
 
 namespace crec = CR::Engine::Core;
 
-inline crec::FileHandle::FileHandle(const std::filesystem::path& a_path) {
-	fopen_s(&m_file, a_path.string().c_str(), "wb");
+inline crec::FileHandle::FileHandle(const std::filesystem::path& a_path, bool a_forWriting) {
+	fopen_s(&m_file, a_path.string().c_str(), a_forWriting ? "wb" : "rb");
 }
 
 inline crec::FileHandle::~FileHandle() {

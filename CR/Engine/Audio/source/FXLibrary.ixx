@@ -1,5 +1,9 @@
 module;
 
+#include "generated/audio/soundfx_generated.h"
+
+#include "flatbuffers/idl.h"
+
 #include "core/Log.h"
 
 #include <dr_flac.h>
@@ -8,6 +12,7 @@ export module CR.Engine.Audio.FXLibrary;
 
 import CR.Engine.Assets;
 import CR.Engine.Core;
+import CR.Engine.Platform;
 
 import CR.Engine.Audio.Sample;
 import CR.Engine.Audio.Utilities;
@@ -50,6 +55,7 @@ namespace CR::Engine::Audio {
 
 	  private:
 		std::unordered_map<uint64_t, uint16_t> m_lookup;
+		std::vector<std::string> m_names;
 		std::vector<std::string> m_paths;
 		std::vector<CR::Engine::Core::StorageBuffer<int16_t>> m_pcmData;
 
@@ -68,45 +74,61 @@ module :private;
 
 namespace ceasset = CR::Engine::Assets;
 namespace cecore  = CR::Engine::Core;
+namespace ceplat  = CR::Engine::Platform;
 namespace cea     = CR::Engine::Audio;
 
 namespace fs = std::filesystem;
 
 cea::FXLibrary::FXLibrary() {
 	auto& assetService = cecore::GetService<ceasset::Service>();
-	assetService.Load(ceasset::Service::Partitions::Audio, "FX", "flac",
-	                  [&](uint64_t a_hash, std::string_view a_path, const std::span<std::byte> a_data) {
-		                  CR_ASSERT(m_pcmData.size() < std::numeric_limits<uint16_t>::max(),
-		                            "Too many fx, max supported is 64K");
-		                  m_lookup[a_hash] = (uint16_t)m_pcmData.size();
-		                  m_paths.push_back(std::string(a_path));
 
-		                  uint32_t uncompressedSize{};
-		                  auto metaData = [](void* pUserData, drflac_metadata* pMetadata) {
-			                  if(pMetadata->type == DRFLAC_METADATA_BLOCK_TYPE_STREAMINFO) {
-				                  uint32_t* size = (uint32_t*)pUserData;
-				                  *size          = (uint32_t)pMetadata->data.streaminfo.totalPCMFrameCount;
-			                  }
-		                  };
-		                  auto drFlac = drflac_open_memory_with_metadata(
-		                      a_data.data(), a_data.size(), metaData, &uncompressedSize, nullptr);
+	flatbuffers::Parser parser;
+	ceplat::MemoryMappedFile schemaFile(SCHEMAS_SOUNDFX);
+	std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
+	parser.Parse(schemaData.c_str());
 
-		                  CR_ASSERT(uncompressedSize > 0, "0 size flac file");
-		                  CR::Engine::Core::StorageBuffer<int16_t> pcmData;
-		                  pcmData.prepare(uncompressedSize);
+	auto soundFXData = assetService.GetData(cecore::C_Hash64("Audio/soundfx.json"));
+	std::string flatbufferJson((const char*)soundFXData.data(), soundFXData.size());
+	parser.ParseJson(flatbufferJson.c_str());
+	CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)soundFXData.size(), "buffer overrun loading soundfx.json");
+	auto sounds = Flatbuffers::GetSoundFXs(parser.builder_.GetBufferPointer());
+	for(const auto& soundfx : *sounds->soundfx()) {
+		m_lookup[cecore::Hash64(soundfx->name()->c_str())] = (uint16_t)m_pcmData.size();
+		m_names.push_back(soundfx->name()->c_str());
+		m_paths.push_back(soundfx->path()->c_str());
 
-		                  auto framesRead =
-		                      drflac_read_pcm_frames_s16(drFlac, uncompressedSize, pcmData.data());
-		                  while(framesRead < uncompressedSize) {
-			                  framesRead += drflac_read_pcm_frames_s16(drFlac, uncompressedSize - framesRead,
-			                                                           pcmData.data() + framesRead);
-		                  }
-		                  drflac_close(drFlac);
+		auto soundHandle = assetService.GetHandle(cecore::Hash64(m_paths.back()));
+		assetService.Open(soundHandle);
+		auto soundData = assetService.GetData(soundHandle);
 
-		                  pcmData.commit(uncompressedSize);
+		uint32_t uncompressedSize{};
+		auto metaData = [](void* pUserData, drflac_metadata* pMetadata) {
+			if(pMetadata->type == DRFLAC_METADATA_BLOCK_TYPE_STREAMINFO) {
+				uint32_t* size = (uint32_t*)pUserData;
+				*size          = (uint32_t)pMetadata->data.streaminfo.totalPCMFrameCount;
+			}
+		};
+		auto drFlac = drflac_open_memory_with_metadata(soundData.data(), soundData.size(), metaData,
+		                                               &uncompressedSize, nullptr);
 
-		                  m_pcmData.emplace_back(std::move(pcmData));
-	                  });
+		CR_ASSERT(uncompressedSize > 0, "0 size flac file");
+
+		CR::Engine::Core::StorageBuffer<int16_t> pcmData;
+		pcmData.prepare(uncompressedSize);
+
+		auto framesRead = drflac_read_pcm_frames_s16(drFlac, uncompressedSize, pcmData.data());
+		while(framesRead < uncompressedSize) {
+			framesRead += drflac_read_pcm_frames_s16(drFlac, uncompressedSize - framesRead,
+			                                         pcmData.data() + framesRead);
+		}
+		drflac_close(drFlac);
+
+		pcmData.commit(uncompressedSize);
+
+		m_pcmData.emplace_back(std::move(pcmData));
+
+		assetService.Close(soundHandle);
+	}
 }
 
 void cea::FXLibrary::Mix(std::span<Sample> a_data) {

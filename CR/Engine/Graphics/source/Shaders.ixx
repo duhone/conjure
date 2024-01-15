@@ -69,7 +69,7 @@ namespace {
 		fs::create_directories(fs::path(tempPathInput).remove_filename());
 
 		{
-			cecore::FileHandle inputFile(tempPathInput);
+			cecore::FileHandle inputFile(tempPathInput, true);
 			fwrite(a_data.data(), 1, a_data.size(), inputFile.asFile());
 		}
 
@@ -92,7 +92,7 @@ namespace {
 }    // namespace
 
 cegraph::Shaders::Shaders(VkDevice a_device) : m_device(a_device) {
-	auto& assetService = cecore::GetService<ceasset::Service>();
+	// auto& assetService = cecore::GetService<ceasset::Service>();
 
 	fs::path workingFolder = fs::temp_directory_path() /= shaderCompileFolder;
 	fs::create_directory(workingFolder);
@@ -110,10 +110,10 @@ cegraph::Shaders::Shaders(VkDevice a_device) : m_device(a_device) {
 		m_shaderModules.emplace(a_hash, shaderModule);
 	};
 
-	assetService.Load(ceasset::Service::Partitions::Graphics, "Shaders", "comp", loadShader);
+	/*assetService.Load(ceasset::Service::Partitions::Graphics, "Shaders", "comp", loadShader);
 	assetService.Load(ceasset::Service::Partitions::Graphics, "Shaders", "vert", loadShader);
 	assetService.Load(ceasset::Service::Partitions::Graphics, "Shaders", "frag", loadShader);
-
+	*/
 	fs::remove_all(workingFolder);
 }
 

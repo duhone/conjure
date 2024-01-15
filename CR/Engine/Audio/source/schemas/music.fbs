@@ -1,0 +1,12 @@
+namespace CR.Engine.Audio.Flatbuffers;
+
+table Song{
+	name:string;
+	path:string;
+}
+ 
+table Music {
+  music:[Song];
+}
+ 
+root_type Music;
