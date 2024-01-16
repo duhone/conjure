@@ -145,9 +145,9 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 
 	m_commandPool = CommandPool(m_context.Device, m_graphicsQueueIndex);
 	m_graphicsThread.emplace(m_context.Device, m_transferQueue, m_transferQueueIndex);
-	m_shaders.emplace(m_context.Device);
-	m_materials.emplace(m_context, *m_shaders, *m_graphicsThread, m_renderPass);
-	m_computePipelines.emplace(m_context, *m_shaders);
+	m_shaders.emplace(m_context.Device, *m_graphicsThread);
+	m_materials.emplace(m_context);
+	m_computePipelines.emplace(m_context);
 }
 
 void cegraph::DeviceService::Stop() {
@@ -185,6 +185,9 @@ void cegraph::DeviceService::Stop() {
 }
 
 void cegraph::DeviceService::Update() {
+	m_materials->Update(*m_shaders, *m_graphicsThread, m_renderPass);
+	m_computePipelines->Update(*m_shaders, *m_graphicsThread);
+
 	vkAcquireNextImageKHR(m_context.Device, m_primarySwapChain, UINT64_MAX, VK_NULL_HANDLE, m_frameFence,
 	                      &m_currentFrameBuffer);
 

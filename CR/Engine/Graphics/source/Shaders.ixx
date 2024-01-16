@@ -4,6 +4,8 @@ module;
 
 #include "flatbuffers/idl.h"
 
+#include <function2/function2.hpp>
+
 #include "core/Log.h"
 
 #include "Core.h"
@@ -29,7 +31,7 @@ namespace CR::Engine::Graphics {
 	export class Shaders {
 	  public:
 		Shaders() = default;
-		Shaders(VkDevice a_device);
+		Shaders(VkDevice a_device, GraphicsThread& a_thread);
 		~Shaders();
 		Shaders(const Shaders&)               = delete;
 		Shaders(Shaders&& a_other)            = delete;
@@ -43,10 +45,14 @@ namespace CR::Engine::Graphics {
 			return nullptr;
 		}
 
+		bool IsReady() const { return m_ready.load(std::memory_order_acquire); }
+
 	  private:
 		VkDevice m_device;
 
 		std::unordered_map<uint64_t, VkShaderModule> m_shaderModules;
+
+		std::atomic_bool m_ready;
 	};
 }    // namespace CR::Engine::Graphics
 
@@ -84,37 +90,42 @@ namespace {
 	}
 }    // namespace
 
-cegraph::Shaders::Shaders(VkDevice a_device) : m_device(a_device) {
-	auto& assetService   = cecore::GetService<ceasset::Service>();
-	const auto& rootPath = assetService.GetRootPath();
+cegraph::Shaders::Shaders(VkDevice a_device, GraphicsThread& a_thread) : m_device(a_device) {
+	a_thread.EnqueueTask(
+	    [this]() {
+		    auto& assetService   = cecore::GetService<ceasset::Service>();
+		    const auto& rootPath = assetService.GetRootPath();
 
-	fs::path workingFile = fs::temp_directory_path() / "conjure_compiled_shader.spirv";
+		    fs::path workingFile = fs::temp_directory_path() / "conjure_compiled_shader.spirv";
 
-	flatbuffers::Parser parser;
-	ceplat::MemoryMappedFile schemaFile(SCHEMAS_SHADERS);
-	std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
-	parser.Parse(schemaData.c_str());
+		    flatbuffers::Parser parser;
+		    ceplat::MemoryMappedFile schemaFile(SCHEMAS_SHADERS);
+		    std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
+		    parser.Parse(schemaData.c_str());
 
-	auto shadersData = assetService.GetData(cecore::C_Hash64("Graphics/shaders.json"));
-	std::string flatbufferJson((const char*)shadersData.data(), shadersData.size());
-	parser.ParseJson(flatbufferJson.c_str());
-	CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)shadersData.size(), "buffer overrun loading shaders.json");
-	auto shaders = Flatbuffers::GetShaders(parser.builder_.GetBufferPointer());
+		    auto shadersData = assetService.GetData(cecore::C_Hash64("Graphics/shaders.json"));
+		    std::string flatbufferJson((const char*)shadersData.data(), shadersData.size());
+		    parser.ParseJson(flatbufferJson.c_str());
+		    CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)shadersData.size(),
+		              "buffer overrun loading shaders.json");
+		    auto shaders = Flatbuffers::GetShaders(parser.builder_.GetBufferPointer());
 
-	for(const auto& shader : *shaders->shaders()) {
-		auto spirvFile = CompileShader(rootPath / shader->path()->string_view(), workingFile);
-		VkShaderModuleCreateInfo shaderInfo;
-		ClearStruct(shaderInfo);
-		shaderInfo.pCode    = (uint32_t*)spirvFile.data();
-		shaderInfo.codeSize = spirvFile.size();
+		    for(const auto& shader : *shaders->shaders()) {
+			    auto spirvFile = CompileShader(rootPath / shader->path()->string_view(), workingFile);
+			    VkShaderModuleCreateInfo shaderInfo;
+			    ClearStruct(shaderInfo);
+			    shaderInfo.pCode    = (uint32_t*)spirvFile.data();
+			    shaderInfo.codeSize = spirvFile.size();
 
-		VkShaderModule shaderModule;
-		auto result = vkCreateShaderModule(m_device, &shaderInfo, nullptr, &shaderModule);
-		CR_ASSERT(result == VK_SUCCESS, "failed to load shader {}", shader->path()->string_view());
-		m_shaderModules.emplace(cecore::Hash64(shader->name()->string_view()), shaderModule);
-	}
+			    VkShaderModule shaderModule;
+			    auto result = vkCreateShaderModule(m_device, &shaderInfo, nullptr, &shaderModule);
+			    CR_ASSERT(result == VK_SUCCESS, "failed to load shader {}", shader->path()->string_view());
+			    m_shaderModules.emplace(cecore::Hash64(shader->name()->string_view()), shaderModule);
+		    }
 
-	fs::remove(workingFile);
+		    fs::remove(workingFile);
+	    },
+	    m_ready);
 }
 
 cegraph::Shaders::~Shaders() {

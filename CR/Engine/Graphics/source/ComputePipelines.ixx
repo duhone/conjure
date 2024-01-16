@@ -4,6 +4,8 @@ module;
 
 #include "flatbuffers/idl.h"
 
+#include <function2/function2.hpp>
+
 #include "core/Log.h"
 
 #include "Core.h"
@@ -12,6 +14,7 @@ export module CR.Engine.Graphics.ComputePipelines;
 
 import CR.Engine.Graphics.Constants;
 import CR.Engine.Graphics.Context;
+import CR.Engine.Graphics.GraphicsThread;
 import CR.Engine.Graphics.Shaders;
 import CR.Engine.Graphics.Utils;
 
@@ -25,12 +28,16 @@ namespace CR::Engine::Graphics {
 	export class ComputePipelines {
 	  public:
 		ComputePipelines() = default;
-		ComputePipelines(const Context& a_context, const Shaders& a_shaders);
+		ComputePipelines(const Context& a_context);
 		~ComputePipelines();
 		ComputePipelines(const ComputePipelines&)               = delete;
 		ComputePipelines(ComputePipelines&& a_other)            = delete;
 		ComputePipelines& operator=(const ComputePipelines&)    = delete;
 		ComputePipelines& operator=(ComputePipelines&& a_other) = delete;
+
+		void Update(const Shaders& a_shaders, GraphicsThread& a_thread);
+
+		bool IsReady() const { return m_ready.load(std::memory_order_acquire); }
 
 	  private:
 		const Context& m_context;
@@ -38,6 +45,9 @@ namespace CR::Engine::Graphics {
 		VkPipelineLayout m_pipeLineLayout;
 		VkDescriptorSetLayout m_descriptorSetLayout;
 		std::vector<VkPipeline> m_pipelines;
+
+		std::atomic_bool m_ready;
+		bool m_startedLoad{};
 	};
 }    // namespace CR::Engine::Graphics
 
@@ -48,85 +58,97 @@ namespace cecore  = CR::Engine::Core;
 namespace ceplat  = CR::Engine::Platform;
 namespace cegraph = CR::Engine::Graphics;
 
-cegraph::ComputePipelines::ComputePipelines(const Context& a_context, const Shaders& a_shaders) :
-    m_context(a_context) {
-	auto& assetService = cecore::GetService<ceasset::Service>();
+cegraph::ComputePipelines::ComputePipelines(const Context& a_context) : m_context(a_context) {}
 
-	// TODO: may want to just set the viewport and scissor here for platforms that are
-	// fixed window size, instead of using dynamic states.
+void cegraph::ComputePipelines::Update(const Shaders& a_shaders, GraphicsThread& a_thread) {
+	if(IsReady() || m_startedLoad) { return; }
 
-	VkDescriptorSetLayoutBinding dslBinding[5];
-	ClearStruct(dslBinding);
-	dslBinding[0].binding         = 0;
-	dslBinding[0].descriptorCount = 1;
-	dslBinding[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	dslBinding[0].stageFlags      = VK_SHADER_STAGE_COMPUTE_BIT;
-	dslBinding[1].binding         = 1;
-	dslBinding[1].descriptorCount = 1;
-	dslBinding[1].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-	dslBinding[1].stageFlags      = VK_SHADER_STAGE_COMPUTE_BIT;
-	dslBinding[2].binding         = 2;
-	dslBinding[2].descriptorCount = 1;
-	dslBinding[2].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-	dslBinding[2].stageFlags      = VK_SHADER_STAGE_COMPUTE_BIT;
-	dslBinding[3].binding         = 3;
-	dslBinding[3].descriptorCount = 1;
-	dslBinding[3].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-	dslBinding[3].stageFlags      = VK_SHADER_STAGE_COMPUTE_BIT;
-	dslBinding[4].binding         = 4;
-	dslBinding[4].descriptorCount = 1;
-	dslBinding[4].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	dslBinding[4].stageFlags      = VK_SHADER_STAGE_COMPUTE_BIT;
+	if(!a_shaders.IsReady()) { return; }
 
-	VkDescriptorSetLayoutCreateInfo dslInfo;
-	ClearStruct(dslInfo);
-	dslInfo.bindingCount = (uint32_t)std::size(dslBinding);
-	dslInfo.pBindings    = dslBinding;
+	m_startedLoad = true;
 
-	auto result = vkCreateDescriptorSetLayout(m_context.Device, &dslInfo, nullptr, &m_descriptorSetLayout);
-	CR_ASSERT(result == VK_SUCCESS, "failed to create a descriptor set layout");
+	a_thread.EnqueueTask(
+	    [this, &a_shaders]() {
+		    auto& assetService = cecore::GetService<ceasset::Service>();
 
-	VkPipelineLayoutCreateInfo layoutInfo;
-	ClearStruct(layoutInfo);
-	layoutInfo.pushConstantRangeCount = 0;
-	layoutInfo.pPushConstantRanges    = nullptr;
-	layoutInfo.setLayoutCount         = 1;
-	layoutInfo.pSetLayouts            = &m_descriptorSetLayout;
+		    // TODO: may want to just set the viewport and scissor here for platforms that are
+		    // fixed window size, instead of using dynamic states.
 
-	result = vkCreatePipelineLayout(m_context.Device, &layoutInfo, nullptr, &m_pipeLineLayout);
-	CR_ASSERT(result == VK_SUCCESS, "failed to create a pipeline layout");
+		    VkDescriptorSetLayoutBinding dslBinding[5];
+		    ClearStruct(dslBinding);
+		    dslBinding[0].binding         = 0;
+		    dslBinding[0].descriptorCount = 1;
+		    dslBinding[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		    dslBinding[0].stageFlags      = VK_SHADER_STAGE_COMPUTE_BIT;
+		    dslBinding[1].binding         = 1;
+		    dslBinding[1].descriptorCount = 1;
+		    dslBinding[1].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+		    dslBinding[1].stageFlags      = VK_SHADER_STAGE_COMPUTE_BIT;
+		    dslBinding[2].binding         = 2;
+		    dslBinding[2].descriptorCount = 1;
+		    dslBinding[2].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+		    dslBinding[2].stageFlags      = VK_SHADER_STAGE_COMPUTE_BIT;
+		    dslBinding[3].binding         = 3;
+		    dslBinding[3].descriptorCount = 1;
+		    dslBinding[3].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+		    dslBinding[3].stageFlags      = VK_SHADER_STAGE_COMPUTE_BIT;
+		    dslBinding[4].binding         = 4;
+		    dslBinding[4].descriptorCount = 1;
+		    dslBinding[4].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		    dslBinding[4].stageFlags      = VK_SHADER_STAGE_COMPUTE_BIT;
 
-	auto pipelinesData = assetService.GetData(cecore::C_Hash64("Graphics/computePipelines.json"));
+		    VkDescriptorSetLayoutCreateInfo dslInfo;
+		    ClearStruct(dslInfo);
+		    dslInfo.bindingCount = (uint32_t)std::size(dslBinding);
+		    dslInfo.pBindings    = dslBinding;
 
-	flatbuffers::Parser parser;
-	ceplat::MemoryMappedFile schemaFile(SCHEMAS_COMPUTE_PIPELINES);
-	std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
-	parser.Parse(schemaData.c_str());
-	std::string flatbufferJson((const char*)pipelinesData.data(), pipelinesData.size());
-	parser.ParseJson(flatbufferJson.c_str());
-	CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)pipelinesData.size(),
-	          "buffer overrun loading compute pipelines.json");
-	auto computePipelines = Flatbuffers::GetComputePipelines(parser.builder_.GetBufferPointer());
+		    auto result =
+		        vkCreateDescriptorSetLayout(m_context.Device, &dslInfo, nullptr, &m_descriptorSetLayout);
+		    CR_ASSERT(result == VK_SUCCESS, "failed to create a descriptor set layout");
 
-	for(const auto& pipe : *computePipelines->pipelines()) {
-		auto compShader = a_shaders.GetShader(cecore::Hash64(pipe->compute_shader()->c_str()));
+		    VkPipelineLayoutCreateInfo layoutInfo;
+		    ClearStruct(layoutInfo);
+		    layoutInfo.pushConstantRangeCount = 0;
+		    layoutInfo.pPushConstantRanges    = nullptr;
+		    layoutInfo.setLayoutCount         = 1;
+		    layoutInfo.pSetLayouts            = &m_descriptorSetLayout;
 
-		VkPipelineShaderStageCreateInfo shaderPipeInfo;
-		ClearStruct(shaderPipeInfo);
-		shaderPipeInfo.module              = compShader;
-		shaderPipeInfo.pName               = "main";
-		shaderPipeInfo.stage               = VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT;
-		shaderPipeInfo.pSpecializationInfo = nullptr;
+		    result = vkCreatePipelineLayout(m_context.Device, &layoutInfo, nullptr, &m_pipeLineLayout);
+		    CR_ASSERT(result == VK_SUCCESS, "failed to create a pipeline layout");
 
-		VkComputePipelineCreateInfo pipeInfo;
-		ClearStruct(pipeInfo);
-		pipeInfo.layout = m_pipeLineLayout;
-		pipeInfo.stage  = shaderPipeInfo;
+		    auto pipelinesData = assetService.GetData(cecore::C_Hash64("Graphics/computePipelines.json"));
 
-		result = vkCreateComputePipelines(m_context.Device, VK_NULL_HANDLE, 1, &pipeInfo, nullptr,
-		                                  &m_pipelines.emplace_back());
-		CR_ASSERT(result == VK_SUCCESS, "failed to create a graphics pipeline");
-	}
+		    flatbuffers::Parser parser;
+		    ceplat::MemoryMappedFile schemaFile(SCHEMAS_COMPUTE_PIPELINES);
+		    std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
+		    parser.Parse(schemaData.c_str());
+		    std::string flatbufferJson((const char*)pipelinesData.data(), pipelinesData.size());
+		    parser.ParseJson(flatbufferJson.c_str());
+		    CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)pipelinesData.size(),
+		              "buffer overrun loading compute pipelines.json");
+		    auto computePipelines = Flatbuffers::GetComputePipelines(parser.builder_.GetBufferPointer());
+
+		    for(const auto& pipe : *computePipelines->pipelines()) {
+			    auto compShader = a_shaders.GetShader(cecore::Hash64(pipe->compute_shader()->c_str()));
+
+			    VkPipelineShaderStageCreateInfo shaderPipeInfo;
+			    ClearStruct(shaderPipeInfo);
+			    shaderPipeInfo.module              = compShader;
+			    shaderPipeInfo.pName               = "main";
+			    shaderPipeInfo.stage               = VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT;
+			    shaderPipeInfo.pSpecializationInfo = nullptr;
+
+			    VkComputePipelineCreateInfo pipeInfo;
+			    ClearStruct(pipeInfo);
+			    pipeInfo.layout = m_pipeLineLayout;
+			    pipeInfo.stage  = shaderPipeInfo;
+
+			    result = vkCreateComputePipelines(m_context.Device, VK_NULL_HANDLE, 1, &pipeInfo, nullptr,
+			                                      &m_pipelines.emplace_back());
+			    CR_ASSERT(result == VK_SUCCESS, "failed to create a graphics pipeline");
+		    }
+	    },
+	    m_ready);
 }
 
 cegraph::ComputePipelines::~ComputePipelines() {
