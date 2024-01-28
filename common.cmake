@@ -114,3 +114,17 @@ function(settingsCR target)
 #bugprone-*, -bugprone-bool-pointer-implicit-conversion, cppcoreguidelines-*, -cppcoreguidelines-avoid-c-arrays, -cppcoreguidelines-pro-bounds-constant-array-index, misc-*, performance-*, readability-*, -readability-uppercase-literal-suffix"
 	#)
 endfunction()
+
+
+function(compileFlatbuffersSchema target file)
+	add_custom_command(
+		OUTPUT ${generated_root}/${target}/${file}_generated.h
+		COMMAND ${FLATC}
+		ARGS --cpp --cpp-std C++17
+		ARGS -o ${generated_root}/${target}/ ${root}/source/schemas/${file}.fbs
+		DEPENDS ${root}/source/schemas/${file}.fbs
+		VERBATIM
+	)
+	string(TOUPPER ${file} fileUpper)
+	target_compile_definitions(${target} PUBLIC SCHEMAS_${fileUpper}="${root}/source/schemas/${file}.fbs")
+endfunction()

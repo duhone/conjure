@@ -1,0 +1,13 @@
+namespace CR.Engine.Graphics.Flatbuffers;
+
+table Texture{
+	name:string;
+	path:string;
+	frame_count:uint16;
+}
+ 
+table Textures {
+  mats:[Texture];
+}
+ 
+root_type Textures;

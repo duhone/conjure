@@ -119,7 +119,7 @@ void cegraph::ComputePipelines::Update(const Shaders& a_shaders, GraphicsThread&
 		    auto pipelinesData = assetService.GetData(cecore::C_Hash64("Graphics/computePipelines.json"));
 
 		    flatbuffers::Parser parser;
-		    ceplat::MemoryMappedFile schemaFile(SCHEMAS_COMPUTE_PIPELINES);
+		    ceplat::MemoryMappedFile schemaFile(SCHEMAS_COMPUTEPIPELINES);
 		    std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
 		    parser.Parse(schemaData.c_str());
 		    std::string flatbufferJson((const char*)pipelinesData.data(), pipelinesData.size());

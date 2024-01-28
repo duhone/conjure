@@ -37,12 +37,14 @@ set(SCHEMA_FILES
     ${root}/source/schemas/computePipelines.fbs
     ${root}/source/schemas/materials.fbs
     ${root}/source/schemas/shaders.fbs
+    ${root}/source/schemas/textures.fbs
 )
 
 set(GENERATED_FILES
   ${generated_root}/graphics/computePipelines_generated.h
   ${generated_root}/graphics/materials_generated.h
   ${generated_root}/graphics/shaders_generated.h
+  ${generated_root}/graphics/textures_generated.h
 )
 
 add_library(graphics 
@@ -63,32 +65,10 @@ target_compile_options(graphics PRIVATE /WX-)
 
 file(MAKE_DIRECTORY ${generated_root}/graphics)
 
-add_custom_command(
-    OUTPUT ${generated_root}/graphics/materials_generated.h
-    COMMAND ${FLATC}
-    ARGS --cpp --cpp-std C++17
-    ARGS -o ${generated_root}/graphics/ ${root}/source/schemas/materials.fbs
-    DEPENDS ${root}/source/schemas/materials.fbs
-    VERBATIM
-)
-
-add_custom_command(
-    OUTPUT ${generated_root}/graphics/computePipelines_generated.h
-    COMMAND ${FLATC}
-    ARGS --cpp --cpp-std C++17
-    ARGS -o ${generated_root}/graphics/ ${root}/source/schemas/computePipelines.fbs
-    DEPENDS ${root}/source/schemas/computePipelines.fbs
-    VERBATIM
-)
-
-add_custom_command(
-    OUTPUT ${generated_root}/graphics/shaders_generated.h
-    COMMAND ${FLATC}
-    ARGS --cpp --cpp-std C++17
-    ARGS -o ${generated_root}/graphics/ ${root}/source/schemas/shaders.fbs
-    DEPENDS ${root}/source/schemas/shaders.fbs
-    VERBATIM
-)
+compileFlatbuffersSchema(graphics materials)
+compileFlatbuffersSchema(graphics computePipelines)
+compileFlatbuffersSchema(graphics shaders)
+compileFlatbuffersSchema(graphics textures)
 
 target_link_libraries(graphics PUBLIC
 	headerUnits
@@ -104,7 +84,3 @@ target_link_libraries(graphics PUBLIC
 )
 
 set_property(TARGET graphics APPEND PROPERTY FOLDER Engine)
-
-target_compile_definitions(graphics PUBLIC SCHEMAS_COMPUTE_PIPELINES="${root}/source/schemas/computePipelines.fbs")
-target_compile_definitions(graphics PUBLIC SCHEMAS_MATERIALS="${root}/source/schemas/materials.fbs")
-target_compile_definitions(graphics PUBLIC SCHEMAS_SHADERS="${root}/source/schemas/shaders.fbs")

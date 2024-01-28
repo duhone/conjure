@@ -1,0 +1,54 @@
+{
+    "textures" : [
+            {
+                "name" : "brick",
+                "path" : "Graphics/Textures/brick.jxl",
+                "frame_count" : 1
+            },
+            {
+                "name" : "diamond",
+                "path" : "Graphics/Textures/diamond.jxl",
+                "frame_count" : 1
+            },
+            {
+                "name" : "gold",
+                "path" : "Graphics/Textures/gold.jxl",
+                "frame_count" : 1
+            },
+            {
+                "name" : "ice",
+                "path" : "Graphics/Textures/ice.jxl",
+                "frame_count" : 1
+            },
+            {
+                "name" : "leaf",
+                "path" : "Graphics/Textures/leaf.jxl",
+                "frame_count" : 1
+            },
+            {
+                "name" : "m",
+                "path" : "Graphics/Textures/m.jxl",
+                "frame_count" : 1
+            },
+            {
+                "name" : "question",
+                "path" : "Graphics/Textures/question.jxl",
+                "frame_count" : 1
+            },
+            {
+                "name" : "wood",
+                "path" : "Graphics/Textures/wood.jxl",
+                "frame_count" : 1
+            },
+            {
+                "name" : "CompletionScreen",
+                "path" : "Graphics/Textures/CompletionScreen.jxl",
+                "frame_count" : 1
+            },
+            {
+                "name" : "BonusHarrySelect",
+                "path" : "Graphics/Textures/BonusHarrySelect/BonusHarrySelect.jxl",
+                "frame_count" : 20
+            }
+        ]
+}

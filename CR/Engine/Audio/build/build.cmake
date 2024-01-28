@@ -52,23 +52,8 @@ target_compile_options(audio PRIVATE /WX-)
 
 file(MAKE_DIRECTORY ${generated_root}/audio)
 
-add_custom_command(
-    OUTPUT ${generated_root}/audio/music_generated.h
-    COMMAND ${FLATC}
-    ARGS --cpp --cpp-std C++17
-    ARGS -o ${generated_root}/audio/ ${root}/source/schemas/music.fbs
-    DEPENDS ${root}/source/schemas/music.fbs
-    VERBATIM
-)
-
-add_custom_command(
-    OUTPUT ${generated_root}/audio/soundfx_generated.h
-    COMMAND ${FLATC}
-    ARGS --cpp --cpp-std C++17
-    ARGS -o ${generated_root}/audio/ ${root}/source/schemas/soundfx.fbs
-    DEPENDS ${root}/source/schemas/soundfx.fbs
-    VERBATIM
-)
+compileFlatbuffersSchema(audio music)
+compileFlatbuffersSchema(audio soundfx)
 
 target_link_libraries(audio PUBLIC
     assets
@@ -88,5 +73,3 @@ target_link_libraries(audio PUBLIC
 
 set_property(TARGET audio APPEND PROPERTY FOLDER Engine)
 
-target_compile_definitions(audio PUBLIC SCHEMAS_MUSIC="${root}/source/schemas/music.fbs")
-target_compile_definitions(audio PUBLIC SCHEMAS_SOUNDFX="${root}/source/schemas/soundfx.fbs")
