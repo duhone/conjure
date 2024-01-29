@@ -82,15 +82,8 @@ namespace fs = std::filesystem;
 cea::FXLibrary::FXLibrary() {
 	auto& assetService = cecore::GetService<ceasset::Service>();
 
-	flatbuffers::Parser parser;
-	ceplat::MemoryMappedFile schemaFile(SCHEMAS_SOUNDFX);
-	std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
-	parser.Parse(schemaData.c_str());
-
-	auto soundFXData = assetService.GetData(cecore::C_Hash64("Audio/soundfx.json"));
-	std::string flatbufferJson((const char*)soundFXData.data(), soundFXData.size());
-	parser.ParseJson(flatbufferJson.c_str());
-	CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)soundFXData.size(), "buffer overrun loading soundfx.json");
+	flatbuffers::Parser parser =
+	    assetService.GetData(cecore::C_Hash64("Audio/soundfx.json"), SCHEMAS_SOUNDFX);
 	auto sounds = Flatbuffers::GetSoundFXs(parser.builder_.GetBufferPointer());
 	for(const auto& soundfx : *sounds->soundfx()) {
 		m_lookup[cecore::Hash64(soundfx->name()->c_str())] = (uint16_t)m_pcmData.size();

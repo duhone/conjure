@@ -116,16 +116,9 @@ void cegraph::ComputePipelines::Update(const Shaders& a_shaders, GraphicsThread&
 		    result = vkCreatePipelineLayout(m_context.Device, &layoutInfo, nullptr, &m_pipeLineLayout);
 		    CR_ASSERT(result == VK_SUCCESS, "failed to create a pipeline layout");
 
-		    auto pipelinesData = assetService.GetData(cecore::C_Hash64("Graphics/computePipelines.json"));
+		    flatbuffers::Parser parser = assetService.GetData(
+		        cecore::C_Hash64("Graphics/computePipelines.json"), SCHEMAS_COMPUTEPIPELINES);
 
-		    flatbuffers::Parser parser;
-		    ceplat::MemoryMappedFile schemaFile(SCHEMAS_COMPUTEPIPELINES);
-		    std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
-		    parser.Parse(schemaData.c_str());
-		    std::string flatbufferJson((const char*)pipelinesData.data(), pipelinesData.size());
-		    parser.ParseJson(flatbufferJson.c_str());
-		    CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)pipelinesData.size(),
-		              "buffer overrun loading compute pipelines.json");
 		    auto computePipelines = Flatbuffers::GetComputePipelines(parser.builder_.GetBufferPointer());
 
 		    for(const auto& pipe : *computePipelines->pipelines()) {

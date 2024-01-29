@@ -257,16 +257,8 @@ void cegraph::Materials::Update(const Shaders& a_shaders, GraphicsThread& a_thre
 		    ClearStruct(vertAssemblyInfo);
 		    vertAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
-		    auto materialsData = assetService.GetData(cecore::C_Hash64("Graphics/materials.json"));
-
-		    flatbuffers::Parser parser;
-		    ceplat::MemoryMappedFile schemaFile(SCHEMAS_MATERIALS);
-		    std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
-		    parser.Parse(schemaData.c_str());
-		    std::string flatbufferJson((const char*)materialsData.data(), materialsData.size());
-		    parser.ParseJson(flatbufferJson.c_str());
-		    CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)materialsData.size(),
-		              "buffer overrun loading materials.json");
+		    flatbuffers::Parser parser =
+		        assetService.GetData(cecore::C_Hash64("Graphics/materials.json"), SCHEMAS_MATERIALS);
 		    auto materials = Flatbuffers::GetMaterials(parser.builder_.GetBufferPointer());
 
 		    for(const auto& mat : *materials->mats()) {

@@ -4,6 +4,8 @@ module;
 
 #include "ankerl/unordered_dense.h"
 
+#include "flatbuffers/idl.h"
+
 export module CR.Engine.Assets.Service;
 
 import CR.Engine.Core;
@@ -39,6 +41,12 @@ namespace CR::Engine::Assets {
 		// than once for the same hash, it will be faster to call the 2 separate functions rather than this
 		// convenience function.
 		std::span<std::byte> GetData(uint64_t a_hash) { return m_spans[GetHandle(a_hash).asInt()]; }
+
+		// convenience when loading loose flatbuffers(json) where you need to provide the schema.
+		flatbuffers::Parser GetData(AssetHandle a_handle, std::string_view a_schemaPath);
+		flatbuffers::Parser GetData(uint64_t a_hash, std::string_view a_schemaPath) {
+			return GetData(GetHandle(a_hash), a_schemaPath);
+		}
 
 		// a no-op if this isn't a bulk asset. You must call close as many times as you called open.
 		void Open(AssetHandle a_handle);
@@ -165,4 +173,18 @@ void ceassets::Service::Close(AssetHandle a_handle) {
 		m_spans[a_handle.asInt()]    = std::span<std::byte>{};
 	}
 	--m_openCount[a_handle.asInt()];
+}
+
+flatbuffers::Parser ceassets::Service::GetData(AssetHandle a_handle, std::string_view a_schemaPath) {
+	flatbuffers::Parser parser;
+	ceplat::MemoryMappedFile schemaFile(a_schemaPath);
+	std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
+	parser.Parse(schemaData.c_str());
+
+	auto jsonData = GetData(a_handle);
+	std::string flatbufferJson((const char*)jsonData.data(), jsonData.size());
+	parser.ParseJson(flatbufferJson.c_str());
+	CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)jsonData.size(), "buffer overrun loading {}",
+	          m_debugFiles[a_handle.asInt()]);
+	return parser;
 }

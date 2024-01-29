@@ -98,16 +98,9 @@ cegraph::Shaders::Shaders(VkDevice a_device, GraphicsThread& a_thread) : m_devic
 
 		    fs::path workingFile = fs::temp_directory_path() / "conjure_compiled_shader.spirv";
 
-		    flatbuffers::Parser parser;
-		    ceplat::MemoryMappedFile schemaFile(SCHEMAS_SHADERS);
-		    std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
-		    parser.Parse(schemaData.c_str());
+		    flatbuffers::Parser parser =
+		        assetService.GetData(cecore::C_Hash64("Graphics/shaders.json"), SCHEMAS_SHADERS);
 
-		    auto shadersData = assetService.GetData(cecore::C_Hash64("Graphics/shaders.json"));
-		    std::string flatbufferJson((const char*)shadersData.data(), shadersData.size());
-		    parser.ParseJson(flatbufferJson.c_str());
-		    CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)shadersData.size(),
-		              "buffer overrun loading shaders.json");
 		    auto shaders = Flatbuffers::GetShaders(parser.builder_.GetBufferPointer());
 
 		    for(const auto& shader : *shaders->shaders()) {

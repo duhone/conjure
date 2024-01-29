@@ -89,16 +89,8 @@ namespace fs = std::filesystem;
 cea::MusicLibrary::MusicLibrary() {
 	auto& assetService = cecore::GetService<ceasset::Service>();
 
-	flatbuffers::Parser parser;
-	ceplat::MemoryMappedFile schemaFile(SCHEMAS_MUSIC);
-	std::string schemaData((const char*)schemaFile.data(), schemaFile.size());
-	parser.Parse(schemaData.c_str());
-
-	auto musicData = assetService.GetData(cecore::C_Hash64("Audio/music.json"));
-	std::string flatbufferJson((const char*)musicData.data(), musicData.size());
-	parser.ParseJson(flatbufferJson.c_str());
-	CR_ASSERT(parser.BytesConsumed() <= (ptrdiff_t)musicData.size(), "buffer overrun loading music.json");
-	auto music = Flatbuffers::GetMusic(parser.builder_.GetBufferPointer());
+	flatbuffers::Parser parser = assetService.GetData(cecore::C_Hash64("Audio/music.json"), SCHEMAS_MUSIC);
+	auto music                 = Flatbuffers::GetMusic(parser.builder_.GetBufferPointer());
 	for(const auto& song : *music->music()) {
 		m_lookup[cecore::Hash64(song->name()->c_str())] = (uint16_t)m_flacData.size();
 		m_names.push_back(song->name()->c_str());

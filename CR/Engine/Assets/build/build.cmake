@@ -25,6 +25,7 @@ settingsCR(assets)
 
 target_link_libraries(assets PUBLIC
 	headerUnits
+	flatbuffers
 	fmt
 	unordered_dense
 	core
