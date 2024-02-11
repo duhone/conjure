@@ -6,6 +6,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 project (Conjure)
   
 include (${CMAKE_CURRENT_SOURCE_DIR}/common.cmake)
+include (${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/brotli/build/build.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/cli11/build/build.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/doctest/build/build.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/drlibs/build/build.cmake)
