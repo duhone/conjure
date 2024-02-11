@@ -1,0 +1,282 @@
+set(root "${CMAKE_CURRENT_LIST_DIR}/..")
+# at the moment we only care about decoding
+
+set(INTERFACE_FILES
+  ${root}/libjxl/lib/include/jxl/cms.h
+  ${root}/libjxl/lib/include/jxl/cms_interface.h
+  ${root}/libjxl/lib/include/jxl/codestream_header.h
+  ${root}/libjxl/lib/include/jxl/color_encoding.h
+  ${root}/libjxl/lib/include/jxl/decode.h
+  ${root}/libjxl/lib/include/jxl/decode_cxx.h
+  #${root}/libjxl/lib/include/jxl/encode.h
+  #${root}/libjxl/lib/include/jxl/encode_cxx.h
+  ${root}/libjxl/lib/include/jxl/memory_manager.h
+  ${root}/libjxl/lib/include/jxl/parallel_runner.h
+  ${root}/libjxl/lib/include/jxl/stats.h
+  ${root}/libjxl/lib/include/jxl/types.h
+  # thread
+  ${root}/libjxl/lib/include/jxl/resizable_parallel_runner.h
+  ${root}/libjxl/lib/include/jxl/resizable_parallel_runner_cxx.h
+  ${root}/libjxl/lib/include/jxl/thread_parallel_runner.h
+  ${root}/libjxl/lib/include/jxl/thread_parallel_runner_cxx.h
+)
+
+set(SOURCE_FILES
+# base files
+  ${root}/libjxl/lib/jxl/base/arch_macros.h
+  ${root}/libjxl/lib/jxl/base/bits.h
+  ${root}/libjxl/lib/jxl/base/byte_order.h
+  ${root}/libjxl/lib/jxl/base/common.h
+  ${root}/libjxl/lib/jxl/base/compiler_specific.h
+  ${root}/libjxl/lib/jxl/base/data_parallel.h
+  ${root}/libjxl/lib/jxl/base/fast_math-inl.h
+  ${root}/libjxl/lib/jxl/base/float.h
+  ${root}/libjxl/lib/jxl/base/iaca.h
+  ${root}/libjxl/lib/jxl/base/matrix_ops.h
+  ${root}/libjxl/lib/jxl/base/os_macros.h
+  ${root}/libjxl/lib/jxl/base/override.h
+  ${root}/libjxl/lib/jxl/base/printf_macros.h
+  ${root}/libjxl/lib/jxl/base/random.h
+  ${root}/libjxl/lib/jxl/base/rational_polynomial-inl.h
+  ${root}/libjxl/lib/jxl/base/sanitizer_definitions.h
+  ${root}/libjxl/lib/jxl/base/scope_guard.h
+  ${root}/libjxl/lib/jxl/base/span.h
+  ${root}/libjxl/lib/jxl/base/status.h
+# jxl extras decode only
+  ${root}/libjxl/lib/extras/dec/jxl.cc
+  ${root}/libjxl/lib/extras/dec/jxl.h
+# libjxl decode only
+  ${root}/libjxl/lib/jxl/ac_context.h
+  ${root}/libjxl/lib/jxl/ac_strategy.cc
+  ${root}/libjxl/lib/jxl/ac_strategy.h
+  ${root}/libjxl/lib/jxl/alpha.cc
+  ${root}/libjxl/lib/jxl/alpha.h
+  ${root}/libjxl/lib/jxl/ans_common.cc
+  ${root}/libjxl/lib/jxl/ans_common.h
+  ${root}/libjxl/lib/jxl/ans_params.h
+  ${root}/libjxl/lib/jxl/blending.cc
+  ${root}/libjxl/lib/jxl/blending.h
+  ${root}/libjxl/lib/jxl/cache_aligned.cc
+  ${root}/libjxl/lib/jxl/cache_aligned.h
+  ${root}/libjxl/lib/jxl/chroma_from_luma.cc
+  ${root}/libjxl/lib/jxl/chroma_from_luma.h
+  ${root}/libjxl/lib/jxl/codec_in_out.h
+  ${root}/libjxl/lib/jxl/coeff_order.cc
+  ${root}/libjxl/lib/jxl/coeff_order.h
+  ${root}/libjxl/lib/jxl/coeff_order_fwd.h
+  ${root}/libjxl/lib/jxl/color_encoding_internal.cc
+  ${root}/libjxl/lib/jxl/color_encoding_internal.h
+  ${root}/libjxl/lib/jxl/common.h
+  ${root}/libjxl/lib/jxl/compressed_dc.cc
+  ${root}/libjxl/lib/jxl/compressed_dc.h
+  ${root}/libjxl/lib/jxl/convolve-inl.h
+  ${root}/libjxl/lib/jxl/convolve.h
+  ${root}/libjxl/lib/jxl/convolve_separable5.cc
+  ${root}/libjxl/lib/jxl/convolve_separable7.cc
+  ${root}/libjxl/lib/jxl/convolve_slow.cc
+  ${root}/libjxl/lib/jxl/convolve_symmetric3.cc
+  ${root}/libjxl/lib/jxl/convolve_symmetric5.cc
+  ${root}/libjxl/lib/jxl/dct-inl.h
+  ${root}/libjxl/lib/jxl/dct_block-inl.h
+  ${root}/libjxl/lib/jxl/dct_scales.cc
+  ${root}/libjxl/lib/jxl/dct_scales.h
+  ${root}/libjxl/lib/jxl/dct_util.h
+  ${root}/libjxl/lib/jxl/dec_ans.cc
+  ${root}/libjxl/lib/jxl/dec_ans.h
+  ${root}/libjxl/lib/jxl/dec_bit_reader.h
+  ${root}/libjxl/lib/jxl/dec_cache.cc
+  ${root}/libjxl/lib/jxl/dec_cache.h
+  ${root}/libjxl/lib/jxl/dec_context_map.cc
+  ${root}/libjxl/lib/jxl/dec_context_map.h
+  ${root}/libjxl/lib/jxl/dec_external_image.cc
+  ${root}/libjxl/lib/jxl/dec_external_image.h
+  ${root}/libjxl/lib/jxl/dec_frame.cc
+  ${root}/libjxl/lib/jxl/dec_frame.h
+  ${root}/libjxl/lib/jxl/dec_group.cc
+  ${root}/libjxl/lib/jxl/dec_group.h
+  ${root}/libjxl/lib/jxl/dec_group_border.cc
+  ${root}/libjxl/lib/jxl/dec_group_border.h
+  ${root}/libjxl/lib/jxl/dec_huffman.cc
+  ${root}/libjxl/lib/jxl/dec_huffman.h
+  ${root}/libjxl/lib/jxl/dec_modular.cc
+  ${root}/libjxl/lib/jxl/dec_modular.h
+  ${root}/libjxl/lib/jxl/dec_noise.cc
+  ${root}/libjxl/lib/jxl/dec_noise.h
+  ${root}/libjxl/lib/jxl/dec_patch_dictionary.cc
+  ${root}/libjxl/lib/jxl/dec_patch_dictionary.h
+  ${root}/libjxl/lib/jxl/dec_transforms-inl.h
+  ${root}/libjxl/lib/jxl/dec_xyb-inl.h
+  ${root}/libjxl/lib/jxl/dec_xyb.cc
+  ${root}/libjxl/lib/jxl/dec_xyb.h
+  ${root}/libjxl/lib/jxl/decode.cc
+  ${root}/libjxl/lib/jxl/entropy_coder.cc
+  ${root}/libjxl/lib/jxl/entropy_coder.h
+  ${root}/libjxl/lib/jxl/epf.cc
+  ${root}/libjxl/lib/jxl/epf.h
+  ${root}/libjxl/lib/jxl/exif.h
+  ${root}/libjxl/lib/jxl/fast_dct-inl.h
+  ${root}/libjxl/lib/jxl/fast_dct.cc
+  ${root}/libjxl/lib/jxl/fast_dct.h
+  ${root}/libjxl/lib/jxl/fast_dct128-inl.h
+  ${root}/libjxl/lib/jxl/fast_dct16-inl.h
+  ${root}/libjxl/lib/jxl/fast_dct256-inl.h
+  ${root}/libjxl/lib/jxl/fast_dct32-inl.h
+  ${root}/libjxl/lib/jxl/fast_dct64-inl.h
+  ${root}/libjxl/lib/jxl/fast_dct8-inl.h
+  ${root}/libjxl/lib/jxl/field_encodings.h
+  ${root}/libjxl/lib/jxl/fields.cc
+  ${root}/libjxl/lib/jxl/fields.h
+  ${root}/libjxl/lib/jxl/frame_dimensions.h
+  ${root}/libjxl/lib/jxl/frame_header.cc
+  ${root}/libjxl/lib/jxl/frame_header.h
+  ${root}/libjxl/lib/jxl/gauss_blur.cc
+  ${root}/libjxl/lib/jxl/gauss_blur.h
+  ${root}/libjxl/lib/jxl/headers.cc
+  ${root}/libjxl/lib/jxl/headers.h
+  ${root}/libjxl/lib/jxl/huffman_table.cc
+  ${root}/libjxl/lib/jxl/huffman_table.h
+  ${root}/libjxl/lib/jxl/icc_codec.cc
+  ${root}/libjxl/lib/jxl/icc_codec.h
+  ${root}/libjxl/lib/jxl/icc_codec_common.cc
+  ${root}/libjxl/lib/jxl/icc_codec_common.h
+  ${root}/libjxl/lib/jxl/image.cc
+  ${root}/libjxl/lib/jxl/image.h
+  ${root}/libjxl/lib/jxl/image_bundle.cc
+  ${root}/libjxl/lib/jxl/image_bundle.h
+  ${root}/libjxl/lib/jxl/image_metadata.cc
+  ${root}/libjxl/lib/jxl/image_metadata.h
+  ${root}/libjxl/lib/jxl/image_ops.h
+  ${root}/libjxl/lib/jxl/inverse_mtf-inl.h
+  ${root}/libjxl/lib/jxl/lehmer_code.h
+  ${root}/libjxl/lib/jxl/loop_filter.cc
+  ${root}/libjxl/lib/jxl/loop_filter.h
+  ${root}/libjxl/lib/jxl/luminance.cc
+  ${root}/libjxl/lib/jxl/luminance.h
+  ${root}/libjxl/lib/jxl/memory_manager_internal.cc
+  ${root}/libjxl/lib/jxl/memory_manager_internal.h
+  ${root}/libjxl/lib/jxl/modular/encoding/context_predict.h
+  ${root}/libjxl/lib/jxl/modular/encoding/dec_ma.cc
+  ${root}/libjxl/lib/jxl/modular/encoding/dec_ma.h
+  ${root}/libjxl/lib/jxl/modular/encoding/encoding.cc
+  ${root}/libjxl/lib/jxl/modular/encoding/encoding.h
+  ${root}/libjxl/lib/jxl/modular/encoding/ma_common.h
+  ${root}/libjxl/lib/jxl/modular/modular_image.cc
+  ${root}/libjxl/lib/jxl/modular/modular_image.h
+  ${root}/libjxl/lib/jxl/modular/options.h
+  ${root}/libjxl/lib/jxl/modular/transform/palette.cc
+  ${root}/libjxl/lib/jxl/modular/transform/palette.h
+  ${root}/libjxl/lib/jxl/modular/transform/rct.cc
+  ${root}/libjxl/lib/jxl/modular/transform/rct.h
+  ${root}/libjxl/lib/jxl/modular/transform/squeeze.cc
+  ${root}/libjxl/lib/jxl/modular/transform/squeeze.h
+  ${root}/libjxl/lib/jxl/modular/transform/transform.cc
+  ${root}/libjxl/lib/jxl/modular/transform/transform.h
+  ${root}/libjxl/lib/jxl/noise.h
+  ${root}/libjxl/lib/jxl/opsin_params.cc
+  ${root}/libjxl/lib/jxl/opsin_params.h
+  ${root}/libjxl/lib/jxl/pack_signed.h
+  ${root}/libjxl/lib/jxl/padded_bytes.h
+  ${root}/libjxl/lib/jxl/passes_state.cc
+  ${root}/libjxl/lib/jxl/passes_state.h
+  ${root}/libjxl/lib/jxl/patch_dictionary_internal.h
+  ${root}/libjxl/lib/jxl/quant_weights.cc
+  ${root}/libjxl/lib/jxl/quant_weights.h
+  ${root}/libjxl/lib/jxl/quantizer-inl.h
+  ${root}/libjxl/lib/jxl/quantizer.cc
+  ${root}/libjxl/lib/jxl/quantizer.h
+  ${root}/libjxl/lib/jxl/render_pipeline/low_memory_render_pipeline.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/low_memory_render_pipeline.h
+  ${root}/libjxl/lib/jxl/render_pipeline/render_pipeline.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/render_pipeline.h
+  ${root}/libjxl/lib/jxl/render_pipeline/render_pipeline_stage.h
+  ${root}/libjxl/lib/jxl/render_pipeline/simple_render_pipeline.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/simple_render_pipeline.h
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_blending.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_blending.h
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_chroma_upsampling.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_chroma_upsampling.h
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_cms.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_cms.h
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_epf.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_epf.h
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_from_linear.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_from_linear.h
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_gaborish.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_gaborish.h
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_noise.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_noise.h
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_patches.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_patches.h
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_splines.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_splines.h
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_spot.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_spot.h
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_to_linear.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_to_linear.h
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_tone_mapping.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_tone_mapping.h
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_upsampling.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_upsampling.h
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_write.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_write.h
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_xyb.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_xyb.h
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_ycbcr.cc
+  ${root}/libjxl/lib/jxl/render_pipeline/stage_ycbcr.h
+  ${root}/libjxl/lib/jxl/sanitizers.h
+  ${root}/libjxl/lib/jxl/simd_util-inl.h
+  ${root}/libjxl/lib/jxl/simd_util.cc
+  ${root}/libjxl/lib/jxl/simd_util.h
+  ${root}/libjxl/lib/jxl/splines.cc
+  ${root}/libjxl/lib/jxl/splines.h
+  ${root}/libjxl/lib/jxl/toc.cc
+  ${root}/libjxl/lib/jxl/toc.h
+  ${root}/libjxl/lib/jxl/transpose-inl.h
+  ${root}/libjxl/lib/jxl/xorshift128plus-inl.h
+# extras, decode only
+  ${root}/libjxl/lib/extras/alpha_blend.cc
+  ${root}/libjxl/lib/extras/alpha_blend.h
+  ${root}/libjxl/lib/extras/common.cc
+  ${root}/libjxl/lib/extras/common.h
+  ${root}/libjxl/lib/extras/dec/color_description.cc
+  ${root}/libjxl/lib/extras/dec/color_description.h
+  ${root}/libjxl/lib/extras/dec/color_hints.cc
+  ${root}/libjxl/lib/extras/dec/color_hints.h
+  ${root}/libjxl/lib/extras/dec/decode.cc
+  ${root}/libjxl/lib/extras/dec/decode.h
+  ${root}/libjxl/lib/extras/enc/encode.cc
+  ${root}/libjxl/lib/extras/enc/encode.h
+  ${root}/libjxl/lib/extras/exif.cc
+  ${root}/libjxl/lib/extras/exif.h
+  ${root}/libjxl/lib/extras/packed_image.h
+  ${root}/libjxl/lib/extras/size_constraints.h
+  ${root}/libjxl/lib/extras/time.cc
+  ${root}/libjxl/lib/extras/time.h
+ # threads 
+  ${root}/libjxl/lib/threads/resizable_parallel_runner.cc
+  ${root}/libjxl/lib/threads/thread_parallel_runner.cc
+  ${root}/libjxl/lib/threads/thread_parallel_runner_internal.cc
+  ${root}/libjxl/lib/threads/thread_parallel_runner_internal.h
+)
+
+set(BUILD_FILES
+    ${root}/build/build.cmake
+)
+
+add_library(libjxl OBJECT 
+	${INTERFACE_FILES} 
+	${SOURCE_FILES} 
+	${BUILD_FILES}
+)
+settings3rdParty(libjxl)
+
+target_link_libraries(libjxl PUBLIC
+	brotli
+	highway
+)
+
+target_compile_definitions(libjxl PUBLIC -DJXL_STATIC_DEFINE)
+
+target_include_directories(libjxl SYSTEM PRIVATE "${root}/libjxl")
+target_include_directories(libjxl SYSTEM PRIVATE "${root}/libjxl/lib")
+target_include_directories(libjxl SYSTEM PUBLIC "${root}/libjxl/lib/include")
