@@ -2,53 +2,43 @@
     "textures" : [
             {
                 "name" : "brick",
-                "path" : "Graphics/Textures/brick.jxl",
-                "frame_count" : 1
+                "path" : "Graphics/Textures/brick.jxl"
             },
             {
                 "name" : "diamond",
-                "path" : "Graphics/Textures/diamond.jxl",
-                "frame_count" : 1
+                "path" : "Graphics/Textures/diamond.jxl"
             },
             {
                 "name" : "gold",
-                "path" : "Graphics/Textures/gold.jxl",
-                "frame_count" : 1
+                "path" : "Graphics/Textures/gold.jxl"
             },
             {
                 "name" : "ice",
-                "path" : "Graphics/Textures/ice.jxl",
-                "frame_count" : 1
+                "path" : "Graphics/Textures/ice.jxl"
             },
             {
                 "name" : "leaf",
-                "path" : "Graphics/Textures/leaf.jxl",
-                "frame_count" : 1
+                "path" : "Graphics/Textures/leaf.jxl"
             },
             {
                 "name" : "m",
-                "path" : "Graphics/Textures/m.jxl",
-                "frame_count" : 1
+                "path" : "Graphics/Textures/m.jxl"
             },
             {
                 "name" : "question",
-                "path" : "Graphics/Textures/question.jxl",
-                "frame_count" : 1
+                "path" : "Graphics/Textures/question.jxl"
             },
             {
                 "name" : "wood",
-                "path" : "Graphics/Textures/wood.jxl",
-                "frame_count" : 1
+                "path" : "Graphics/Textures/wood.jxl"
             },
             {
                 "name" : "CompletionScreen",
-                "path" : "Graphics/Textures/CompletionScreen.jxl",
-                "frame_count" : 1
+                "path" : "Graphics/Textures/CompletionScreen.jxl"
             },
             {
                 "name" : "BonusHarrySelect",
-                "path" : "Graphics/Textures/BonusHarrySelect/BonusHarrySelect.jxl",
-                "frame_count" : 20
+                "path" : "Graphics/Textures/BonusHarrySelect.jxl"
             }
         ]
 }
