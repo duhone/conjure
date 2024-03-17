@@ -6,7 +6,7 @@ table Texture{
 }
  
 table Textures {
-  mats:[Texture];
+  textures:[Texture];
 }
  
 root_type Textures;

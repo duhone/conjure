@@ -19,6 +19,7 @@ set(SOURCE_FILES
     ${root}/source/GraphicsThread.ixx
     ${root}/source/Materials.ixx
     ${root}/source/Shaders.ixx
+    ${root}/source/Textures.ixx
     ${root}/source/Utils.ixx
     ${root}/source/VkMemAllocator.cpp
 )
