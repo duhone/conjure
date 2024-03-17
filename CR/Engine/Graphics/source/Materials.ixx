@@ -162,8 +162,8 @@ void cegraph::Materials::Update(const Shaders& a_shaders, GraphicsThread& a_thre
 		    fragSpecInfoEntrys.size       = sizeof(int32_t);
 
 		    VkSpecializationInfo fragSpecInfo;
-		    fragSpecInfo.dataSize      = sizeof(c_maxTextures);
-		    fragSpecInfo.pData         = &c_maxTextures;
+		    fragSpecInfo.dataSize      = sizeof(Constants::c_maxTextures);
+		    fragSpecInfo.pData         = &Constants::c_maxTextures;
 		    fragSpecInfo.mapEntryCount = 1;
 		    fragSpecInfo.pMapEntries   = &fragSpecInfoEntrys;
 
@@ -224,13 +224,13 @@ void cegraph::Materials::Update(const Shaders& a_shaders, GraphicsThread& a_thre
 
 		    // Have to pass one sampler per descriptor. but only using one sampler, so just have to duplicate
 		    std::vector<VkSampler> samplers;
-		    samplers.reserve(c_maxTextures);
-		    for(int32_t i = 0; i < c_maxTextures; ++i) { samplers.push_back(m_sampler); }
+		    samplers.reserve(Constants::c_maxTextures);
+		    for(int32_t i = 0; i < Constants::c_maxTextures; ++i) { samplers.push_back(m_sampler); }
 
 		    VkDescriptorSetLayoutBinding dslBinding[1];
 		    ClearStruct(dslBinding[0]);
 		    dslBinding[0].binding            = 0;
-		    dslBinding[0].descriptorCount    = c_maxTextures;
+		    dslBinding[0].descriptorCount    = Constants::c_maxTextures;
 		    dslBinding[0].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		    dslBinding[0].stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
 		    dslBinding[0].pImmutableSamplers = samplers.data();

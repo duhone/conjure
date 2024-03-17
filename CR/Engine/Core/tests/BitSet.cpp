@@ -86,3 +86,16 @@ TEST_CASE("BitSet iterate") {
 		++counter;
 	}
 }
+
+TEST_CASE("BitSet Insert Range") {
+	BitSet<512> bitset;
+	CHECK(bitset.size() == 0);
+	bitset.insert(6);
+	CHECK(bitset.FindNotInSet() == 0);
+	bitset.insert(0);
+	CHECK(bitset.FindNotInSet() == 1);
+	for(std::uint16_t i = 0; i < 128; ++i) { bitset.insert(i); }
+	CHECK(bitset.FindNotInSet() == 128);
+	bitset.insert(128);
+	CHECK(bitset.FindNotInSet() == 129);
+}

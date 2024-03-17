@@ -60,6 +60,33 @@ namespace CR::Engine::Core {
 			word |= 1ull << (a_value % 64);
 		}
 
+		// insert a_count integers starting at a_first
+		constexpr void insertRange(std::uint16_t a_first, std::uint16_t a_count) noexcept {
+			CR_ASSERT_AUDIT((a_first + a_count) <= Size,
+			                "bitset capacity not large enough to hold integers from {} to {}", a_first,
+			                (a_first + a_count));
+			uint64_t currentWord = a_first / 64;
+			uint16_t numFirst    = a_first % 64;
+			if(numFirst > 0) {
+				a_count -= numFirst;
+				uint64_t numFirstMask = ~(~uint64_t(0) >> (64 - numFirst));
+				auto& word            = m_words[currentWord];
+				word |= numFirstMask;
+				++currentWord;
+			}
+			uint64_t numWords = a_count / 64;
+			while(numWords > 0) {
+				m_words[currentWord] = ~uint64_t(0);
+				++currentWord;
+			}
+			uint64_t numLast = a_count % 64;
+			if(numLast > 0) {
+				uint64_t numLastMask = (~uint64_t(0) >> (64 - numFirst));
+				auto& word           = m_words[currentWord];
+				word |= numLastMask;
+			}
+		}
+
 		constexpr void erase(std::uint16_t a_value) noexcept {
 			CR_ASSERT_AUDIT(a_value < Size, "bitset capacity not large enough to hold {}", a_value);
 			auto& word = m_words[a_value / 64];
