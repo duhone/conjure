@@ -13,6 +13,7 @@
 export module CR.Engine.Graphics.Textures;
 
 import CR.Engine.Graphics.Constants;
+import CR.Engine.Graphics.Context;
 import CR.Engine.Graphics.GraphicsThread;
 import CR.Engine.Graphics.Utils;
 
@@ -23,10 +24,12 @@ import CR.Engine.Platform;
 import <cstring>;
 import <filesystem>;
 
+using namespace CR::Engine::Core::Literals;
+
 export namespace CR::Engine::Graphics::Textures {
 	using TextureHandle = CR::Engine::Core::Handle<uint16_t, class TextureHandleTag>;
 
-	void Initialize();
+	void Initialize(Context& a_context);
 	void Shutdown();
 
 	TextureHandle GetHandle(uint64_t hash);
@@ -43,7 +46,19 @@ namespace ceplat  = CR::Engine::Platform;
 namespace fs = std::filesystem;
 
 namespace {
+	// Width	Height		max frames.
+	//	4K		  4K			1
+	//  2K		  2K			4
+	//  1K        1K           16
+	//  512       512          64
+	//  256       256         256
+	//  128       128         1024
+	// TODO: when we support packed assets, make this 1/4 size when using packed.
+	constexpr uint64_t c_stagingBufferSize = 64_MB;
+
 	struct Data {
+		cegraph::Context& gContext;
+
 		// Variables for in use textures
 
 		// variables for all textures
@@ -52,6 +67,10 @@ namespace {
 		std::array<fs::path, cegraph::Constants::c_maxTextures> Paths;
 		std::array<uint16_t, cegraph::Constants::c_maxTextures> RefCounts;
 
+		VkBuffer StagingBuffer;
+		VmaAllocation StagingMemory;
+		void* StagingData;
+
 		// lookups
 		ankerl::unordered_dense::map<uint64_t, cegraph::Textures::TextureHandle> m_handleLookup;
 	};
@@ -59,9 +78,9 @@ namespace {
 	Data* g_data = nullptr;
 }    // namespace
 
-void cegraph::Textures::Initialize() {
+void cegraph::Textures::Initialize(Context& a_context) {
 	CR_ASSERT(g_data == nullptr, "Textures are already initialized");
-	g_data = new Data{};
+	g_data = new Data{a_context};
 
 	auto& assetService   = cecore::GetService<ceasset::Service>();
 	const auto& rootPath = assetService.GetRootPath();
@@ -82,10 +101,26 @@ void cegraph::Textures::Initialize() {
 	}
 
 	memset(g_data->RefCounts.data(), 0, g_data->RefCounts.size() * sizeof(uint16_t));
+
+	VkBufferCreateInfo stagingCreateInfo{};
+	ClearStruct(stagingCreateInfo);
+	stagingCreateInfo.size  = c_stagingBufferSize;
+	stagingCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+	VmaAllocationCreateInfo stagingAllocCreateInfo{};
+	stagingAllocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+	stagingAllocCreateInfo.flags =
+	    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+	VmaAllocationInfo stagingAllocInfo{};
+	vmaCreateBuffer(g_data->gContext.Allocator, &stagingCreateInfo, &stagingAllocCreateInfo,
+	                &g_data->StagingBuffer, &g_data->StagingMemory, &stagingAllocInfo);
+	g_data->StagingData = stagingAllocInfo.pMappedData;
 }
 
 void cegraph::Textures::Shutdown() {
 	CR_ASSERT(g_data != nullptr, "Textures are already shutdown");
+	vmaDestroyBuffer(g_data->gContext.Allocator, g_data->StagingBuffer, g_data->StagingMemory);
 	delete g_data;
 }
 

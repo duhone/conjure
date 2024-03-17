@@ -15,6 +15,7 @@ import CR.Engine.Graphics.Context;
 import CR.Engine.Graphics.GraphicsThread;
 import CR.Engine.Graphics.Materials;
 import CR.Engine.Graphics.Shaders;
+import CR.Engine.Graphics.Textures;
 import CR.Engine.Graphics.Utils;
 
 import <algorithm>;
@@ -148,11 +149,13 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 	m_shaders.emplace(m_context.Device, *m_graphicsThread);
 	m_materials.emplace(m_context);
 	m_computePipelines.emplace(m_context);
+	Textures::Initialize(m_context);
 }
 
 void cegraph::DeviceService::Stop() {
 	vkDeviceWaitIdle(m_context.Device);
 
+	Textures::Shutdown();
 	m_computePipelines.reset();
 	m_materials.reset();
 	m_shaders.reset();
@@ -479,11 +482,13 @@ void cegraph::DeviceService::BuildDevice() {
 		queueInfos.push_back(queueInfo);
 		++queueIndexMap[m_presentationQueueIndex];
 	}
-	presentationQueueIndex     = queueIndexMap[m_presentationQueueIndex];
-	queueInfo.queueFamilyIndex = m_transferQueueIndex;
-	queueInfo.pQueuePriorities = &transferPriority;
-	queueInfos.push_back(queueInfo);
-	++queueIndexMap[m_transferQueueIndex];
+	presentationQueueIndex = queueIndexMap[m_presentationQueueIndex];
+	if(m_graphicsQueueIndex != m_transferQueueIndex) {
+		queueInfo.queueFamilyIndex = m_transferQueueIndex;
+		queueInfo.pQueuePriorities = &transferPriority;
+		queueInfos.push_back(queueInfo);
+		++queueIndexMap[m_transferQueueIndex];
+	}
 	transferQueueIndex = queueIndexMap[m_transferQueueIndex];
 
 	std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
