@@ -31,7 +31,7 @@ namespace CR::Engine::Graphics {
 	export class Shaders {
 	  public:
 		Shaders() = default;
-		Shaders(VkDevice a_device, GraphicsThread& a_thread);
+		Shaders(VkDevice a_device);
 		~Shaders();
 		Shaders(const Shaders&)               = delete;
 		Shaders(Shaders&& a_other)            = delete;
@@ -90,8 +90,8 @@ namespace {
 	}
 }    // namespace
 
-cegraph::Shaders::Shaders(VkDevice a_device, GraphicsThread& a_thread) : m_device(a_device) {
-	a_thread.EnqueueTask(
+cegraph::Shaders::Shaders(VkDevice a_device) : m_device(a_device) {
+	GraphicsThread::EnqueueTask(
 	    [this]() {
 		    auto& assetService   = cecore::GetService<ceasset::Service>();
 		    const auto& rootPath = assetService.GetRootPath();

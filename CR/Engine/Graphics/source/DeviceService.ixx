@@ -83,7 +83,6 @@ namespace CR::Engine::Graphics {
 		cecore::Embedded<Shaders> m_shaders;
 		cecore::Embedded<Materials> m_materials;
 		cecore::Embedded<ComputePipelines> m_computePipelines;
-		cecore::Embedded<GraphicsThread> m_graphicsThread;
 	};
 }    // namespace CR::Engine::Graphics
 
@@ -145,8 +144,8 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 	CreateSwapChain();
 
 	m_commandPool = CommandPool(m_context.Device, m_graphicsQueueIndex);
-	m_graphicsThread.emplace(m_context.Device, m_transferQueue, m_transferQueueIndex);
-	m_shaders.emplace(m_context.Device, *m_graphicsThread);
+	GraphicsThread::Initialize(m_context.Device, m_transferQueue, m_transferQueueIndex);
+	m_shaders.emplace(m_context.Device);
 	m_materials.emplace(m_context);
 	m_computePipelines.emplace(m_context);
 	Textures::Initialize(m_context);
@@ -159,7 +158,7 @@ void cegraph::DeviceService::Stop() {
 	m_computePipelines.reset();
 	m_materials.reset();
 	m_shaders.reset();
-	m_graphicsThread.reset();
+	GraphicsThread::Shutdown();
 
 	m_commandPool.ResetAll();
 	m_commandPool = CommandPool();
@@ -188,8 +187,8 @@ void cegraph::DeviceService::Stop() {
 }
 
 void cegraph::DeviceService::Update() {
-	m_materials->Update(*m_shaders, *m_graphicsThread, m_renderPass);
-	m_computePipelines->Update(*m_shaders, *m_graphicsThread);
+	m_materials->Update(*m_shaders, m_renderPass);
+	m_computePipelines->Update(*m_shaders);
 
 	vkAcquireNextImageKHR(m_context.Device, m_primarySwapChain, UINT64_MAX, VK_NULL_HANDLE, m_frameFence,
 	                      &m_currentFrameBuffer);

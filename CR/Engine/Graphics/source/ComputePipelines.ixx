@@ -35,7 +35,7 @@ namespace CR::Engine::Graphics {
 		ComputePipelines& operator=(const ComputePipelines&)    = delete;
 		ComputePipelines& operator=(ComputePipelines&& a_other) = delete;
 
-		void Update(const Shaders& a_shaders, GraphicsThread& a_thread);
+		void Update(const Shaders& a_shaders);
 
 		bool IsReady() const { return m_ready.load(std::memory_order_acquire); }
 
@@ -60,14 +60,14 @@ namespace cegraph = CR::Engine::Graphics;
 
 cegraph::ComputePipelines::ComputePipelines(const Context& a_context) : m_context(a_context) {}
 
-void cegraph::ComputePipelines::Update(const Shaders& a_shaders, GraphicsThread& a_thread) {
+void cegraph::ComputePipelines::Update(const Shaders& a_shaders) {
 	if(IsReady() || m_startedLoad) { return; }
 
 	if(!a_shaders.IsReady()) { return; }
 
 	m_startedLoad = true;
 
-	a_thread.EnqueueTask(
+	GraphicsThread::EnqueueTask(
 	    [this, &a_shaders]() {
 		    auto& assetService = cecore::GetService<ceasset::Service>();
 

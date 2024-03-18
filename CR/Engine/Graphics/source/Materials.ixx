@@ -35,7 +35,7 @@ namespace CR::Engine::Graphics {
 		Materials& operator=(const Materials&)    = delete;
 		Materials& operator=(Materials&& a_other) = delete;
 
-		void Update(const Shaders& a_shaders, GraphicsThread& a_thread, VkRenderPass a_renderPass);
+		void Update(const Shaders& a_shaders, VkRenderPass a_renderPass);
 
 		bool IsReady() const { return m_ready.load(std::memory_order_acquire); }
 
@@ -144,15 +144,14 @@ namespace {
 
 cegraph::Materials::Materials(const Context& a_context) : m_context(a_context) {}
 
-void cegraph::Materials::Update(const Shaders& a_shaders, GraphicsThread& a_thread,
-                                VkRenderPass a_renderPass) {
+void cegraph::Materials::Update(const Shaders& a_shaders, VkRenderPass a_renderPass) {
 	if(IsReady() || m_startedLoad) { return; }
 
 	if(!a_shaders.IsReady()) { return; }
 
 	m_startedLoad = true;
 
-	a_thread.EnqueueTask(
+	GraphicsThread::EnqueueTask(
 	    [this, &a_shaders, a_renderPass]() {
 		    auto& assetService = cecore::GetService<ceasset::Service>();
 
