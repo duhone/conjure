@@ -27,7 +27,7 @@ import <filesystem>;
 using namespace CR::Engine::Core::Literals;
 
 export namespace CR::Engine::Graphics::Textures {
-	using TextureHandle = CR::Engine::Core::Handle<uint16_t, class TextureHandleTag>;
+	using TextureHandle = CR::Engine::Core::Handle<class TextureHandleTag>;
 
 	void Initialize(Context& a_context);
 	void Shutdown();
@@ -60,6 +60,8 @@ namespace {
 		cegraph::Context& gContext;
 
 		// Variables for in use textures
+		cecore::BitSet<cegraph::Constants::c_maxTextures> PendingLoad;
+		std::array<std::atomic_bool, cegraph::Constants::c_maxTextures> LoadComplete;
 
 		// variables for all textures
 		cecore::BitSet<cegraph::Constants::c_maxTextures> Used;

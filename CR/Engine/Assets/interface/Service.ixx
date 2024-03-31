@@ -31,7 +31,7 @@ namespace CR::Engine::Assets {
 		Service& operator=(const Service&) = delete;
 		Service& operator=(Service&&)      = delete;
 
-		using AssetHandle = CR::Engine::Core::Handle<uint16_t, class AssetHandleTag>;
+		using AssetHandle = CR::Engine::Core::Handle<class AssetHandleTag>;
 
 		AssetHandle GetHandle(uint64_t a_hash);
 
