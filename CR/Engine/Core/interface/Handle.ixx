@@ -41,10 +41,8 @@ namespace CR::Engine::Core {
 	class OwningHandle {
 	  public:
 		constexpr OwningHandle() = default;
-		// always take uint64_t, convenience, avoid some casting, will increment refCount
-		constexpr explicit OwningHandle(uint64_t a_id, uint32_t* refCount) {
-			CR_ASSERT(uint16_t < c_unused, "this Handle type can hold a value this large {}", a_id);
-			m_handle   = Handle(a_id);
+		constexpr explicit OwningHandle(Handle<TAG> a_handle, uint16_t* refCount) {
+			m_handle   = a_handle;
 			m_refCount = refCount;
 			(*m_refCount) += 1;
 		}
@@ -71,6 +69,7 @@ namespace CR::Engine::Core {
 		constexpr Handle<TAG> getHandle() const { return m_handle; }
 		constexpr uint16_t asInt() const { return m_handle.asInt(); }
 		constexpr bool isValid() const { return m_handle.isValid(); }
+		constexpr operator Handle<TAG>() { return m_handle; }
 
 	  protected:
 		inline static constexpr uint16_t c_unused{std::numeric_limits<uint16_t>::max()};

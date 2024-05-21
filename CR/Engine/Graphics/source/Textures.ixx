@@ -23,17 +23,23 @@ import CR.Engine.Platform;
 
 import <cstring>;
 import <filesystem>;
+import <span>;
 
 using namespace CR::Engine::Core::Literals;
 
 export namespace CR::Engine::Graphics::Textures {
-	using TextureHandle = CR::Engine::Core::Handle<class TextureHandleTag>;
+	using TextureHandle    = CR::Engine::Core::Handle<class TextureHandleTag>;
+	using TextureSetHandle = CR::Engine::Core::Handle<class TextureSetHandleTag>;
 
 	void Initialize(Context& a_context);
 	void Shutdown();
 
 	TextureHandle GetHandle(uint64_t hash);
+	// check IsReady to see if done.
+	TextureSetHandle LoadTextureSetAsync(std::span<uint64_t> hashes);
+	void ReleaseTextureSet(TextureSetHandle set);
 
+	bool IsReady(TextureSetHandle handle);
 }    // namespace CR::Engine::Graphics::Textures
 
 module :private;
@@ -56,18 +62,30 @@ namespace {
 	// TODO: when we support packed assets, make this 1/4 size when using packed.
 	constexpr uint64_t c_stagingBufferSize = 64_MB;
 
+	using TextureSet = cecore::BitSet<cegraph::Constants::c_maxTextures>;
+
 	struct Data {
 		cegraph::Context& gContext;
 
-		// Variables for in use textures
-		cecore::BitSet<cegraph::Constants::c_maxTextures> PendingLoad;
-		std::array<std::atomic_bool, cegraph::Constants::c_maxTextures> LoadComplete;
+		// Variables for texture sets
+		std::mutex LoadingMutex;
+		std::array<bool, cegraph::Constants::c_maxTextureSets> TextureSetsUsed;
+		std::array<TextureSet, cegraph::Constants::c_maxTextureSets> TextureSets;
+
+		std::array<std::atomic_bool, cegraph::Constants::c_maxTextureSets> LoadPending;
+		std::array<std::atomic_bool, cegraph::Constants::c_maxTextureSets> LoadComplete;
+
+		std::array<std::atomic_bool, cegraph::Constants::c_maxTextureSets> ReleasePending;
+		std::array<std::atomic_bool, cegraph::Constants::c_maxTextureSets> ReleaseComplete;
+
+		std::array<bool, cegraph::Constants::c_maxTextureSets> TextureSetsReady;
 
 		// variables for all textures
 		cecore::BitSet<cegraph::Constants::c_maxTextures> Used;
 		std::array<std::string, cegraph::Constants::c_maxTextures> DebugNames;
 		std::array<fs::path, cegraph::Constants::c_maxTextures> Paths;
-		std::array<uint16_t, cegraph::Constants::c_maxTextures> RefCounts;
+		// Should be the union of all TextureSets that are Ready
+		TextureSet TexturesReady;
 
 		VkBuffer StagingBuffer;
 		VmaAllocation StagingMemory;
@@ -102,8 +120,6 @@ void cegraph::Textures::Initialize(Context& a_context) {
 		g_data->m_handleLookup[cecore::Hash64(textures[i]->name()->c_str())] = handle;
 	}
 
-	memset(g_data->RefCounts.data(), 0, g_data->RefCounts.size() * sizeof(uint16_t));
-
 	VkBufferCreateInfo stagingCreateInfo{};
 	ClearStruct(stagingCreateInfo);
 	stagingCreateInfo.size  = c_stagingBufferSize;
@@ -131,4 +147,39 @@ cegraph::Textures::TextureHandle cegraph::Textures::GetHandle(uint64_t hash) {
 	auto handleIter = g_data->m_handleLookup.find(hash);
 	CR_ASSERT(handleIter != g_data->m_handleLookup.end(), "Texture could not be found");
 	return handleIter->second;
+}
+
+cegraph::Textures::TextureSetHandle cegraph::Textures::LoadTextureSetAsync(std::span<uint64_t> hashes) {
+	CR_ASSERT(g_data != nullptr, "Textures not initialized");
+
+	uint32_t result;
+	for(result = 0; result < g_data->TextureSetsUsed.size(); ++result) {
+		if(!g_data->TextureSetsUsed[result]) { break; }
+	}
+	CR_ASSERT(result != g_data->TextureSetsUsed.size(), "Ran out of available texture sets");
+	CR_ASSERT(g_data->TextureSets[result].empty(), "New textures set should start empty");
+
+	for(uint64_t hash : hashes) {
+		auto handleIter = g_data->m_handleLookup.find(hash);
+		CR_ASSERT(handleIter != g_data->m_handleLookup.end(), "Texture could not be found");
+		g_data->TextureSets[result].insert(handleIter->second.asInt());
+	}
+
+	g_data->LoadPending[result].store(true, std::memory_order_release);
+
+	return TextureSetHandle(result);
+}
+
+void cegraph::Textures::ReleaseTextureSet(TextureSetHandle set) {
+	CR_ASSERT(g_data != nullptr, "Textures not initialized");
+	CR_ASSERT(set.isValid(), "invalid texture set handle");
+	CR_ASSERT(set.asInt() != g_data->TextureSetsUsed.size(), "Ran out of available texture sets");
+
+	g_data->ReleasePending[set.asInt()].store(true, std::memory_order_release);
+}
+
+bool cegraph::Textures::IsReady(TextureSetHandle handle) {
+	CR_ASSERT_AUDIT(handle.isValid(), "texture set handle not valid");
+	CR_ASSERT(handle.asInt() < Constants::c_maxTextureSets, "texture set handle not valid");
+	return g_data->TextureSetsReady[handle.asInt()];
 }
