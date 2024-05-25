@@ -99,3 +99,37 @@ TEST_CASE("BitSet Insert Range") {
 	bitset.insert(128);
 	CHECK(bitset.FindNotInSet() == 129);
 }
+
+TEST_CASE("BitSet bitwise") {
+	BitSet<512> bitset1;
+	bitset1.insert(2);
+	bitset1.insert(6);
+	BitSet<512> bitset2;
+	bitset2.insert(2);
+	bitset2.insert(12);
+
+	BitSet<512> bitsetUnion = bitset1 | bitset2;
+	CHECK(bitsetUnion.contains(2));
+	CHECK(bitsetUnion.contains(6));
+	CHECK(bitsetUnion.contains(12));
+
+	BitSet<512> bitsetIntersection = bitset1 & bitset2;
+	CHECK(bitsetIntersection.contains(2));
+	CHECK(!bitsetIntersection.contains(6));
+	CHECK(!bitsetIntersection.contains(12));
+
+	BitSet<512> bitsetDisjunctiveUnion = bitset1 ^ bitset2;
+	CHECK(!bitsetDisjunctiveUnion.contains(2));
+	CHECK(bitsetDisjunctiveUnion.contains(6));
+	CHECK(bitsetDisjunctiveUnion.contains(12));
+
+	BitSet<512> bitsetComplement = ~bitset1;
+	CHECK(bitsetComplement.contains(0));
+	CHECK(bitsetComplement.contains(1));
+	CHECK(!bitsetComplement.contains(2));
+	CHECK(bitsetComplement.contains(3));
+	CHECK(bitsetComplement.contains(4));
+	CHECK(bitsetComplement.contains(5));
+	CHECK(!bitsetComplement.contains(6));
+	CHECK(bitsetComplement.contains(7));
+}

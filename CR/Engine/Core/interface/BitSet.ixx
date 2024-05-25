@@ -12,18 +12,18 @@ import <iterator>;
 import <limits>;
 
 namespace CR::Engine::Core {
-	// std::bitset is missing some fundamental opearations, making it slow in practice.
+	// std::bitset is missing some fundamental operations, making it slow in practice.
 	// This is basically a std::bitset, except it can iterator 1 bits fast, and find the first 0 bit fast.
 	// The API is different that std::bitset, its treated more as a set of integers. The API follows std::set
-	// instead. The Size template parameter reprents the largest integer that the set can contain + 1. i.e.
+	// instead. The Size template parameter represents the largest integer that the set can contain + 1. i.e.
 	// Size 512 means this set can hold integers from 0 to 511. Size must be a multiple of 64. Multiples of
 	// 512 may make more sense in practice, since you can fit 512 bits in a cache line.
 	//
 	// The current implementation is the fastest for sets with Size <= 2048 or so. Could use an alternate
-	// implemtation for Sizes 2049-16384; Basically needs to burn one cache line for some simple acceleration
-	// data, current size(), min/max contained value, ect. And maybe switch the bitset itself to a heap
-	// alocation. Larger than 16384 probably faster to use something like roaring bitmap. With that in mind,
-	// this class has a hard cap at 64K.
+	// implementation for Sizes 2049-16384; Basically needs to burn one cache line for some simple
+	// acceleration data, current size(), min/max contained value, ect. And maybe switch the bitset itself to
+	// a heap allocation. Larger than 16384 probably faster to use something like roaring bitmap. With that in
+	// mind, this class has a hard cap at 64K.
 	export template<std::uint16_t Size>
 	class BitSet final {
 		static_assert(Size % 64 == 0, "BitSet must be a multiple of 64 bits, keep it simple");
@@ -104,6 +104,44 @@ namespace CR::Engine::Core {
 			while((word = m_words[i++]) == std::numeric_limits<std::uint64_t>::max()) {}
 			auto bitPos = word == 0 ? 0 : std::countr_one(word);
 			return static_cast<std::uint16_t>(bitPos + (64 * (i - 1)));
+		}
+
+		friend BitSet<Size> operator|(const BitSet<Size>& arg1, const BitSet<Size>& arg2) {
+			BitSet<Size> result;
+
+			for(uint32_t i = 0; i < arg1.m_words.size(); ++i) {
+				result.m_words[i] = arg1.m_words[i] | arg2.m_words[i];
+			}
+
+			return result;
+		}
+
+		friend BitSet<Size> operator&(const BitSet<Size>& arg1, const BitSet<Size>& arg2) {
+			BitSet<Size> result;
+
+			for(uint32_t i = 0; i < arg1.m_words.size(); ++i) {
+				result.m_words[i] = arg1.m_words[i] & arg2.m_words[i];
+			}
+
+			return result;
+		}
+
+		friend BitSet<Size> operator^(const BitSet<Size>& arg1, const BitSet<Size>& arg2) {
+			BitSet<Size> result;
+
+			for(uint32_t i = 0; i < arg1.m_words.size(); ++i) {
+				result.m_words[i] = arg1.m_words[i] ^ arg2.m_words[i];
+			}
+
+			return result;
+		}
+
+		friend BitSet<Size> operator~(const BitSet<Size>& arg) {
+			BitSet<Size> result;
+
+			for(uint32_t i = 0; i < arg.m_words.size(); ++i) { result.m_words[i] = ~arg.m_words[i]; }
+
+			return result;
 		}
 
 		class ConstIterator {
