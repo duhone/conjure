@@ -21,9 +21,11 @@ import CR.Engine.Assets;
 import CR.Engine.Core;
 import CR.Engine.Platform;
 
+import <atomic>;
 import <cstring>;
 import <filesystem>;
 import <span>;
+import <thread>;
 
 using namespace CR::Engine::Core::Literals;
 
@@ -69,14 +71,14 @@ namespace {
 
 		// Variables for texture sets
 		std::mutex LoadingMutex;
-		std::array<bool, cegraph::Constants::c_maxTextureSets> TextureSetsUsed;
+		cecore::BitSet<cegraph::Constants::c_maxTextureSets> TextureSetsUsed;
 		std::array<TextureSet, cegraph::Constants::c_maxTextureSets> TextureSets;
 
-		std::array<std::atomic_bool, cegraph::Constants::c_maxTextureSets> LoadPending;
-		std::array<std::atomic_bool, cegraph::Constants::c_maxTextureSets> LoadComplete;
+		cecore::BitSet<cegraph::Constants::c_maxTextureSets> LoadPending;
+		cecore::BitSet<cegraph::Constants::c_maxTextureSets> LoadComplete;
 
-		std::array<std::atomic_bool, cegraph::Constants::c_maxTextureSets> ReleasePending;
-		std::array<std::atomic_bool, cegraph::Constants::c_maxTextureSets> ReleaseComplete;
+		cecore::BitSet<cegraph::Constants::c_maxTextureSets> ReleasePending;
+		cecore::BitSet<cegraph::Constants::c_maxTextureSets> ReleaseComplete;
 
 		std::array<bool, cegraph::Constants::c_maxTextureSets> TextureSetsReady;
 
@@ -93,9 +95,57 @@ namespace {
 
 		// lookups
 		ankerl::unordered_dense::map<uint64_t, cegraph::Textures::TextureHandle> m_handleLookup;
+
+		std::jthread LoadThread;
+		std::atomic_bool LoadThreadDone{false};
 	};
 
 	Data* g_data = nullptr;
+
+	TextureSet GenerateCombined(int32_t filter) {
+		TextureSet result;
+
+		for(auto set : g_data->TextureSetsUsed) {
+			if(set == filter) { continue; }
+			result = result | g_data->TextureSets[set];
+		}
+
+		return result;
+	}
+
+	void HandleReleasedSets() {
+		TextureSet toRelease;
+
+		{
+			std::scoped_lock loc(g_data->LoadingMutex);
+			for(auto released : g_data->ReleasePending) {
+				if(g_data->LoadPending.contains(released)) {
+					// if pending load just cancel it, nothing else needs be done
+					g_data->LoadPending.erase(released);
+				} else {
+					toRelease.insert(released);
+					// TextureSet newSet    = GenerateCombined(released);
+					// TextureSet toRelease = (~newSet) & g_data->TexturesReady;
+				}
+			}
+		}
+
+		{
+			std::scoped_lock loc(g_data->LoadingMutex);
+			for(uint32_t released : toRelease) {
+				g_data->ReleasePending.erase(released);
+				g_data->ReleaseComplete.insert(released);
+			}
+		}
+	}
+
+	void LoadThreadMain() {
+		CR_ASSERT(g_data != nullptr, "Textures aren't initialized");
+
+		while(!g_data->LoadThreadDone.load(std::memory_order_acquire)) { HandleReleasedSets(); }
+
+		HandleReleasedSets();
+	}
 }    // namespace
 
 void cegraph::Textures::Initialize(Context& a_context) {
@@ -134,10 +184,16 @@ void cegraph::Textures::Initialize(Context& a_context) {
 	vmaCreateBuffer(g_data->gContext.Allocator, &stagingCreateInfo, &stagingAllocCreateInfo,
 	                &g_data->StagingBuffer, &g_data->StagingMemory, &stagingAllocInfo);
 	g_data->StagingData = stagingAllocInfo.pMappedData;
+
+	g_data->LoadThread = std::jthread(LoadThreadMain);
 }
 
 void cegraph::Textures::Shutdown() {
 	CR_ASSERT(g_data != nullptr, "Textures are already shutdown");
+
+	g_data->LoadThreadDone.store(true, std::memory_order_release);
+	g_data->LoadThread.join();
+
 	vmaDestroyBuffer(g_data->gContext.Allocator, g_data->StagingBuffer, g_data->StagingMemory);
 	delete g_data;
 }
@@ -153,19 +209,19 @@ cegraph::Textures::TextureSetHandle cegraph::Textures::LoadTextureSetAsync(std::
 	CR_ASSERT(g_data != nullptr, "Textures not initialized");
 
 	uint32_t result;
-	for(result = 0; result < g_data->TextureSetsUsed.size(); ++result) {
-		if(!g_data->TextureSetsUsed[result]) { break; }
-	}
-	CR_ASSERT(result != g_data->TextureSetsUsed.size(), "Ran out of available texture sets");
-	CR_ASSERT(g_data->TextureSets[result].empty(), "New textures set should start empty");
+	{
+		std::scoped_lock loc(g_data->LoadingMutex);
+		result = g_data->TextureSetsUsed.FindNotInSet();
+		CR_ASSERT(g_data->TextureSets[result].empty(), "New textures set should start empty");
 
-	for(uint64_t hash : hashes) {
-		auto handleIter = g_data->m_handleLookup.find(hash);
-		CR_ASSERT(handleIter != g_data->m_handleLookup.end(), "Texture could not be found");
-		g_data->TextureSets[result].insert(handleIter->second.asInt());
-	}
+		for(uint64_t hash : hashes) {
+			auto handleIter = g_data->m_handleLookup.find(hash);
+			CR_ASSERT(handleIter != g_data->m_handleLookup.end(), "Texture could not be found");
+			g_data->TextureSets[result].insert(handleIter->second.asInt());
+		}
 
-	g_data->LoadPending[result].store(true, std::memory_order_release);
+		g_data->LoadPending.insert(result);
+	}
 
 	return TextureSetHandle(result);
 }
@@ -175,7 +231,10 @@ void cegraph::Textures::ReleaseTextureSet(TextureSetHandle set) {
 	CR_ASSERT(set.isValid(), "invalid texture set handle");
 	CR_ASSERT(set.asInt() != g_data->TextureSetsUsed.size(), "Ran out of available texture sets");
 
-	g_data->ReleasePending[set.asInt()].store(true, std::memory_order_release);
+	{
+		std::scoped_lock loc(g_data->LoadingMutex);
+		g_data->ReleasePending.insert(set.asInt());
+	}
 }
 
 bool cegraph::Textures::IsReady(TextureSetHandle handle) {

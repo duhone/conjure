@@ -24,9 +24,9 @@ namespace CR::Engine::Core {
 	// acceleration data, current size(), min/max contained value, ect. And maybe switch the bitset itself to
 	// a heap allocation. Larger than 16384 probably faster to use something like roaring bitmap. With that in
 	// mind, this class has a hard cap at 64K.
-	export template<std::uint16_t Size>
+	export template<std::uint16_t SizeRequested>
 	class BitSet final {
-		static_assert(Size % 64 == 0, "BitSet must be a multiple of 64 bits, keep it simple");
+		constexpr inline static std::uint16_t Size     = ((SizeRequested + 63) / 64) * 64;
 		constexpr inline static std::uint16_t c_endIDX = (Size / 64);
 
 	  public:
