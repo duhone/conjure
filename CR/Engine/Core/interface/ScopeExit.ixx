@@ -1,10 +1,10 @@
 export module CR.Engine.Core.ScopeExit;
 
-import<functional>;
-import<vector>;
+import <functional>;
+import <vector>;
 
-//based on an old version of p0052. proposal has changed a fair amount since then.
-// not sure if it will ever make it into C++
+// based on an old version of p0052. proposal has changed a fair amount since then.
+//  not sure if it will ever make it into C++
 export namespace CR::Engine::Core {
 	template<typename EF>
 	struct scope_exit {
@@ -22,15 +22,21 @@ export namespace CR::Engine::Core {
 		void release() noexcept { this->execute_on_destruction = false; }
 
 	  private:
-		scope_exit(scope_exit const&) = delete;
-		void operator=(scope_exit const&) = delete;
+		scope_exit(scope_exit const&)       = delete;
+		void operator=(scope_exit const&)   = delete;
 		scope_exit& operator=(scope_exit&&) = delete;
 		EF exit_function;
 		bool execute_on_destruction;
 		// exposition only
 	};
+
 	template<typename EF>
 	auto make_scope_exit(EF&& exit_function) noexcept {
+		return scope_exit<std::remove_reference_t<EF>>(std::forward<EF>(exit_function));
+	}
+
+	template<typename EF>
+	auto defer(EF&& exit_function) noexcept {
 		return scope_exit<std::remove_reference_t<EF>>(std::forward<EF>(exit_function));
 	}
 
@@ -49,8 +55,8 @@ export namespace CR::Engine::Core {
 		    resource(std::move(resource)), deleter(std::move(deleter)), execute_on_destruction{shouldrun} {}
 		// move
 		unique_resource(unique_resource&& other) noexcept :
-		    resource(std::move(other.resource)),
-		    deleter(std::move(other.deleter)), execute_on_destruction{other.execute_on_destruction} {
+		    resource(std::move(other.resource)), deleter(std::move(other.deleter)),
+		    execute_on_destruction{other.execute_on_destruction} {
 			other.release();
 		}
 		unique_resource& operator=(unique_resource&& other) noexcept(noexcept(this->reset())) {
@@ -89,12 +95,12 @@ export namespace CR::Engine::Core {
 	// factories
 	template<typename R, typename D>
 	auto make_unique_resource(R&& r, D&& d) noexcept {
-		return unique_resource<R, std::remove_reference_t<D>>(std::move(r), std::forward<std::remove_reference_t<D>>(d),
-		                                                      true);
+		return unique_resource<R, std::remove_reference_t<D>>(
+		    std::move(r), std::forward<std::remove_reference_t<D>>(d), true);
 	}
 	template<typename R, typename D>
 	auto make_unique_resource_checked(R r, R invalid, D d) noexcept {
 		bool shouldrun = not bool(r == invalid);
 		return unique_resource<R, D>(std::move(r), std::move(d), shouldrun);
 	}
-}
+}    // namespace CR::Engine::Core

@@ -1,0 +1,8 @@
+{
+    "textures" : [
+            {
+                "name" : "CompletionScreen",
+                "path" : "Graphics/Textures/CompletionScreen.jxl"
+            }
+        ]
+}

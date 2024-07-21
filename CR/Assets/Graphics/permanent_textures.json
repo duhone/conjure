@@ -33,10 +33,6 @@
                 "path" : "Graphics/Textures/wood.jxl"
             },
             {
-                "name" : "CompletionScreen",
-                "path" : "Graphics/Textures/CompletionScreen.jxl"
-            },
-            {
                 "name" : "BonusHarrySelect",
                 "path" : "Graphics/Textures/BonusHarrySelect.jxl"
             }

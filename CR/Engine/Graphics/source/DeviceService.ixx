@@ -189,6 +189,7 @@ void cegraph::DeviceService::Stop() {
 void cegraph::DeviceService::Update() {
 	m_materials->Update(*m_shaders, m_renderPass);
 	m_computePipelines->Update(*m_shaders);
+	Textures::Update();
 
 	vkAcquireNextImageKHR(m_context.Device, m_primarySwapChain, UINT64_MAX, VK_NULL_HANDLE, m_frameFence,
 	                      &m_currentFrameBuffer);
