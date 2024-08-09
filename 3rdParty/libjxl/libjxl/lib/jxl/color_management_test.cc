@@ -8,20 +8,26 @@
 #include <stdint.h>
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
-#include <new>
+#include <cstdio>
+#include <cstdlib>
+#include <ostream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "lib/jxl/base/common.h"
 #include "lib/jxl/base/compiler_specific.h"
-#include "lib/jxl/base/data_parallel.h"
-#include "lib/jxl/base/random.h"
 #include "lib/jxl/base/span.h"
 #include "lib/jxl/cms/color_encoding_cms.h"
 #include "lib/jxl/cms/opsin_params.h"
 #include "lib/jxl/color_encoding_internal.h"
 #include "lib/jxl/enc_xyb.h"
+#include "lib/jxl/image.h"
+#include "lib/jxl/image_bundle.h"
+#include "lib/jxl/image_metadata.h"
+#include "lib/jxl/image_ops.h"
 #include "lib/jxl/image_test_utils.h"
 #include "lib/jxl/test_utils.h"
 #include "lib/jxl/testing.h"
@@ -43,9 +49,9 @@ using ::testing::ElementsAre;
 using ::testing::FloatNear;
 
 // Small enough to be fast. If changed, must update Generate*.
-static constexpr size_t kWidth = 16;
+constexpr size_t kWidth = 16;
 
-static constexpr size_t kNumThreads = 1;  // only have a single row.
+constexpr size_t kNumThreads = 1;  // only have a single row.
 
 MATCHER_P(HasSameFieldsAs, expected, "") {
   if (arg.GetRenderingIntent() != expected.GetRenderingIntent()) {
@@ -100,15 +106,15 @@ struct Globals {
   Globals() {
     in_gray = GenerateGray();
     in_color = GenerateColor();
-    out_gray = ImageF(kWidth, 1);
-    out_color = ImageF(kWidth * 3, 1);
+    JXL_ASSIGN_OR_DIE(out_gray, ImageF::Create(kWidth, 1));
+    JXL_ASSIGN_OR_DIE(out_color, ImageF::Create(kWidth * 3, 1));
 
     c_native = ColorEncoding::LinearSRGB(/*is_gray=*/false);
     c_gray = ColorEncoding::LinearSRGB(/*is_gray=*/true);
   }
 
   static ImageF GenerateGray() {
-    ImageF gray(kWidth, 1);
+    JXL_ASSIGN_OR_DIE(ImageF gray, ImageF::Create(kWidth, 1));
     float* JXL_RESTRICT row = gray.Row(0);
     // Increasing left to right
     for (uint32_t x = 0; x < kWidth; ++x) {
@@ -118,7 +124,7 @@ struct Globals {
   }
 
   static ImageF GenerateColor() {
-    ImageF image(kWidth * 3, 1);
+    JXL_ASSIGN_OR_DIE(ImageF image, ImageF::Create(kWidth * 3, 1));
     float* JXL_RESTRICT interleaved = image.Row(0);
     std::fill(interleaved, interleaved + kWidth * 3, 0.0f);
 
@@ -176,8 +182,10 @@ class ColorManagementTest
     const size_t thread = 0;
     const ImageF& in = c.IsGray() ? g->in_gray : g->in_color;
     ImageF* JXL_RESTRICT out = c.IsGray() ? &g->out_gray : &g->out_color;
-    ASSERT_TRUE(xform_fwd.Run(thread, in.Row(0), xform_fwd.BufDst(thread)));
-    ASSERT_TRUE(xform_rev.Run(thread, xform_fwd.BufDst(thread), out->Row(0)));
+    ASSERT_TRUE(
+        xform_fwd.Run(thread, in.Row(0), xform_fwd.BufDst(thread), kWidth));
+    ASSERT_TRUE(
+        xform_rev.Run(thread, xform_fwd.BufDst(thread), out->Row(0), kWidth));
 
     // With lcms2, this value is lower: 5E-5
     double max_l1 = 7E-4;
@@ -235,7 +243,7 @@ TEST_F(ColorManagementTest, D2700Chromaticity) {
   std::vector<uint8_t> icc_data =
       jxl::test::ReadTestData("jxl/color_management/sRGB-D2700.icc");
   IccBytes icc;
-  Bytes(icc_data).AppendTo(&icc);
+  Bytes(icc_data).AppendTo(icc);
   ColorEncoding sRGB_D2700;
   ASSERT_TRUE(sRGB_D2700.SetICC(std::move(icc), JxlGetDefaultCms()));
 
@@ -252,7 +260,7 @@ TEST_F(ColorManagementTest, D2700ToSRGB) {
   std::vector<uint8_t> icc_data =
       jxl::test::ReadTestData("jxl/color_management/sRGB-D2700.icc");
   IccBytes icc;
-  Bytes(icc_data).AppendTo(&icc);
+  Bytes(icc_data).AppendTo(icc);
   ColorEncoding sRGB_D2700;
   ASSERT_TRUE(sRGB_D2700.SetICC(std::move(icc), JxlGetDefaultCms()));
 
@@ -261,7 +269,7 @@ TEST_F(ColorManagementTest, D2700ToSRGB) {
                              kDefaultIntensityTarget, 1, 1));
   const float sRGB_D2700_values[3] = {0.863, 0.737, 0.490};
   float sRGB_values[3];
-  ASSERT_TRUE(transform.Run(0, sRGB_D2700_values, sRGB_values));
+  ASSERT_TRUE(transform.Run(0, sRGB_D2700_values, sRGB_values, 1));
   EXPECT_THAT(sRGB_values,
               ElementsAre(FloatNear(0.914, 1e-3), FloatNear(0.745, 1e-3),
                           FloatNear(0.601, 1e-3)));
@@ -283,7 +291,7 @@ TEST_F(ColorManagementTest, P3HlgTo2020Hlg) {
   ASSERT_TRUE(transform.Init(p3_hlg, rec2020_hlg, 1000, 1, 1));
   const float p3_hlg_values[3] = {0., 0.75, 0.};
   float rec2020_hlg_values[3];
-  ASSERT_TRUE(transform.Run(0, p3_hlg_values, rec2020_hlg_values));
+  ASSERT_TRUE(transform.Run(0, p3_hlg_values, rec2020_hlg_values, 1));
   EXPECT_THAT(rec2020_hlg_values,
               ElementsAre(FloatNear(0.3973, 1e-4), FloatNear(0.7382, 1e-4),
                           FloatNear(0.1183, 1e-4)));
@@ -303,7 +311,7 @@ TEST_F(ColorManagementTest, HlgOotf) {
   // HDR reference white: https://www.itu.int/pub/R-REP-BT.2408-4-2021
   float p3_hlg_values[3] = {0.75, 0.75, 0.75};
   float linear_srgb_values[3];
-  ASSERT_TRUE(transform_to_1000.Run(0, p3_hlg_values, linear_srgb_values));
+  ASSERT_TRUE(transform_to_1000.Run(0, p3_hlg_values, linear_srgb_values, 1));
   // On a 1000-nit display, HDR reference white should be 203 cd/m² which is
   // 0.203 times the maximum.
   EXPECT_THAT(linear_srgb_values,
@@ -313,14 +321,14 @@ TEST_F(ColorManagementTest, HlgOotf) {
   ColorSpaceTransform transform_to_400(*JxlGetDefaultCms());
   ASSERT_TRUE(
       transform_to_400.Init(p3_hlg, ColorEncoding::LinearSRGB(), 400, 1, 1));
-  ASSERT_TRUE(transform_to_400.Run(0, p3_hlg_values, linear_srgb_values));
+  ASSERT_TRUE(transform_to_400.Run(0, p3_hlg_values, linear_srgb_values, 1));
   // On a 400-nit display, it should be 100 cd/m².
   EXPECT_THAT(linear_srgb_values,
               ElementsAre(FloatNear(0.250, 1e-3), FloatNear(0.250, 1e-3),
                           FloatNear(0.250, 1e-3)));
 
   p3_hlg_values[2] = 0.50;
-  ASSERT_TRUE(transform_to_1000.Run(0, p3_hlg_values, linear_srgb_values));
+  ASSERT_TRUE(transform_to_1000.Run(0, p3_hlg_values, linear_srgb_values, 1));
   EXPECT_THAT(linear_srgb_values,
               ElementsAre(FloatNear(0.201, 1e-3), FloatNear(0.201, 1e-3),
                           FloatNear(0.050, 1e-3)));
@@ -329,7 +337,7 @@ TEST_F(ColorManagementTest, HlgOotf) {
   ASSERT_TRUE(
       transform_from_400.Init(ColorEncoding::LinearSRGB(), p3_hlg, 400, 1, 1));
   linear_srgb_values[0] = linear_srgb_values[1] = linear_srgb_values[2] = 0.250;
-  ASSERT_TRUE(transform_from_400.Run(0, linear_srgb_values, p3_hlg_values));
+  ASSERT_TRUE(transform_from_400.Run(0, linear_srgb_values, p3_hlg_values, 1));
   EXPECT_THAT(p3_hlg_values,
               ElementsAre(FloatNear(0.75, 1e-3), FloatNear(0.75, 1e-3),
                           FloatNear(0.75, 1e-3)));
@@ -346,7 +354,7 @@ TEST_F(ColorManagementTest, HlgOotf) {
   const float grayscale_hlg_value = 0.75;
   float linear_grayscale_value;
   ASSERT_TRUE(grayscale_transform.Run(0, &grayscale_hlg_value,
-                                      &linear_grayscale_value));
+                                      &linear_grayscale_value, 1));
   EXPECT_THAT(linear_grayscale_value, FloatNear(0.203, 1e-3));
 }
 
@@ -367,7 +375,7 @@ TEST_F(ColorManagementTest, XYBProfile) {
   ImageMetadata metadata;
   metadata.color_encoding = c_native;
   ImageBundle ib(&metadata);
-  Image3F native(kNumColors, 1);
+  JXL_ASSIGN_OR_DIE(Image3F native, Image3F::Create(kNumColors, 1));
   float mul = 1.0f / (kGridDim - 1);
   for (size_t ir = 0, x = 0; ir < kGridDim; ++ir) {
     for (size_t ig = 0; ig < kGridDim; ++ig) {
@@ -380,10 +388,10 @@ TEST_F(ColorManagementTest, XYBProfile) {
   }
   ib.SetFromImage(std::move(native), c_native);
   const Image3F& in = *ib.color();
-  Image3F opsin(kNumColors, 1);
-  ToXYB(ib, nullptr, &opsin, cms, nullptr);
+  JXL_ASSIGN_OR_DIE(Image3F opsin, Image3F::Create(kNumColors, 1));
+  JXL_CHECK(ToXYB(ib, nullptr, &opsin, cms, nullptr));
 
-  Image3F opsin2(kNumColors, 1);
+  JXL_ASSIGN_OR_DIE(Image3F opsin2, Image3F::Create(kNumColors, 1));
   CopyImageTo(opsin, &opsin2);
   ScaleXYB(&opsin2);
 
@@ -395,9 +403,9 @@ TEST_F(ColorManagementTest, XYBProfile) {
   }
 
   float* dst = xform.BufDst(0);
-  ASSERT_TRUE(xform.Run(0, src, dst));
+  ASSERT_TRUE(xform.Run(0, src, dst, kNumColors));
 
-  Image3F out(kNumColors, 1);
+  JXL_ASSIGN_OR_DIE(Image3F out, Image3F::Create(kNumColors, 1));
   for (size_t i = 0; i < kNumColors; ++i) {
     for (size_t c = 0; c < 3; ++c) {
       out.PlaneRow(c, 0)[i] = dst[3 * i + c];

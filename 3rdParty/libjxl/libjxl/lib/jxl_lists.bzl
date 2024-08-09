@@ -3,16 +3,20 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-# This file is generated, do not modify by manually.
-# Run `tools/scripts/build_cleaner.py --update` to regenerate it.
+"""
+This file is generated, do not modify by manually.
+Run `tools/scripts/build_cleaner.py --update` to regenerate it.
+"""
 
 libjxl_base_sources = [
     "jxl/base/arch_macros.h",
     "jxl/base/bits.h",
     "jxl/base/byte_order.h",
+    "jxl/base/c_callback_support.h",
     "jxl/base/common.h",
     "jxl/base/compiler_specific.h",
     "jxl/base/data_parallel.h",
+    "jxl/base/exif.h",
     "jxl/base/fast_math-inl.h",
     "jxl/base/float.h",
     "jxl/base/iaca.h",
@@ -143,7 +147,6 @@ libjxl_dec_sources = [
     "jxl/convolve-inl.h",
     "jxl/convolve.h",
     "jxl/convolve_separable5.cc",
-    "jxl/convolve_separable7.cc",
     "jxl/convolve_slow.cc",
     "jxl/convolve_symmetric3.cc",
     "jxl/convolve_symmetric5.cc",
@@ -184,10 +187,7 @@ libjxl_dec_sources = [
     "jxl/entropy_coder.h",
     "jxl/epf.cc",
     "jxl/epf.h",
-    "jxl/exif.h",
     "jxl/fast_dct-inl.h",
-    "jxl/fast_dct.cc",
-    "jxl/fast_dct.h",
     "jxl/fast_dct128-inl.h",
     "jxl/fast_dct16-inl.h",
     "jxl/fast_dct256-inl.h",
@@ -200,8 +200,6 @@ libjxl_dec_sources = [
     "jxl/frame_dimensions.h",
     "jxl/frame_header.cc",
     "jxl/frame_header.h",
-    "jxl/gauss_blur.cc",
-    "jxl/gauss_blur.h",
     "jxl/headers.cc",
     "jxl/headers.h",
     "jxl/huffman_table.cc",
@@ -216,6 +214,7 @@ libjxl_dec_sources = [
     "jxl/image_bundle.h",
     "jxl/image_metadata.cc",
     "jxl/image_metadata.h",
+    "jxl/image_ops.cc",
     "jxl/image_ops.h",
     "jxl/inverse_mtf-inl.h",
     "jxl/lehmer_code.h",
@@ -445,6 +444,8 @@ libjxl_extras_sources = [
     "extras/enc/encode.h",
     "extras/exif.cc",
     "extras/exif.h",
+    "extras/mmap.cc",
+    "extras/mmap.h",
     "extras/packed_image.h",
     "extras/size_constraints.h",
     "extras/time.cc",
@@ -455,7 +456,6 @@ libjxl_gbench_sources = [
     "extras/tone_mapping_gbench.cc",
     "jxl/dec_external_image_gbench.cc",
     "jxl/enc_external_image_gbench.cc",
-    "jxl/gauss_blur_gbench.cc",
     "jxl/splines_gbench.cc",
     "jxl/tf_gbench.cc",
 ]
@@ -549,9 +549,9 @@ libjxl_jpegli_wrapper_sources = [
 
 libjxl_major_version = 0
 
-libjxl_minor_version = 9
+libjxl_minor_version = 10
 
-libjxl_patch_version = 1
+libjxl_patch_version = 3
 
 libjxl_public_headers = [
     "include/jxl/cms.h",
@@ -615,7 +615,6 @@ libjxl_tests = [
     "jxl/fast_math_test.cc",
     "jxl/fields_test.cc",
     "jxl/gamma_correct_test.cc",
-    "jxl/gauss_blur_test.cc",
     "jxl/gradient_test.cc",
     "jxl/iaca_test.cc",
     "jxl/icc_codec_test.cc",

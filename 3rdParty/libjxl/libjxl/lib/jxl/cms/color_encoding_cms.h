@@ -13,11 +13,9 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
-#include <string>
 #include <utility>
 #include <vector>
 
-#include "lib/jxl/base/common.h"
 #include "lib/jxl/base/status.h"
 
 namespace jxl {
@@ -518,7 +516,7 @@ struct ColorEncoding {
     JXL_RETURN_IF_ERROR(cms.set_fields_from_icc(cms.set_fields_data,
                                                 new_icc.data(), new_icc.size(),
                                                 &external, &new_cmyk));
-    cmyk = new_cmyk;
+    cmyk = static_cast<bool>(new_cmyk);
     JXL_RETURN_IF_ERROR(FromExternal(external));
     icc = std::move(new_icc);
     return true;

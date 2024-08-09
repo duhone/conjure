@@ -8,15 +8,12 @@
 
 // Forward/backward-compatible 'bundles' with auto-serialized 'fields'.
 
-#include <inttypes.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <cinttypes>
 #include <cmath>  // abs
 #include <cstdarg>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
 
 #include "lib/jxl/base/bits.h"
 #include "lib/jxl/base/compiler_specific.h"
@@ -301,7 +298,7 @@ class ExtensionStates {
 
 class VisitorBase : public Visitor {
  public:
-  explicit VisitorBase() {}
+  explicit VisitorBase() = default;
   ~VisitorBase() override { JXL_ASSERT(depth_ == 0); }
 
   // This is the only call site of Fields::VisitFields.

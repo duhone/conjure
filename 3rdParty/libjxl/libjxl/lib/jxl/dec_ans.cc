@@ -154,7 +154,7 @@ Status ReadHistogram(int precision_bits, std::vector<int32_t>* counts,
         (*counts)[i] = prev;
         numsame--;
       } else {
-        int code = logcounts[i];
+        unsigned int code = logcounts[i];
         // omit_pos may not be negative at this point (checked before).
         if (i == static_cast<size_t>(omit_pos)) {
           continue;
@@ -164,7 +164,7 @@ Status ReadHistogram(int precision_bits, std::vector<int32_t>* counts,
           (*counts)[i] = 1;
         } else {
           int bitcount = GetPopulationCountPrecision(code - 1, shift);
-          (*counts)[i] = (1 << (code - 1)) +
+          (*counts)[i] = (1u << (code - 1)) +
                          (input->ReadBits(bitcount) << (code - 1 - bitcount));
         }
       }
@@ -260,7 +260,8 @@ Status DecodeUintConfig(size_t log_alpha_size, HybridUintConfig* uint_config,
                         BitReader* br) {
   br->Refill();
   size_t split_exponent = br->ReadBits(CeilLog2Nonzero(log_alpha_size + 1));
-  size_t msb_in_token = 0, lsb_in_token = 0;
+  size_t msb_in_token = 0;
+  size_t lsb_in_token = 0;
   if (split_exponent != log_alpha_size) {
     // otherwise, msb/lsb don't matter.
     size_t nbits = CeilLog2Nonzero(split_exponent + 1);
@@ -284,9 +285,8 @@ Status DecodeUintConfigs(size_t log_alpha_size,
                          std::vector<HybridUintConfig>* uint_config,
                          BitReader* br) {
   // TODO(veluca): RLE?
-  for (size_t i = 0; i < uint_config->size(); i++) {
-    JXL_RETURN_IF_ERROR(
-        DecodeUintConfig(log_alpha_size, &(*uint_config)[i], br));
+  for (auto& cfg : *uint_config) {
+    JXL_RETURN_IF_ERROR(DecodeUintConfig(log_alpha_size, &cfg, br));
   }
   return true;
 }
@@ -341,8 +341,11 @@ Status DecodeHistograms(BitReader* br, size_t num_contexts, ANSCode* code,
   if (num_contexts > 1) {
     JXL_RETURN_IF_ERROR(DecodeContextMap(context_map, &num_histograms, br));
   }
+  JXL_DEBUG_V(
+      4, "Decoded context map of size %" PRIuS " and %" PRIuS " histograms",
+      num_contexts, num_histograms);
   code->lz77.nonserialized_distance_context = context_map->back();
-  code->use_prefix_code = br->ReadFixedBits<1>();
+  code->use_prefix_code = static_cast<bool>(br->ReadFixedBits<1>());
   if (code->use_prefix_code) {
     code->log_alpha_size = PREFIX_MAX_BITS;
   } else {
@@ -354,17 +357,6 @@ Status DecodeHistograms(BitReader* br, size_t num_contexts, ANSCode* code,
   const size_t max_alphabet_size = 1 << code->log_alpha_size;
   JXL_RETURN_IF_ERROR(
       DecodeANSCodes(num_histograms, max_alphabet_size, br, code));
-  // When using LZ77, flat codes might result in valid codestreams with
-  // histograms that potentially allow very large bit counts.
-  // TODO(veluca): in principle, a valid codestream might contain a histogram
-  // that could allow very large numbers of bits that is never used during ANS
-  // decoding. There's no benefit to doing that, though.
-  if (!code->lz77.enabled && code->max_num_bits > 32) {
-    // Just emit a warning as there are many opportunities for false positives.
-    JXL_WARNING("Histogram can represent numbers that are too large: %" PRIuS
-                "\n",
-                code->max_num_bits);
-  }
   return true;
 }
 

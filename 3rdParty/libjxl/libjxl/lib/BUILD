@@ -3,6 +3,9 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+
 # Load sources/headers/tests lists.
 load(
     "jxl_lists.bzl",
@@ -56,8 +59,6 @@ load(
     "libjxl_test_shards",
     "libjxl_test_timeouts",
 )
-load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 
 DEFAULT_VISIBILITY = ["//:__subpackages__"]
 
@@ -198,7 +199,9 @@ cc_library(
     name = "jpegxl",
     srcs = libjxl_dec_sources + libjxl_dec_box_sources + libjxl_dec_jpeg_sources + libjxl_enc_sources + libjxl_cms_sources,
     compatible_with = DEFAULT_COMPATIBILITY,
-    defines = ["JPEGXL_ENABLE_SKCMS=1"],
+    defines = [
+        "JPEGXL_ENABLE_SKCMS=1",
+    ],
     deps = [
         ":base",
         ":includes",

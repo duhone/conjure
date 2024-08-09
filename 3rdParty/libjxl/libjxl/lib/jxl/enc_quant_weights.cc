@@ -5,24 +5,18 @@
 
 #include "lib/jxl/enc_quant_weights.h"
 
+#include <jxl/types.h>
 #include <stdlib.h>
 
-#include <algorithm>
 #include <cmath>
-#include <limits>
-#include <utility>
 
-#include "lib/jxl/base/bits.h"
 #include "lib/jxl/base/common.h"
 #include "lib/jxl/base/status.h"
-#include "lib/jxl/dct_scales.h"
 #include "lib/jxl/enc_aux_out.h"
 #include "lib/jxl/enc_bit_writer.h"
 #include "lib/jxl/enc_modular.h"
 #include "lib/jxl/fields.h"
-#include "lib/jxl/image.h"
 #include "lib/jxl/modular/encoding/encoding.h"
-#include "lib/jxl/modular/options.h"
 
 namespace jxl {
 
@@ -95,8 +89,8 @@ Status EncodeQuant(const QuantEncoding& encoding, size_t idx, size_t size_x,
       break;
     }
     case QuantEncoding::kQuantModeRAW: {
-      ModularFrameEncoder::EncodeQuantTable(size_x, size_y, writer, encoding,
-                                            idx, modular_frame_encoder);
+      JXL_RETURN_IF_ERROR(ModularFrameEncoder::EncodeQuantTable(
+          size_x, size_y, writer, encoding, idx, modular_frame_encoder));
       break;
     }
     case QuantEncoding::kQuantModeAFV: {
@@ -116,11 +110,11 @@ Status EncodeQuant(const QuantEncoding& encoding, size_t idx, size_t size_x,
 
 }  // namespace
 
-Status DequantMatricesEncode(const DequantMatrices* matrices, BitWriter* writer,
+Status DequantMatricesEncode(const DequantMatrices& matrices, BitWriter* writer,
                              size_t layer, AuxOut* aux_out,
                              ModularFrameEncoder* modular_frame_encoder) {
   bool all_default = true;
-  const std::vector<QuantEncoding>& encodings = matrices->encodings();
+  const std::vector<QuantEncoding>& encodings = matrices.encodings();
 
   for (size_t i = 0; i < encodings.size(); i++) {
     if (encodings[i].mode != QuantEncoding::kQuantModeLibrary ||
@@ -130,7 +124,7 @@ Status DequantMatricesEncode(const DequantMatrices* matrices, BitWriter* writer,
   }
   // TODO(janwas): better bound
   BitWriter::Allotment allotment(writer, 512 * 1024);
-  writer->Write(1, all_default);
+  writer->Write(1, TO_JXL_BOOL(all_default));
   if (!all_default) {
     for (size_t i = 0; i < encodings.size(); i++) {
       JXL_RETURN_IF_ERROR(EncodeQuant(
@@ -142,18 +136,18 @@ Status DequantMatricesEncode(const DequantMatrices* matrices, BitWriter* writer,
   return true;
 }
 
-Status DequantMatricesEncodeDC(const DequantMatrices* matrices,
+Status DequantMatricesEncodeDC(const DequantMatrices& matrices,
                                BitWriter* writer, size_t layer,
                                AuxOut* aux_out) {
   bool all_default = true;
-  const float* dc_quant = matrices->DCQuants();
+  const float* dc_quant = matrices.DCQuants();
   for (size_t c = 0; c < 3; c++) {
     if (dc_quant[c] != kDCQuant[c]) {
       all_default = false;
     }
   }
   BitWriter::Allotment allotment(writer, 1 + sizeof(float) * kBitsPerByte * 3);
-  writer->Write(1, all_default);
+  writer->Write(1, TO_JXL_BOOL(all_default));
   if (!all_default) {
     for (size_t c = 0; c < 3; c++) {
       JXL_RETURN_IF_ERROR(F16Coder::Write(dc_quant[c] * 128.0f, writer));
@@ -167,7 +161,7 @@ void DequantMatricesSetCustomDC(DequantMatrices* matrices, const float* dc) {
   matrices->SetDCQuant(dc);
   // Roundtrip encode/decode DC to ensure same values as decoder.
   BitWriter writer;
-  JXL_CHECK(DequantMatricesEncodeDC(matrices, &writer, 0, nullptr));
+  JXL_CHECK(DequantMatricesEncodeDC(*matrices, &writer, 0, nullptr));
   writer.ZeroPadToByte();
   BitReader br(writer.GetSpan());
   // Called only in the encoder: should fail only for programmer errors.
@@ -187,7 +181,7 @@ void DequantMatricesRoundtrip(DequantMatrices* matrices) {
   // Do not pass modular en/decoder, as they only change entropy and not
   // values.
   BitWriter writer;
-  JXL_CHECK(DequantMatricesEncode(matrices, &writer, 0, nullptr));
+  JXL_CHECK(DequantMatricesEncode(*matrices, &writer, 0, nullptr));
   writer.ZeroPadToByte();
   BitReader br(writer.GetSpan());
   // Called only in the encoder: should fail only for programmer errors.
@@ -195,19 +189,20 @@ void DequantMatricesRoundtrip(DequantMatrices* matrices) {
   JXL_CHECK(br.Close());
 }
 
-void DequantMatricesSetCustom(DequantMatrices* matrices,
-                              const std::vector<QuantEncoding>& encodings,
-                              ModularFrameEncoder* encoder) {
+Status DequantMatricesSetCustom(DequantMatrices* matrices,
+                                const std::vector<QuantEncoding>& encodings,
+                                ModularFrameEncoder* encoder) {
   JXL_ASSERT(encodings.size() == DequantMatrices::kNum);
   matrices->SetEncodings(encodings);
   for (size_t i = 0; i < encodings.size(); i++) {
     if (encodings[i].mode == QuantEncodingInternal::kQuantModeRAW) {
-      encoder->AddQuantTable(DequantMatrices::required_size_x[i] * kBlockDim,
-                             DequantMatrices::required_size_y[i] * kBlockDim,
-                             encodings[i], i);
+      JXL_RETURN_IF_ERROR(encoder->AddQuantTable(
+          DequantMatrices::required_size_x[i] * kBlockDim,
+          DequantMatrices::required_size_y[i] * kBlockDim, encodings[i], i));
     }
   }
   DequantMatricesRoundtrip(matrices);
+  return true;
 }
 
 }  // namespace jxl

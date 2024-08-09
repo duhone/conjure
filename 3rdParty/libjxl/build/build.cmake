@@ -56,6 +56,8 @@ set(SOURCE_FILES
   ${root}/libjxl/lib/jxl/ans_params.h
   ${root}/libjxl/lib/jxl/blending.cc
   ${root}/libjxl/lib/jxl/blending.h
+  ${root}/libjxl/lib/jxl/box_content_decoder.cc
+  ${root}/libjxl/lib/jxl/box_content_decoder.h
   ${root}/libjxl/lib/jxl/cache_aligned.cc
   ${root}/libjxl/lib/jxl/cache_aligned.h
   ${root}/libjxl/lib/jxl/chroma_from_luma.cc
@@ -72,7 +74,6 @@ set(SOURCE_FILES
   ${root}/libjxl/lib/jxl/convolve-inl.h
   ${root}/libjxl/lib/jxl/convolve.h
   ${root}/libjxl/lib/jxl/convolve_separable5.cc
-  ${root}/libjxl/lib/jxl/convolve_separable7.cc
   ${root}/libjxl/lib/jxl/convolve_slow.cc
   ${root}/libjxl/lib/jxl/convolve_symmetric3.cc
   ${root}/libjxl/lib/jxl/convolve_symmetric5.cc
@@ -113,10 +114,7 @@ set(SOURCE_FILES
   ${root}/libjxl/lib/jxl/entropy_coder.h
   ${root}/libjxl/lib/jxl/epf.cc
   ${root}/libjxl/lib/jxl/epf.h
-  ${root}/libjxl/lib/jxl/exif.h
   ${root}/libjxl/lib/jxl/fast_dct-inl.h
-  ${root}/libjxl/lib/jxl/fast_dct.cc
-  ${root}/libjxl/lib/jxl/fast_dct.h
   ${root}/libjxl/lib/jxl/fast_dct128-inl.h
   ${root}/libjxl/lib/jxl/fast_dct16-inl.h
   ${root}/libjxl/lib/jxl/fast_dct256-inl.h
@@ -129,8 +127,6 @@ set(SOURCE_FILES
   ${root}/libjxl/lib/jxl/frame_dimensions.h
   ${root}/libjxl/lib/jxl/frame_header.cc
   ${root}/libjxl/lib/jxl/frame_header.h
-  ${root}/libjxl/lib/jxl/gauss_blur.cc
-  ${root}/libjxl/lib/jxl/gauss_blur.h
   ${root}/libjxl/lib/jxl/headers.cc
   ${root}/libjxl/lib/jxl/headers.h
   ${root}/libjxl/lib/jxl/huffman_table.cc
@@ -248,6 +244,8 @@ set(SOURCE_FILES
   ${root}/libjxl/lib/extras/enc/encode.h
   ${root}/libjxl/lib/extras/exif.cc
   ${root}/libjxl/lib/extras/exif.h
+  ${root}/libjxl/lib/extras/mmap.cc
+  ${root}/libjxl/lib/extras/mmap.h
   ${root}/libjxl/lib/extras/packed_image.h
   ${root}/libjxl/lib/extras/size_constraints.h
   ${root}/libjxl/lib/extras/time.cc
@@ -275,8 +273,10 @@ target_link_libraries(libjxl PUBLIC
 	highway
 )
 
-target_compile_definitions(libjxl PUBLIC -DJXL_STATIC_DEFINE)
+target_compile_definitions(libjxl PUBLIC JXL_STATIC_DEFINE JXL_THREADS_STATIC_DEFINE)
+target_compile_definitions(libjxl PUBLIC JPEGXL_ENABLE_TRANSCODE_JPEG=0)
 
 target_include_directories(libjxl SYSTEM PRIVATE "${root}/libjxl")
 target_include_directories(libjxl SYSTEM PRIVATE "${root}/libjxl/lib")
 target_include_directories(libjxl SYSTEM PUBLIC "${root}/libjxl/lib/include")
+target_include_directories(libjxl SYSTEM PUBLIC "${root}/generated")

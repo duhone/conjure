@@ -7,12 +7,34 @@
 
 #include <jxl/cms.h>
 #include <jxl/codestream_header.h>
+#include <jxl/types.h>
 #include <setjmp.h>
 #include <stdint.h>
 
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdlib>
+#include <cstring>
+#include <hwy/aligned_allocator.h>
+#include <limits>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "lib/extras/enc/encode.h"
+#include "lib/extras/packed_image.h"
+#include "lib/jpegli/common.h"
 #include "lib/jpegli/encode.h"
+#include "lib/jpegli/types.h"
+#include "lib/jxl/base/byte_order.h"
+#include "lib/jxl/base/common.h"
+#include "lib/jxl/base/data_parallel.h"
+#include "lib/jxl/base/status.h"
+#include "lib/jxl/color_encoding_internal.h"
 #include "lib/jxl/enc_xyb.h"
+#include "lib/jxl/image.h"
+#include "lib/jxl/simd_util.h"
 
 namespace jxl {
 namespace extras {
@@ -50,7 +72,7 @@ Status VerifyInput(const PackedPixelFile& ppf) {
 
 Status GetColorEncoding(const PackedPixelFile& ppf,
                         ColorEncoding* color_encoding) {
-  if (!ppf.icc.empty()) {
+  if (ppf.primary_color_representation == PackedPixelFile::kIccIsPrimary) {
     IccBytes icc = ppf.icc;
     JXL_RETURN_IF_ERROR(
         color_encoding->SetICC(std::move(icc), JxlGetDefaultCms()));
@@ -101,12 +123,12 @@ Status WriteAppData(j_compress_ptr cinfo,
   return true;
 }
 
-static constexpr int kICCMarker = 0xe2;
+constexpr int kICCMarker = 0xe2;
 constexpr unsigned char kICCSignature[12] = {
     0x49, 0x43, 0x43, 0x5F, 0x50, 0x52, 0x4F, 0x46, 0x49, 0x4C, 0x45, 0x00};
-static constexpr uint8_t kUnknownTf = 2;
-static constexpr unsigned char kCICPTagSignature[4] = {0x63, 0x69, 0x63, 0x70};
-static constexpr size_t kCICPTagSize = 12;
+constexpr uint8_t kUnknownTf = 2;
+constexpr unsigned char kCICPTagSignature[4] = {0x63, 0x69, 0x63, 0x70};
+constexpr size_t kCICPTagSize = 12;
 
 bool FindCICPTag(const uint8_t* icc_data, size_t len, bool is_first_chunk,
                  size_t* cicp_offset, size_t* cicp_length, uint8_t* cicp_tag,
@@ -353,11 +375,11 @@ Status EncodeJpeg(const PackedPixelFile& ppf, const JpegSettings& jpeg_settings,
   unsigned char* output_buffer = nullptr;
   unsigned long output_size = 0;
   std::vector<uint8_t> row_bytes;
-  size_t rowlen = RoundUpTo(ppf.info.xsize, VectorSize());
+  size_t rowlen = RoundUpTo(ppf.info.xsize, MaxVectorSize());
   hwy::AlignedFreeUniquePtr<float[]> xyb_tmp =
       hwy::AllocateAligned<float>(6 * rowlen);
   hwy::AlignedFreeUniquePtr<float[]> premul_absorb =
-      hwy::AllocateAligned<float>(VectorSize() * 12);
+      hwy::AllocateAligned<float>(MaxVectorSize() * 12);
   ComputePremulAbsorb(255.0f, premul_absorb.get());
 
   jpeg_compress_struct cinfo;
@@ -415,7 +437,7 @@ Status EncodeJpeg(const PackedPixelFile& ppf, const JpegSettings& jpeg_settings,
       }
     }
     jpegli_enable_adaptive_quantization(
-        &cinfo, jpeg_settings.use_adaptive_quantization);
+        &cinfo, TO_JXL_BOOL(jpeg_settings.use_adaptive_quantization));
     if (jpeg_settings.psnr_target > 0.0) {
       jpegli_set_psnr(&cinfo, jpeg_settings.psnr_target,
                       jpeg_settings.search_tolerance,
@@ -427,11 +449,11 @@ Status EncodeJpeg(const PackedPixelFile& ppf, const JpegSettings& jpeg_settings,
       jpegli_set_distance(&cinfo, jpeg_settings.distance, TRUE);
     }
     jpegli_set_progressive_level(&cinfo, jpeg_settings.progressive_level);
-    cinfo.optimize_coding = jpeg_settings.optimize_coding;
+    cinfo.optimize_coding = TO_JXL_BOOL(jpeg_settings.optimize_coding);
     if (!jpeg_settings.app_data.empty()) {
       // Make sure jpegli_start_compress() does not write any APP markers.
-      cinfo.write_JFIF_header = false;
-      cinfo.write_Adobe_marker = false;
+      cinfo.write_JFIF_header = JXL_FALSE;
+      cinfo.write_Adobe_marker = JXL_FALSE;
     }
     const PackedImage& image = ppf.frames[0].color;
     if (jpeg_settings.xyb) {
@@ -458,7 +480,7 @@ Status EncodeJpeg(const PackedPixelFile& ppf, const JpegSettings& jpeg_settings,
         ToFloatRow(&pixels[y * image.stride], image.format, 3 * image.xsize,
                    src_buf);
         // convert to linear srgb
-        if (!c_transform.Run(0, src_buf, dst_buf)) {
+        if (!c_transform.Run(0, src_buf, dst_buf, image.xsize)) {
           return false;
         }
         // deinterleave channels
@@ -487,9 +509,9 @@ Status EncodeJpeg(const PackedPixelFile& ppf, const JpegSettings& jpeg_settings,
       }
     } else {
       row_bytes.resize(image.stride);
-      if (cinfo.num_components == (int)image.format.num_channels) {
+      if (cinfo.num_components == static_cast<int>(image.format.num_channels)) {
         for (size_t y = 0; y < info.ysize; ++y) {
-          memcpy(&row_bytes[0], pixels + y * image.stride, image.stride);
+          memcpy(row_bytes.data(), pixels + y * image.stride, image.stride);
           JSAMPROW row[] = {row_bytes.data()};
           jpegli_write_scanlines(&cinfo, row, 1);
         }
