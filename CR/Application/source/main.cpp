@@ -60,6 +60,19 @@ int main(int, char*) {
 		ceinput::Regions regions;
 		auto region = regions.Create({{0, 0}, {400, 300}});
 
+		std::vector<uint64_t> textureSetHashes;
+		textureSetHashes.emplace_back(cecore::C_Hash64("CompletionScreen"));
+		textureSetHashes.emplace_back(cecore::C_Hash64("BonusHarrySelect"));
+		textureSetHashes.emplace_back(cecore::C_Hash64("brick"));
+		textureSetHashes.emplace_back(cecore::C_Hash64("diamond"));
+		textureSetHashes.emplace_back(cecore::C_Hash64("gold"));
+		textureSetHashes.emplace_back(cecore::C_Hash64("ice"));
+		textureSetHashes.emplace_back(cecore::C_Hash64("leaf"));
+		textureSetHashes.emplace_back(cecore::C_Hash64("m"));
+		textureSetHashes.emplace_back(cecore::C_Hash64("question"));
+		textureSetHashes.emplace_back(cecore::C_Hash64("wood"));
+		auto textureSet = graphicsService.LoadTextureSet(textureSetHashes);
+
 		while(!done) {
 			window.UpdateInput();
 			inputService.Update();
@@ -68,6 +81,8 @@ int main(int, char*) {
 
 			graphicsService.Update();
 		}
+
+		graphicsService.ReleaseTextureSet(textureSet);
 	}
 
 	cecore::ServicesStop();

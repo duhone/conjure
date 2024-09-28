@@ -1,6 +1,10 @@
 {
     "textures" : [
             {
+                "name" : "CompletionScreen",
+                "path" : "Graphics/Textures/CompletionScreen.jxl"
+            },
+            {
                 "name" : "brick",
                 "path" : "Graphics/Textures/brick.jxl"
             },

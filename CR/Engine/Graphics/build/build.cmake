@@ -5,6 +5,7 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 ###############################################
 set(INTERFACE_FILES
     ${root}/interface/Graphics.ixx
+    ${root}/interface/HandleTypes.ixx
     ${root}/interface/Service.ixx
 )
 
@@ -82,6 +83,9 @@ target_link_libraries(graphics PUBLIC
 	volk
     vulkan_utilities
     vulkan_vma
+    libjxl
+    highway
+    brotli
 )
 
 set_property(TARGET graphics APPEND PROPERTY FOLDER Engine)
