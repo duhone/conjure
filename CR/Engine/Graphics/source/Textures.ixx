@@ -29,6 +29,7 @@ import <cstring>;
 import <filesystem>;
 import <span>;
 import <thread>;
+import <vector>;
 
 using namespace CR::Engine::Core::Literals;
 
@@ -215,7 +216,8 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 		JxlDecoderReset(g_data->Decoder);
 		JxlDecoderStatus status = JxlDecoderSetCoalescing(g_data->Decoder, JXL_FALSE);
 		CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to set coalescing on jpeg xl decoder");
-		status = JxlDecoderSubscribeEvents(g_data->Decoder, JXL_DEC_BASIC_INFO | JXL_DEC_FRAME);
+		status = JxlDecoderSubscribeEvents(g_data->Decoder,
+		                                   JXL_DEC_BASIC_INFO | JXL_DEC_FRAME | JXL_DEC_FULL_IMAGE);
 		CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to subscribe to events on jpeg xl decoder");
 		status = JxlDecoderSetInput(g_data->Decoder, (const uint8_t*)jxlData.data(), jxlData.size());
 		CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to set input on jpeg xl decoder");
@@ -225,7 +227,18 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 		uint32_t width{};
 		uint32_t height{};
 
+		std::vector<VkBufferImageCopy> frameCopies;
+		VkDeviceSize bufferOffset{};
+		uint32_t nextLayer{};
+		JxlPixelFormat pixelFormat;
+		pixelFormat.num_channels = 4;
+		pixelFormat.data_type    = JXL_TYPE_UINT8;
+		pixelFormat.endianness   = JXL_LITTLE_ENDIAN;
+		pixelFormat.align        = 1;
+
 		JxlDecoderStatus loopStatus{};
+		size_t bufferSize{};
+		uint8_t* outputBuffer = (uint8_t*)g_data->StagingData[stagingBuffer];
 		do {
 			loopStatus = JxlDecoderProcessInput(g_data->Decoder);
 			switch(loopStatus) {
@@ -242,8 +255,50 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 					JxlFrameHeader frameHeader;
 					status = JxlDecoderGetFrameHeader(g_data->Decoder, &frameHeader);
 					CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to get frame header on jpeg xl decoder");
+
+					VkBufferImageCopy& copyInfo              = frameCopies.emplace_back();
+					copyInfo.bufferOffset                    = bufferOffset;
+					copyInfo.bufferRowLength                 = 0;
+					copyInfo.bufferImageHeight               = 0;
+					copyInfo.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+					copyInfo.imageSubresource.mipLevel       = 0;
+					copyInfo.imageSubresource.baseArrayLayer = nextLayer;
+					copyInfo.imageSubresource.layerCount     = 1;
+					copyInfo.imageOffset                     = {0, 0, 0};
+					copyInfo.imageExtent                     = {basicInfo.xsize, basicInfo.ysize, 1};
+
+					status = JxlDecoderImageOutBufferSize(g_data->Decoder, &pixelFormat, &bufferSize);
+					CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to get frame byte size on jpeg xl decoder");
+					CR_ASSERT((bufferOffset + bufferSize) < c_stagingBufferSize,
+					          "Staging buffer too small to hold jpeg xl texture");
+					status =
+					    JxlDecoderSetImageOutBuffer(g_data->Decoder, &pixelFormat, outputBuffer, bufferSize);
+					CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to set output buffer on jpeg xl decoder");
 				} break;
 				case JXL_DEC_FULL_IMAGE:
+					if(basicInfo.alpha_premultiplied == JXL_FALSE) {
+						// we want premultiplied alpha, if not stored that way, then have to do on load
+
+						for(uint32_t i = 0; i < basicInfo.xsize * basicInfo.ysize; ++i) {
+							uint32_t red   = outputBuffer[4 * i + 0];
+							uint32_t green = outputBuffer[4 * i + 1];
+							uint32_t blue  = outputBuffer[4 * i + 2];
+							uint32_t alpha = outputBuffer[4 * i + 3];
+
+							red   = (red * alpha + 127) / 256;
+							green = (green * alpha + 127) / 256;
+							blue  = (blue * alpha + 127) / 256;
+
+							outputBuffer[4 * i + 0] = (uint8_t)std::min<uint32_t>(red, 255);
+							outputBuffer[4 * i + 1] = (uint8_t)std::min<uint32_t>(green, 255);
+							outputBuffer[4 * i + 2] = (uint8_t)std::min<uint32_t>(blue, 255);
+							outputBuffer[4 * i + 3] = (uint8_t)std::min<uint32_t>(alpha, 255);
+						}
+					}
+
+					bufferOffset += bufferSize;
+					outputBuffer += bufferSize;
+					++nextLayer;
 					break;
 				default:
 					break;
