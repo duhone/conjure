@@ -80,6 +80,9 @@ namespace {
 		std::array<uint64_t, cegraph::Constants::c_maxTextures> AssetHashes;
 		std::array<std::string, cegraph::Constants::c_maxTextures> DebugNames;
 		std::array<fs::path, cegraph::Constants::c_maxTextures> Paths;
+		std::array<VkImage, cegraph::Constants::c_maxTextures> Images;
+		std::array<VmaAllocation, cegraph::Constants::c_maxTextures> Allocations;
+		std::array<VkImageView, cegraph::Constants::c_maxTextures> Views;
 		// Should be the union of all used TextureSets
 		TextureSet TexturesLoaded;
 
@@ -306,6 +309,50 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 		} while(loopStatus != JXL_DEC_SUCCESS);
 
 		JxlDecoderReleaseInput(g_data->Decoder);
+
+		VkImageCreateInfo createInfo;
+		ClearStruct(createInfo);
+		createInfo.extent.width  = width;
+		createInfo.extent.height = height;
+		createInfo.extent.depth  = 1;
+		createInfo.arrayLayers   = frameCopies.size();
+		createInfo.mipLevels     = 1;
+		createInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
+		createInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+		createInfo.usage         = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		createInfo.imageType     = VK_IMAGE_TYPE_2D;
+		createInfo.flags         = 0;
+		createInfo.format        = VK_FORMAT_R8G8B8A8_SRGB;
+		createInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
+
+		VmaAllocationCreateInfo allocCreateInfo{};
+		allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+
+		VkImage image{};
+		VmaAllocation imageAlloc{};
+		VkImageView imageView{};
+		VkResult vkResult = vmaCreateImage(g_data->gContext.Allocator, &createInfo, &allocCreateInfo, &image,
+		                                   &imageAlloc, nullptr);
+		CR_ASSERT(status == VK_SUCCESS, "Failed to create vulkan image");
+
+		VkImageViewCreateInfo viewInfo;
+		ClearStruct(viewInfo);
+		viewInfo.image                           = image;
+		viewInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+		viewInfo.format                          = VK_FORMAT_R8G8B8A8_SRGB;
+		viewInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+		viewInfo.subresourceRange.baseMipLevel   = 0;
+		viewInfo.subresourceRange.levelCount     = 1;
+		viewInfo.subresourceRange.baseArrayLayer = 0;
+		viewInfo.subresourceRange.layerCount     = frameCopies.size();
+
+		vkResult = vkCreateImageView(g_data->gContext.Device, &viewInfo, nullptr, &imageView);
+		CR_ASSERT(status == VK_SUCCESS, "Failed to create vulkan image view");
+
+		g_data->Images[texture]      = image;
+		g_data->Allocations[texture] = imageAlloc;
+		g_data->Views[texture]       = imageView;
 	}
 
 	g_data->TexturesLoaded = newCombined;
@@ -322,6 +369,11 @@ void cegraph::Textures::ReleaseTextureSet(Handles::TextureSet set) {
 
 	TextureSet newLoaded = GenerateCombined();
 	TextureSet toUnLoad  = newLoaded ^ g_data->TexturesLoaded;
+
+	for(uint16_t texture : toUnLoad) {
+		vkDestroyImageView(g_data->gContext.Device, g_data->Views[texture], nullptr);
+		vmaDestroyImage(g_data->gContext.Allocator, g_data->Images[texture], g_data->Allocations[texture]);
+	}
 
 	g_data->TexturesLoaded = newLoaded;
 }
