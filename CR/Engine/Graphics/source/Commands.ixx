@@ -6,8 +6,10 @@ module;
 
 export module CR.Engine.Graphics.Commands;
 
-import CR.Engine.Core;
+import CR.Engine.Graphics.Context;
 import CR.Engine.Graphics.Utils;
+
+import CR.Engine.Core;
 
 import <optional>;
 import <span>;
@@ -20,6 +22,10 @@ namespace CR::Engine::Graphics::Commands {
 	export void TransitionToDst(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image, uint32_t a_layerCount);
 	export void CopyBufferToImg(VkCommandBuffer& a_cmdBuffer, const VkBuffer& a_buffer, VkImage& a_image,
 	                            std::span<VkBufferImageCopy> a_copies);
+	export void TransitionToGraphicsQueue(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image,
+	                                      uint32_t a_layerCount);
+	export void TransitionFromTransferQueue(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image,
+	                                        uint32_t a_layerCount);
 }    // namespace CR::Engine::Graphics::Commands
 
 module :private;
@@ -80,4 +86,46 @@ void cegraph::Commands::CopyBufferToImg(VkCommandBuffer& a_cmdBuffer, const VkBu
                                         VkImage& a_image, std::span<VkBufferImageCopy> a_copies) {
 	vkCmdCopyBufferToImage(a_cmdBuffer, a_buffer, a_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 	                       a_copies.size(), a_copies.data());
+}
+
+void cegraph::Commands::TransitionToGraphicsQueue(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image,
+                                                  uint32_t a_layerCount) {
+	VkImageMemoryBarrier barrier;
+	ClearStruct(barrier);
+	barrier.srcAccessMask                   = VK_ACCESS_TRANSFER_WRITE_BIT;
+	barrier.dstAccessMask                   = VK_ACCESS_NONE;
+	barrier.oldLayout                       = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	barrier.newLayout                       = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
+	barrier.srcQueueFamilyIndex             = GetContext().TransferQueueIndex;
+	barrier.dstQueueFamilyIndex             = GetContext().GraphicsQueueIndex;
+	barrier.image                           = a_image;
+	barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount     = a_layerCount;
+	barrier.subresourceRange.baseMipLevel   = 0;
+	barrier.subresourceRange.levelCount     = 1;
+
+	vkCmdPipelineBarrier(a_cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0,
+	                     0, nullptr, 0, nullptr, 1, &barrier);
+}
+
+void cegraph::Commands::TransitionFromTransferQueue(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image,
+                                                    uint32_t a_layerCount) {
+	VkImageMemoryBarrier barrier;
+	ClearStruct(barrier);
+	barrier.srcAccessMask                   = VK_ACCESS_NONE;
+	barrier.dstAccessMask                   = VK_ACCESS_SHADER_READ_BIT;
+	barrier.oldLayout                       = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	barrier.newLayout                       = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
+	barrier.srcQueueFamilyIndex             = GetContext().TransferQueueIndex;
+	barrier.dstQueueFamilyIndex             = GetContext().GraphicsQueueIndex;
+	barrier.image                           = a_image;
+	barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount     = a_layerCount;
+	barrier.subresourceRange.baseMipLevel   = 0;
+	barrier.subresourceRange.levelCount     = 1;
+
+	vkCmdPipelineBarrier(a_cmdBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+	                     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }

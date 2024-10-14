@@ -362,6 +362,7 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 		     frameCopies = std::move(frameCopies)](VkCommandBuffer& cmdBuffer) mutable {
 			    Commands::TransitionToDst(cmdBuffer, image, frameCopies.size());
 			    Commands::CopyBufferToImg(cmdBuffer, buffer, image, frameCopies);
+			    Commands::TransitionToGraphicsQueue(cmdBuffer, image, frameCopies.size());
 		    },
 		    g_data->LoadCompleted[texture]);
 	}
