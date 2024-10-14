@@ -12,9 +12,12 @@
 
 #include "Core.h"
 
+#include <function2/function2.hpp>
+
 export module CR.Engine.Graphics.Textures;
 
 import CR.Engine.Graphics.Constants;
+import CR.Engine.Graphics.Commands;
 import CR.Engine.Graphics.Context;
 import CR.Engine.Graphics.Handles;
 import CR.Engine.Graphics.GraphicsThread;
@@ -34,7 +37,7 @@ import <vector>;
 using namespace CR::Engine::Core::Literals;
 
 export namespace CR::Engine::Graphics::Textures {
-	void Initialize(Context& a_context);
+	void Initialize();
 	void Update();
 	void Shutdown();
 
@@ -68,8 +71,6 @@ namespace {
 	using TextureSet = cecore::BitSet<cegraph::Constants::c_maxTextures>;
 
 	struct Data {
-		cegraph::Context& gContext;
-
 		// Variables for texture sets
 		cecore::BitSet<cegraph::Constants::c_maxTextureSets> TextureSetsUsed;
 		std::array<TextureSet, cegraph::Constants::c_maxTextureSets> TextureSets;
@@ -83,6 +84,7 @@ namespace {
 		std::array<VkImage, cegraph::Constants::c_maxTextures> Images;
 		std::array<VmaAllocation, cegraph::Constants::c_maxTextures> Allocations;
 		std::array<VkImageView, cegraph::Constants::c_maxTextures> Views;
+		std::array<std::atomic_bool, cegraph::Constants::c_maxTextures> LoadCompleted;
 		// Should be the union of all used TextureSets
 		TextureSet TexturesLoaded;
 
@@ -110,9 +112,9 @@ namespace {
 
 }    // namespace
 
-void cegraph::Textures::Initialize(Context& a_context) {
+void cegraph::Textures::Initialize() {
 	CR_ASSERT(g_data == nullptr, "Textures are already initialized");
-	g_data = new Data{a_context};
+	g_data = new Data{};
 
 	auto& assetService   = cecore::GetService<ceasset::Service>();
 	const auto& rootPath = assetService.GetRootPath();
@@ -149,7 +151,7 @@ void cegraph::Textures::Initialize(Context& a_context) {
 		    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
 		VmaAllocationInfo stagingAllocInfo{};
-		vmaCreateBuffer(g_data->gContext.Allocator, &stagingCreateInfo, &stagingAllocCreateInfo,
+		vmaCreateBuffer(GetContext().Allocator, &stagingCreateInfo, &stagingAllocCreateInfo,
 		                &g_data->StagingBuffer[i], &g_data->StagingMemory[i], &stagingAllocInfo);
 		g_data->StagingData[i] = stagingAllocInfo.pMappedData;
 	}
@@ -170,8 +172,8 @@ void cegraph::Textures::Shutdown() {
 	JxlResizableParallelRunnerDestroy(g_data->parRunner);
 	JxlDecoderDestroy(g_data->Decoder);
 
-	vmaDestroyBuffer(g_data->gContext.Allocator, g_data->StagingBuffer[0], g_data->StagingMemory[0]);
-	vmaDestroyBuffer(g_data->gContext.Allocator, g_data->StagingBuffer[1], g_data->StagingMemory[1]);
+	vmaDestroyBuffer(GetContext().Allocator, g_data->StagingBuffer[0], g_data->StagingMemory[0]);
+	vmaDestroyBuffer(GetContext().Allocator, g_data->StagingBuffer[1], g_data->StagingMemory[1]);
 	delete g_data;
 }
 
@@ -332,7 +334,7 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 		VkImage image{};
 		VmaAllocation imageAlloc{};
 		VkImageView imageView{};
-		VkResult vkResult = vmaCreateImage(g_data->gContext.Allocator, &createInfo, &allocCreateInfo, &image,
+		VkResult vkResult = vmaCreateImage(GetContext().Allocator, &createInfo, &allocCreateInfo, &image,
 		                                   &imageAlloc, nullptr);
 		CR_ASSERT(status == VK_SUCCESS, "Failed to create vulkan image");
 
@@ -347,12 +349,21 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount     = frameCopies.size();
 
-		vkResult = vkCreateImageView(g_data->gContext.Device, &viewInfo, nullptr, &imageView);
+		vkResult = vkCreateImageView(GetContext().Device, &viewInfo, nullptr, &imageView);
 		CR_ASSERT(status == VK_SUCCESS, "Failed to create vulkan image view");
 
 		g_data->Images[texture]      = image;
 		g_data->Allocations[texture] = imageAlloc;
 		g_data->Views[texture]       = imageView;
+		g_data->LoadCompleted[texture].store(false, std::memory_order_release);
+
+		GraphicsThread::EnqueueTask(
+		    [image = image, buffer = g_data->StagingBuffer[stagingBuffer],
+		     frameCopies = std::move(frameCopies)](VkCommandBuffer& cmdBuffer) mutable {
+			    Commands::TransitionToDst(cmdBuffer, image, frameCopies.size());
+			    Commands::CopyBufferToImg(cmdBuffer, buffer, image, frameCopies);
+		    },
+		    g_data->LoadCompleted[texture]);
 	}
 
 	g_data->TexturesLoaded = newCombined;
@@ -371,8 +382,8 @@ void cegraph::Textures::ReleaseTextureSet(Handles::TextureSet set) {
 	TextureSet toUnLoad  = newLoaded ^ g_data->TexturesLoaded;
 
 	for(uint16_t texture : toUnLoad) {
-		vkDestroyImageView(g_data->gContext.Device, g_data->Views[texture], nullptr);
-		vmaDestroyImage(g_data->gContext.Allocator, g_data->Images[texture], g_data->Allocations[texture]);
+		vkDestroyImageView(GetContext().Device, g_data->Views[texture], nullptr);
+		vmaDestroyImage(GetContext().Allocator, g_data->Images[texture], g_data->Allocations[texture]);
 	}
 
 	g_data->TexturesLoaded = newLoaded;

@@ -14,6 +14,7 @@ module;
 
 export module CR.Engine.Graphics.Shaders;
 
+import CR.Engine.Graphics.Context;
 import CR.Engine.Graphics.GraphicsThread;
 import CR.Engine.Graphics.Utils;
 
@@ -30,8 +31,7 @@ import <unordered_map>;
 namespace CR::Engine::Graphics {
 	export class Shaders {
 	  public:
-		Shaders() = default;
-		Shaders(VkDevice a_device);
+		Shaders();
 		~Shaders();
 		Shaders(const Shaders&)               = delete;
 		Shaders(Shaders&& a_other)            = delete;
@@ -48,8 +48,6 @@ namespace CR::Engine::Graphics {
 		bool IsReady() const { return m_ready.load(std::memory_order_acquire); }
 
 	  private:
-		VkDevice m_device;
-
 		std::unordered_map<uint64_t, VkShaderModule> m_shaderModules;
 
 		std::atomic_bool m_ready;
@@ -90,7 +88,7 @@ namespace {
 	}
 }    // namespace
 
-cegraph::Shaders::Shaders(VkDevice a_device) : m_device(a_device) {
+cegraph::Shaders::Shaders() {
 	GraphicsThread::EnqueueTask(
 	    [this]() {
 		    auto& assetService   = cecore::GetService<ceasset::Service>();
@@ -111,7 +109,7 @@ cegraph::Shaders::Shaders(VkDevice a_device) : m_device(a_device) {
 			    shaderInfo.codeSize = spirvFile.size();
 
 			    VkShaderModule shaderModule;
-			    auto result = vkCreateShaderModule(m_device, &shaderInfo, nullptr, &shaderModule);
+			    auto result = vkCreateShaderModule(GetContext().Device, &shaderInfo, nullptr, &shaderModule);
 			    CR_ASSERT(result == VK_SUCCESS, "failed to load shader {}", shader->path()->string_view());
 			    m_shaderModules.emplace(cecore::Hash64(shader->name()->string_view()), shaderModule);
 		    }
@@ -122,5 +120,7 @@ cegraph::Shaders::Shaders(VkDevice a_device) : m_device(a_device) {
 }
 
 cegraph::Shaders::~Shaders() {
-	for(const auto& shader : m_shaderModules) { vkDestroyShaderModule(m_device, shader.second, nullptr); }
+	for(const auto& shader : m_shaderModules) {
+		vkDestroyShaderModule(GetContext().Device, shader.second, nullptr);
+	}
 }

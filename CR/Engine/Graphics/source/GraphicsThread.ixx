@@ -27,7 +27,7 @@ namespace CR::Engine::Graphics {
 		using taskSimple_t      = fu2::unique_function<void()>;
 		using taskGPUCommands_t = fu2::unique_function<void(VkCommandBuffer& buffer)>;
 
-		void Initialize(VkDevice a_device, VkQueue& a_transferQueue, uint32_t a_transferQueueFamily);
+		void Initialize(VkQueue& a_transferQueue);
 		void Shutdown();
 
 		// For simple tasks that don't need to issue GPU commands. Compile a shader/ect.
@@ -106,12 +106,11 @@ namespace {
 	}
 }    // namespace
 
-void cegraph::GraphicsThread::Initialize(VkDevice a_device, VkQueue& a_transferQueue,
-                                         uint32_t a_transferQueueFamily) {
+void cegraph::GraphicsThread::Initialize(VkQueue& a_transferQueue) {
 	CR_ASSERT(g_data == nullptr, "GraphicsThread is already initialized");
 	g_data = new Data{a_transferQueue};
 
-	g_data->CommandPool = CommandPool(a_device, a_transferQueueFamily);
+	g_data->CommandPool = CommandPool(GetContext().TransferQueueIndex);
 
 	g_data->Running.store(true, std::memory_order_release);
 	g_data->Thread = std::jthread(ThreadMain);

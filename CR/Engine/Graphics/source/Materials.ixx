@@ -27,8 +27,7 @@ import <vector>;
 namespace CR::Engine::Graphics {
 	export class Materials {
 	  public:
-		Materials() = default;
-		Materials(const Context& a_context);
+		Materials();
 		~Materials();
 		Materials(const Materials&)               = delete;
 		Materials(Materials&& a_other)            = delete;
@@ -40,8 +39,6 @@ namespace CR::Engine::Graphics {
 		bool IsReady() const { return m_ready.load(std::memory_order_acquire); }
 
 	  private:
-		const Context& m_context;
-
 		VkPipelineLayout m_pipeLineLayout;
 		VkDescriptorSetLayout m_descriptorSetLayout;
 		VkSampler m_sampler;
@@ -142,7 +139,7 @@ namespace {
 	}
 }    // namespace
 
-cegraph::Materials::Materials(const Context& a_context) : m_context(a_context) {}
+cegraph::Materials::Materials() {}
 
 void cegraph::Materials::Update(const Shaders& a_shaders, VkRenderPass a_renderPass) {
 	if(IsReady() || m_startedLoad) { return; }
@@ -218,7 +215,7 @@ void cegraph::Materials::Update(const Shaders& a_shaders, VkRenderPass a_renderP
 		    samplerInfo.mipmapMode       = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 		    samplerInfo.anisotropyEnable = false;
 
-		    auto result = vkCreateSampler(m_context.Device, &samplerInfo, nullptr, &m_sampler);
+		    auto result = vkCreateSampler(GetContext().Device, &samplerInfo, nullptr, &m_sampler);
 		    CR_ASSERT(result == VK_SUCCESS, "failed to create a sampler");
 
 		    // Have to pass one sampler per descriptor. but only using one sampler, so just have to duplicate
@@ -239,7 +236,8 @@ void cegraph::Materials::Update(const Shaders& a_shaders, VkRenderPass a_renderP
 		    dslInfo.bindingCount = (uint32_t)std::size(dslBinding);
 		    dslInfo.pBindings    = dslBinding;
 
-		    result = vkCreateDescriptorSetLayout(m_context.Device, &dslInfo, nullptr, &m_descriptorSetLayout);
+		    result =
+		        vkCreateDescriptorSetLayout(GetContext().Device, &dslInfo, nullptr, &m_descriptorSetLayout);
 		    CR_ASSERT(result == VK_SUCCESS, "failed to create a descriptor set layout");
 
 		    VkPipelineLayoutCreateInfo layoutInfo;
@@ -249,7 +247,7 @@ void cegraph::Materials::Update(const Shaders& a_shaders, VkRenderPass a_renderP
 		    layoutInfo.setLayoutCount         = 1;
 		    layoutInfo.pSetLayouts            = &m_descriptorSetLayout;
 
-		    result = vkCreatePipelineLayout(m_context.Device, &layoutInfo, nullptr, &m_pipeLineLayout);
+		    result = vkCreatePipelineLayout(GetContext().Device, &layoutInfo, nullptr, &m_pipeLineLayout);
 		    CR_ASSERT(result == VK_SUCCESS, "failed to create a pipeline layout");
 
 		    VkPipelineInputAssemblyStateCreateInfo vertAssemblyInfo;
@@ -324,7 +322,7 @@ void cegraph::Materials::Update(const Shaders& a_shaders, VkRenderPass a_renderP
 			    pipeInfo.pStages             = shaderPipeInfo;
 			    pipeInfo.renderPass          = a_renderPass;
 
-			    result = vkCreateGraphicsPipelines(m_context.Device, VK_NULL_HANDLE, 1, &pipeInfo, nullptr,
+			    result = vkCreateGraphicsPipelines(GetContext().Device, VK_NULL_HANDLE, 1, &pipeInfo, nullptr,
 			                                       &m_pipelines.emplace_back());
 			    CR_ASSERT(result == VK_SUCCESS, "failed to create a graphics pipeline");
 		    }
@@ -333,8 +331,8 @@ void cegraph::Materials::Update(const Shaders& a_shaders, VkRenderPass a_renderP
 }
 
 cegraph::Materials::~Materials() {
-	for(auto& pipeline : m_pipelines) { vkDestroyPipeline(m_context.Device, pipeline, nullptr); }
-	vkDestroyPipelineLayout(m_context.Device, m_pipeLineLayout, nullptr);
-	vkDestroyDescriptorSetLayout(m_context.Device, m_descriptorSetLayout, nullptr);
-	vkDestroySampler(m_context.Device, m_sampler, nullptr);
+	for(auto& pipeline : m_pipelines) { vkDestroyPipeline(GetContext().Device, pipeline, nullptr); }
+	vkDestroyPipelineLayout(GetContext().Device, m_pipeLineLayout, nullptr);
+	vkDestroyDescriptorSetLayout(GetContext().Device, m_descriptorSetLayout, nullptr);
+	vkDestroySampler(GetContext().Device, m_sampler, nullptr);
 }

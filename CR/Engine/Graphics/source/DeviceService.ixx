@@ -46,11 +46,9 @@ namespace CR::Engine::Graphics {
 		void Stop();
 
 	  private:
-		void FindDevice();
-		void BuildDevice();
-		void CreateSwapChain();
-
-		Context m_context;
+		void FindDevice(Context& context);
+		void BuildDevice(Context& context);
+		void CreateSwapChain(const Context& context);
 
 		ceplat::Window& m_window;
 		glm::ivec2 m_windowSize{0, 0};
@@ -67,8 +65,6 @@ namespace CR::Engine::Graphics {
 		VkQueue m_graphicsQueue;
 		VkQueue m_transferQueue;
 		VkQueue m_presentationQueue;
-		int32_t m_graphicsQueueIndex{-1};
-		int32_t m_transferQueueIndex{-1};
 		int32_t m_presentationQueueIndex{-1};
 
 		// MSAA
@@ -92,6 +88,8 @@ namespace cegraph = CR::Engine::Graphics;
 
 cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<glm::vec4> a_clearColor) :
     m_window(a_window), m_clearColor(a_clearColor) {
+	Context context;
+
 	[[maybe_unused]] auto result = volkInitialize();
 	CR_ASSERT(result == VK_SUCCESS, "Failed to initialize Volk");
 
@@ -128,31 +126,35 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 
 	vkCreateWin32SurfaceKHR(m_instance, &win32Surface, nullptr, &m_primarySurface);
 
-	FindDevice();
-	BuildDevice();
-	volkLoadDevice(m_context.Device);
+	FindDevice(context);
+	BuildDevice(context);
+	volkLoadDevice(context.Device);
 
 	VmaAllocatorCreateInfo allocatorCreateInfo;
 	memset(&allocatorCreateInfo, 0, sizeof(VmaAllocatorCreateInfo));
 	allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_2;
-	allocatorCreateInfo.physicalDevice   = m_context.PhysicalDevice;
-	allocatorCreateInfo.device           = m_context.Device;
+	allocatorCreateInfo.physicalDevice   = context.PhysicalDevice;
+	allocatorCreateInfo.device           = context.Device;
 	allocatorCreateInfo.instance         = m_instance;
 
-	vmaCreateAllocator(&allocatorCreateInfo, &m_context.Allocator);
+	vmaCreateAllocator(&allocatorCreateInfo, &context.Allocator);
 
-	CreateSwapChain();
+	CreateSwapChain(context);
 
-	m_commandPool = CommandPool(m_context.Device, m_graphicsQueueIndex);
-	GraphicsThread::Initialize(m_context.Device, m_transferQueue, m_transferQueueIndex);
-	m_shaders.emplace(m_context.Device);
-	m_materials.emplace(m_context);
-	m_computePipelines.emplace(m_context);
-	Textures::Initialize(m_context);
+	SetContext(context);
+
+	m_commandPool = CommandPool(context.GraphicsQueueIndex);
+	GraphicsThread::Initialize(m_transferQueue);
+	m_shaders.emplace();
+	m_materials.emplace();
+	m_computePipelines.emplace();
+	Textures::Initialize();
 }
 
 void cegraph::DeviceService::Stop() {
-	vkDeviceWaitIdle(m_context.Device);
+	const Context& context = GetContext();
+
+	vkDeviceWaitIdle(context.Device);
 
 	Textures::Shutdown();
 	m_computePipelines.reset();
@@ -163,39 +165,41 @@ void cegraph::DeviceService::Stop() {
 	m_commandPool.ResetAll();
 	m_commandPool = CommandPool();
 
-	vkDestroyFence(m_context.Device, m_frameFence, nullptr);
-	vkDestroySemaphore(m_context.Device, m_renderingFinished, nullptr);
-	for(auto& framebuffer : m_frameBuffers) { vkDestroyFramebuffer(m_context.Device, framebuffer, nullptr); }
+	vkDestroyFence(context.Device, m_frameFence, nullptr);
+	vkDestroySemaphore(context.Device, m_renderingFinished, nullptr);
+	for(auto& framebuffer : m_frameBuffers) { vkDestroyFramebuffer(context.Device, framebuffer, nullptr); }
 
-	vkDestroyRenderPass(m_context.Device, m_renderPass, nullptr);
+	vkDestroyRenderPass(context.Device, m_renderPass, nullptr);
 	for(auto& imageView : m_primarySwapChainImageViews) {
-		vkDestroyImageView(m_context.Device, imageView, nullptr);
+		vkDestroyImageView(context.Device, imageView, nullptr);
 	}
 	m_primarySwapChainImageViews.clear();
 	m_primarySwapChainImages.clear();
 
-	vkDestroyImageView(m_context.Device, m_msaaView, nullptr);
-	vmaDestroyImage(m_context.Allocator, m_msaaImage, m_msaaAlloc);
+	vkDestroyImageView(context.Device, m_msaaView, nullptr);
+	vmaDestroyImage(context.Allocator, m_msaaImage, m_msaaAlloc);
 
-	vkDestroySwapchainKHR(m_context.Device, m_primarySwapChain, nullptr);
+	vkDestroySwapchainKHR(context.Device, m_primarySwapChain, nullptr);
 
-	vmaDestroyAllocator(m_context.Allocator);
+	vmaDestroyAllocator(context.Allocator);
 
-	vkDestroyDevice(m_context.Device, nullptr);
+	vkDestroyDevice(context.Device, nullptr);
 	vkDestroySurfaceKHR(m_instance, m_primarySurface, nullptr);
 	vkDestroyInstance(m_instance, nullptr);
 }
 
 void cegraph::DeviceService::Update() {
+	const Context& context = GetContext();
+
 	m_materials->Update(*m_shaders, m_renderPass);
 	m_computePipelines->Update(*m_shaders);
 	Textures::Update();
 
-	vkAcquireNextImageKHR(m_context.Device, m_primarySwapChain, UINT64_MAX, VK_NULL_HANDLE, m_frameFence,
+	vkAcquireNextImageKHR(context.Device, m_primarySwapChain, UINT64_MAX, VK_NULL_HANDLE, m_frameFence,
 	                      &m_currentFrameBuffer);
 
-	vkWaitForFences(m_context.Device, 1, &m_frameFence, VK_TRUE, UINT64_MAX);
-	vkResetFences(m_context.Device, 1, &m_frameFence);
+	vkWaitForFences(context.Device, 1, &m_frameFence, VK_TRUE, UINT64_MAX);
+	vkResetFences(context.Device, 1, &m_frameFence);
 
 	m_commandPool.ResetAll();
 	auto commandBuffer = m_commandPool.Begin();
@@ -228,7 +232,7 @@ void cegraph::DeviceService::Update() {
 	vkQueueWaitIdle(m_presentationQueue);
 }
 
-void cegraph::DeviceService::FindDevice() {
+void cegraph::DeviceService::FindDevice(Context& context) {
 	std::vector<VkPhysicalDevice> physicalDevices;
 	uint32_t deviceCount{};
 	[[maybe_unused]] auto result = vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
@@ -342,25 +346,25 @@ void cegraph::DeviceService::FindDevice() {
 	}
 
 	if(dedicatedTransfer.has_value()) {
-		m_transferQueueIndex = dedicatedTransfer.value();
+		context.TransferQueueIndex = dedicatedTransfer.value();
 	} else if(!transferQueues.empty()) {
-		m_transferQueueIndex = transferQueues[0];
+		context.TransferQueueIndex = transferQueues[0];
 	} else {
 		CR_LOG("Could not find a valid vulkan transfer queue");
 	}
 
 	if(graphicsAndPresentation.has_value()) {
-		m_graphicsQueueIndex = m_presentationQueueIndex = graphicsAndPresentation.value();
+		context.GraphicsQueueIndex = m_presentationQueueIndex = graphicsAndPresentation.value();
 	} else if(!graphicsQueues.empty() && !presentationQueues.empty()) {
-		m_graphicsQueueIndex     = graphicsQueues[0];
-		m_presentationQueueIndex = presentationQueues[0];
+		context.GraphicsQueueIndex = graphicsQueues[0];
+		m_presentationQueueIndex   = presentationQueues[0];
 	} else {
 		if(graphicsQueues.empty()) { CR_LOG("Could not find a valid vulkan graphics queue"); }
 		if(presentationQueues.empty()) { CR_LOG("Could not find a valid presentation queue"); }
 	}
 
 	CR_LOG("graphics queue family: {} transfer queue index: {} presentation queue index: {}",
-	       m_graphicsQueueIndex, m_transferQueueIndex, m_presentationQueueIndex);
+	       context.GraphicsQueueIndex, context.TransferQueueIndex, m_presentationQueueIndex);
 
 	VkPhysicalDeviceVulkan12Features features12;
 	ClearStruct(features12);
@@ -410,12 +414,12 @@ void cegraph::DeviceService::FindDevice() {
 
 	CR_ASSERT(foundDevice != -1, "Could not find a valid vulkan 1.2 graphics device");
 
-	m_context.PhysicalDevice = physicalDevices[foundDevice];
+	context.PhysicalDevice = physicalDevices[foundDevice];
 }
 
-void cegraph::DeviceService::BuildDevice() {
+void cegraph::DeviceService::BuildDevice(Context& context) {
 	VkPhysicalDeviceMemoryProperties memProps;
-	vkGetPhysicalDeviceMemoryProperties(m_context.PhysicalDevice, &memProps);
+	vkGetPhysicalDeviceMemoryProperties(context.PhysicalDevice, &memProps);
 	for(uint32_t i = 0; i < memProps.memoryHeapCount; ++i) {
 		auto heapSize   = memProps.memoryHeaps[i].size / 1024 / 1024;
 		auto& heapFlags = memProps.memoryHeaps[i].flags;
@@ -471,25 +475,25 @@ void cegraph::DeviceService::BuildDevice() {
 	ClearStruct(queueInfo);
 	std::vector<VkDeviceQueueCreateInfo> queueInfos;
 	queueInfos.reserve(3);
-	queueInfo.queueFamilyIndex = m_graphicsQueueIndex;
+	queueInfo.queueFamilyIndex = context.GraphicsQueueIndex;
 	queueInfo.queueCount       = 1;
 	queueInfo.pQueuePriorities = &graphicsPriority;
 	queueInfos.push_back(queueInfo);
-	++queueIndexMap[m_graphicsQueueIndex];
-	graphicsQueueIndex = queueIndexMap[m_graphicsQueueIndex];
-	if(m_graphicsQueueIndex != m_presentationQueueIndex) {
+	++queueIndexMap[context.GraphicsQueueIndex];
+	graphicsQueueIndex = queueIndexMap[context.GraphicsQueueIndex];
+	if(context.GraphicsQueueIndex != m_presentationQueueIndex) {
 		queueInfo.queueFamilyIndex = m_presentationQueueIndex;
 		queueInfos.push_back(queueInfo);
 		++queueIndexMap[m_presentationQueueIndex];
 	}
 	presentationQueueIndex = queueIndexMap[m_presentationQueueIndex];
-	if(m_graphicsQueueIndex != m_transferQueueIndex) {
-		queueInfo.queueFamilyIndex = m_transferQueueIndex;
+	if(context.GraphicsQueueIndex != context.TransferQueueIndex) {
+		queueInfo.queueFamilyIndex = context.TransferQueueIndex;
 		queueInfo.pQueuePriorities = &transferPriority;
 		queueInfos.push_back(queueInfo);
-		++queueIndexMap[m_transferQueueIndex];
+		++queueIndexMap[context.TransferQueueIndex];
 	}
-	transferQueueIndex = queueIndexMap[m_transferQueueIndex];
+	transferQueueIndex = queueIndexMap[context.TransferQueueIndex];
 
 	std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
@@ -503,20 +507,18 @@ void cegraph::DeviceService::BuildDevice() {
 	createLogDevInfo.enabledExtensionCount   = (uint32_t)size(deviceExtensions);
 	createLogDevInfo.ppEnabledExtensionNames = data(deviceExtensions);
 
-	if(vkCreateDevice(m_context.PhysicalDevice, &createLogDevInfo, nullptr, &m_context.Device) !=
-	   VK_SUCCESS) {
+	if(vkCreateDevice(context.PhysicalDevice, &createLogDevInfo, nullptr, &context.Device) != VK_SUCCESS) {
 		CR_ERROR("Failed to create a vulkan device");
 	}
 
-	vkGetDeviceQueue(m_context.Device, m_graphicsQueueIndex, graphicsQueueIndex, &m_graphicsQueue);
-	vkGetDeviceQueue(m_context.Device, m_presentationQueueIndex, presentationQueueIndex,
-	                 &m_presentationQueue);
-	vkGetDeviceQueue(m_context.Device, m_transferQueueIndex, transferQueueIndex, &m_transferQueue);
+	vkGetDeviceQueue(context.Device, context.GraphicsQueueIndex, graphicsQueueIndex, &m_graphicsQueue);
+	vkGetDeviceQueue(context.Device, m_presentationQueueIndex, presentationQueueIndex, &m_presentationQueue);
+	vkGetDeviceQueue(context.Device, context.TransferQueueIndex, transferQueueIndex, &m_transferQueue);
 }
 
-void cegraph::DeviceService::CreateSwapChain() {
+void cegraph::DeviceService::CreateSwapChain(const Context& context) {
 	VkSurfaceCapabilitiesKHR surfaceCaps;
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_context.PhysicalDevice, m_primarySurface, &surfaceCaps);
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(context.PhysicalDevice, m_primarySurface, &surfaceCaps);
 	CR_LOG("current surface resolution: {}x{}", surfaceCaps.maxImageExtent.width,
 	       surfaceCaps.maxImageExtent.height);
 	CR_LOG("Min image count: {} Max image count: {}", surfaceCaps.minImageCount, surfaceCaps.maxImageCount);
@@ -524,9 +526,9 @@ void cegraph::DeviceService::CreateSwapChain() {
 
 	std::vector<VkSurfaceFormatKHR> surfaceFormats;
 	uint32_t numFormats{};
-	vkGetPhysicalDeviceSurfaceFormatsKHR(m_context.PhysicalDevice, m_primarySurface, &numFormats, nullptr);
+	vkGetPhysicalDeviceSurfaceFormatsKHR(context.PhysicalDevice, m_primarySurface, &numFormats, nullptr);
 	surfaceFormats.resize(numFormats);
-	vkGetPhysicalDeviceSurfaceFormatsKHR(m_context.PhysicalDevice, m_primarySurface, &numFormats,
+	vkGetPhysicalDeviceSurfaceFormatsKHR(context.PhysicalDevice, m_primarySurface, &numFormats,
 	                                     surfaceFormats.data());
 
 	CR_LOG("Supported surface formats:");
@@ -537,10 +539,10 @@ void cegraph::DeviceService::CreateSwapChain() {
 
 	std::vector<VkPresentModeKHR> presentModes;
 	uint32_t numPresModes{};
-	vkGetPhysicalDeviceSurfacePresentModesKHR(m_context.PhysicalDevice, m_primarySurface, &numPresModes,
+	vkGetPhysicalDeviceSurfacePresentModesKHR(context.PhysicalDevice, m_primarySurface, &numPresModes,
 	                                          nullptr);
 	presentModes.resize(numPresModes);
-	vkGetPhysicalDeviceSurfacePresentModesKHR(m_context.PhysicalDevice, m_primarySurface, &numPresModes,
+	vkGetPhysicalDeviceSurfacePresentModesKHR(context.PhysicalDevice, m_primarySurface, &numPresModes,
 	                                          presentModes.data());
 
 	CR_LOG("Presentation modes:");
@@ -573,7 +575,7 @@ void cegraph::DeviceService::CreateSwapChain() {
 		allocCreateInfo.flags                   = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		allocCreateInfo.priority                = 1.0f;
 
-		vmaCreateImage(m_context.Allocator, &msaaCreateInfo, &allocCreateInfo, &m_msaaImage, &m_msaaAlloc,
+		vmaCreateImage(context.Allocator, &msaaCreateInfo, &allocCreateInfo, &m_msaaImage, &m_msaaAlloc,
 		               nullptr);
 
 		VkImageViewCreateInfo viewInfo;
@@ -587,7 +589,7 @@ void cegraph::DeviceService::CreateSwapChain() {
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount     = 1;
 
-		vkCreateImageView(m_context.Device, &viewInfo, nullptr, &m_msaaView);
+		vkCreateImageView(context.Device, &viewInfo, nullptr, &m_msaaView);
 	}
 
 	VkSwapchainCreateInfoKHR swapCreateInfo;
@@ -597,14 +599,15 @@ void cegraph::DeviceService::CreateSwapChain() {
 	swapCreateInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 	swapCreateInfo.imageExtent     = surfaceCaps.maxImageExtent;
 	swapCreateInfo.imageFormat     = VK_FORMAT_B8G8R8A8_SRGB;
-	if(m_graphicsQueueIndex == m_presentationQueueIndex) {
+	if(context.GraphicsQueueIndex == m_presentationQueueIndex) {
 		swapCreateInfo.imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE;
 		swapCreateInfo.queueFamilyIndexCount = 0;
 		swapCreateInfo.pQueueFamilyIndices   = nullptr;
 
 	} else {
-		swapCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-		uint32_t queueFamilyIndices[] = {(uint32_t)m_graphicsQueueIndex, (uint32_t)m_presentationQueueIndex};
+		swapCreateInfo.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
+		uint32_t queueFamilyIndices[]        = {(uint32_t)context.GraphicsQueueIndex,
+		                                        (uint32_t)m_presentationQueueIndex};
 		swapCreateInfo.queueFamilyIndexCount = (uint32_t)std::size(queueFamilyIndices);
 		swapCreateInfo.pQueueFamilyIndices   = std::data(queueFamilyIndices);
 	}
@@ -615,11 +618,11 @@ void cegraph::DeviceService::CreateSwapChain() {
 	swapCreateInfo.surface          = m_primarySurface;
 	swapCreateInfo.imageArrayLayers = 1;
 
-	vkCreateSwapchainKHR(m_context.Device, &swapCreateInfo, nullptr, &m_primarySwapChain);
+	vkCreateSwapchainKHR(context.Device, &swapCreateInfo, nullptr, &m_primarySwapChain);
 	uint32_t numSwapChainImages{};
-	vkGetSwapchainImagesKHR(m_context.Device, m_primarySwapChain, &numSwapChainImages, nullptr);
+	vkGetSwapchainImagesKHR(context.Device, m_primarySwapChain, &numSwapChainImages, nullptr);
 	m_primarySwapChainImages.resize(numSwapChainImages);
-	vkGetSwapchainImagesKHR(m_context.Device, m_primarySwapChain, &numSwapChainImages,
+	vkGetSwapchainImagesKHR(context.Device, m_primarySwapChain, &numSwapChainImages,
 	                        m_primarySwapChainImages.data());
 
 	for(const auto& image : m_primarySwapChainImages) {
@@ -635,7 +638,7 @@ void cegraph::DeviceService::CreateSwapChain() {
 		viewInfo.subresourceRange.baseMipLevel   = 0;
 		viewInfo.subresourceRange.levelCount     = 1;
 		m_primarySwapChainImageViews.emplace_back();
-		vkCreateImageView(m_context.Device, &viewInfo, nullptr, &m_primarySwapChainImageViews.back());
+		vkCreateImageView(context.Device, &viewInfo, nullptr, &m_primarySwapChainImageViews.back());
 	}
 
 	VkAttachmentDescription attatchDescs[2];
@@ -686,7 +689,7 @@ void cegraph::DeviceService::CreateSwapChain() {
 	renderPassInfo.subpassCount    = 1;
 	renderPassInfo.pSubpasses      = &subpassDesc;
 
-	vkCreateRenderPass(m_context.Device, &renderPassInfo, nullptr, &m_renderPass);
+	vkCreateRenderPass(context.Device, &renderPassInfo, nullptr, &m_renderPass);
 
 	for(auto& imageView : m_primarySwapChainImageViews) {
 		VkFramebufferCreateInfo framebufferInfo;
@@ -700,14 +703,14 @@ void cegraph::DeviceService::CreateSwapChain() {
 		framebufferInfo.layers          = 1;
 
 		m_frameBuffers.emplace_back();
-		vkCreateFramebuffer(m_context.Device, &framebufferInfo, nullptr, &m_frameBuffers.back());
+		vkCreateFramebuffer(context.Device, &framebufferInfo, nullptr, &m_frameBuffers.back());
 	}
 
 	VkSemaphoreCreateInfo semInfo;
 	ClearStruct(semInfo);
-	vkCreateSemaphore(m_context.Device, &semInfo, nullptr, &m_renderingFinished);
+	vkCreateSemaphore(context.Device, &semInfo, nullptr, &m_renderingFinished);
 
 	VkFenceCreateInfo fenceInfo;
 	ClearStruct(fenceInfo);
-	vkCreateFence(m_context.Device, &fenceInfo, nullptr, &m_frameFence);
+	vkCreateFence(context.Device, &fenceInfo, nullptr, &m_frameFence);
 }

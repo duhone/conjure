@@ -27,8 +27,7 @@ import <vector>;
 namespace CR::Engine::Graphics {
 	export class ComputePipelines {
 	  public:
-		ComputePipelines() = default;
-		ComputePipelines(const Context& a_context);
+		ComputePipelines();
 		~ComputePipelines();
 		ComputePipelines(const ComputePipelines&)               = delete;
 		ComputePipelines(ComputePipelines&& a_other)            = delete;
@@ -40,8 +39,6 @@ namespace CR::Engine::Graphics {
 		bool IsReady() const { return m_ready.load(std::memory_order_acquire); }
 
 	  private:
-		const Context& m_context;
-
 		VkPipelineLayout m_pipeLineLayout;
 		VkDescriptorSetLayout m_descriptorSetLayout;
 		std::vector<VkPipeline> m_pipelines;
@@ -58,7 +55,7 @@ namespace cecore  = CR::Engine::Core;
 namespace ceplat  = CR::Engine::Platform;
 namespace cegraph = CR::Engine::Graphics;
 
-cegraph::ComputePipelines::ComputePipelines(const Context& a_context) : m_context(a_context) {}
+cegraph::ComputePipelines::ComputePipelines() {}
 
 void cegraph::ComputePipelines::Update(const Shaders& a_shaders) {
 	if(IsReady() || m_startedLoad) { return; }
@@ -103,7 +100,7 @@ void cegraph::ComputePipelines::Update(const Shaders& a_shaders) {
 		    dslInfo.pBindings    = dslBinding;
 
 		    auto result =
-		        vkCreateDescriptorSetLayout(m_context.Device, &dslInfo, nullptr, &m_descriptorSetLayout);
+		        vkCreateDescriptorSetLayout(GetContext().Device, &dslInfo, nullptr, &m_descriptorSetLayout);
 		    CR_ASSERT(result == VK_SUCCESS, "failed to create a descriptor set layout");
 
 		    VkPipelineLayoutCreateInfo layoutInfo;
@@ -113,7 +110,7 @@ void cegraph::ComputePipelines::Update(const Shaders& a_shaders) {
 		    layoutInfo.setLayoutCount         = 1;
 		    layoutInfo.pSetLayouts            = &m_descriptorSetLayout;
 
-		    result = vkCreatePipelineLayout(m_context.Device, &layoutInfo, nullptr, &m_pipeLineLayout);
+		    result = vkCreatePipelineLayout(GetContext().Device, &layoutInfo, nullptr, &m_pipeLineLayout);
 		    CR_ASSERT(result == VK_SUCCESS, "failed to create a pipeline layout");
 
 		    flatbuffers::Parser parser = assetService.GetData(
@@ -136,7 +133,7 @@ void cegraph::ComputePipelines::Update(const Shaders& a_shaders) {
 			    pipeInfo.layout = m_pipeLineLayout;
 			    pipeInfo.stage  = shaderPipeInfo;
 
-			    result = vkCreateComputePipelines(m_context.Device, VK_NULL_HANDLE, 1, &pipeInfo, nullptr,
+			    result = vkCreateComputePipelines(GetContext().Device, VK_NULL_HANDLE, 1, &pipeInfo, nullptr,
 			                                      &m_pipelines.emplace_back());
 			    CR_ASSERT(result == VK_SUCCESS, "failed to create a graphics pipeline");
 		    }
@@ -145,7 +142,7 @@ void cegraph::ComputePipelines::Update(const Shaders& a_shaders) {
 }
 
 cegraph::ComputePipelines::~ComputePipelines() {
-	for(auto& pipeline : m_pipelines) { vkDestroyPipeline(m_context.Device, pipeline, nullptr); }
-	vkDestroyPipelineLayout(m_context.Device, m_pipeLineLayout, nullptr);
-	vkDestroyDescriptorSetLayout(m_context.Device, m_descriptorSetLayout, nullptr);
+	for(auto& pipeline : m_pipelines) { vkDestroyPipeline(GetContext().Device, pipeline, nullptr); }
+	vkDestroyPipelineLayout(GetContext().Device, m_pipeLineLayout, nullptr);
+	vkDestroyDescriptorSetLayout(GetContext().Device, m_descriptorSetLayout, nullptr);
 }

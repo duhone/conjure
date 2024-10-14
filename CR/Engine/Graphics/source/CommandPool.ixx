@@ -7,6 +7,7 @@ module;
 export module CR.Engine.Graphics.CommandPool;
 
 import CR.Engine.Core;
+import CR.Engine.Graphics.Context;
 import CR.Engine.Graphics.Utils;
 
 import <vector>;
@@ -17,11 +18,11 @@ namespace CR::Engine::Graphics {
 	export class CommandPool {
 	  public:
 		CommandPool() = default;
-		CommandPool(VkDevice a_device, uint32_t a_queueFamily);
+		CommandPool(uint32_t a_queueFamily);
 		~CommandPool();
-		CommandPool(const CommandPool&)               = delete;
+		CommandPool(const CommandPool&) = delete;
 		CommandPool(CommandPool&& a_other);
-		CommandPool& operator=(const CommandPool&)    = delete;
+		CommandPool& operator=(const CommandPool&) = delete;
 		CommandPool& operator=(CommandPool&& a_other);
 
 		[[nodiscard]] VkCommandBuffer Begin();
@@ -32,7 +33,6 @@ namespace CR::Engine::Graphics {
 	  private:
 		void AllocateBuffers();
 
-		VkDevice m_device;
 		VkCommandPool m_commandPool{};
 		std::vector<VkCommandBuffer> m_availableBuffers;
 		std::vector<VkCommandBuffer> m_inUseBuffers;
@@ -41,11 +41,10 @@ namespace CR::Engine::Graphics {
 	inline CommandPool::CommandPool(CommandPool&& a_other) {
 		*this = std::move(a_other);
 	}
-		
+
 	CommandPool& CommandPool::operator=(CommandPool&& a_other) {
 		this->~CommandPool();
-		m_device = a_other.m_device;
-		m_commandPool = a_other.m_commandPool;
+		m_commandPool      = a_other.m_commandPool;
 		m_availableBuffers = std::move(a_other.m_availableBuffers);
 		m_inUseBuffers     = std::move(a_other.m_inUseBuffers);
 
@@ -59,12 +58,12 @@ module :private;
 
 namespace cegraph = CR::Engine::Graphics;
 
-cegraph::CommandPool::CommandPool(VkDevice a_device, uint32_t a_queueFamily) : m_device(a_device) {
+cegraph::CommandPool::CommandPool(uint32_t a_queueFamily) {
 	VkCommandPoolCreateInfo poolInfo;
 	ClearStruct(poolInfo);
 	poolInfo.flags            = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 	poolInfo.queueFamilyIndex = a_queueFamily;
-	auto result               = vkCreateCommandPool(a_device, &poolInfo, nullptr, &m_commandPool);
+	auto result               = vkCreateCommandPool(GetContext().Device, &poolInfo, nullptr, &m_commandPool);
 	CR_ASSERT(result == VK_SUCCESS, "Failed to create a vulkan command pool");
 
 	AllocateBuffers();
@@ -74,7 +73,7 @@ cegraph::CommandPool::~CommandPool() {
 	if(m_commandPool) {
 		CR_ASSERT(m_inUseBuffers.empty(), "vulkan command buffers are still in use")
 		// will free all command buffers as well
-		vkDestroyCommandPool(m_device, m_commandPool, nullptr);
+		vkDestroyCommandPool(GetContext().Device, m_commandPool, nullptr);
 	}
 }
 
@@ -89,8 +88,8 @@ void cegraph::CommandPool::AllocateBuffers() {
 
 	uint32_t newBufferOffset = (uint32_t)m_availableBuffers.size();
 	m_availableBuffers.resize(m_availableBuffers.size() + c_bufferGrowth);
-	auto result =
-	    vkAllocateCommandBuffers(m_device, &bufferInfo, m_availableBuffers.data() + newBufferOffset);
+	auto result = vkAllocateCommandBuffers(GetContext().Device, &bufferInfo,
+	                                       m_availableBuffers.data() + newBufferOffset);
 	CR_ASSERT(result == VK_SUCCESS, "Failed to allocate some vulkan command buffers");
 }
 
@@ -115,7 +114,7 @@ void cegraph::CommandPool::End(VkCommandBuffer a_buffer) {
 }
 
 void cegraph::CommandPool::ResetAll() {
-	auto result = vkResetCommandPool(m_device, m_commandPool, 0);
+	auto result = vkResetCommandPool(GetContext().Device, m_commandPool, 0);
 	CR_ASSERT(result == VK_SUCCESS, "Failed to reset a command pool");
 
 	m_availableBuffers.insert(m_availableBuffers.end(), m_inUseBuffers.begin(), m_inUseBuffers.end());
