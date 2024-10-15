@@ -26,6 +26,9 @@ namespace CR::Engine::Graphics::Commands {
 	                                      uint32_t a_layerCount);
 	export void TransitionFromTransferQueue(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image,
 	                                        uint32_t a_layerCount);
+
+	export void TransitionToReadOptimal(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image,
+	                                    uint32_t a_layerCount);
 }    // namespace CR::Engine::Graphics::Commands
 
 module :private;
@@ -95,7 +98,7 @@ void cegraph::Commands::TransitionToGraphicsQueue(VkCommandBuffer& a_cmdBuffer, 
 	barrier.srcAccessMask                   = VK_ACCESS_TRANSFER_WRITE_BIT;
 	barrier.dstAccessMask                   = VK_ACCESS_NONE;
 	barrier.oldLayout                       = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	barrier.newLayout                       = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
+	barrier.newLayout                       = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	barrier.srcQueueFamilyIndex             = GetContext().TransferQueueIndex;
 	barrier.dstQueueFamilyIndex             = GetContext().GraphicsQueueIndex;
 	barrier.image                           = a_image;
@@ -116,7 +119,7 @@ void cegraph::Commands::TransitionFromTransferQueue(VkCommandBuffer& a_cmdBuffer
 	barrier.srcAccessMask                   = VK_ACCESS_NONE;
 	barrier.dstAccessMask                   = VK_ACCESS_SHADER_READ_BIT;
 	barrier.oldLayout                       = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-	barrier.newLayout                       = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
+	barrier.newLayout                       = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	barrier.srcQueueFamilyIndex             = GetContext().TransferQueueIndex;
 	barrier.dstQueueFamilyIndex             = GetContext().GraphicsQueueIndex;
 	barrier.image                           = a_image;
@@ -128,4 +131,25 @@ void cegraph::Commands::TransitionFromTransferQueue(VkCommandBuffer& a_cmdBuffer
 
 	vkCmdPipelineBarrier(a_cmdBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 	                     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+}
+
+void cegraph::Commands::TransitionToReadOptimal(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image,
+                                                uint32_t a_layerCount) {
+	VkImageMemoryBarrier barrier;
+	ClearStruct(barrier);
+	barrier.srcAccessMask                   = VK_ACCESS_TRANSFER_WRITE_BIT;
+	barrier.dstAccessMask                   = VK_ACCESS_SHADER_READ_BIT;
+	barrier.oldLayout                       = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	barrier.newLayout                       = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image                           = a_image;
+	barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount     = a_layerCount;
+	barrier.subresourceRange.baseMipLevel   = 0;
+	barrier.subresourceRange.levelCount     = 1;
+
+	vkCmdPipelineBarrier(a_cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+	                     0, 0, nullptr, 0, nullptr, 1, &barrier);
 }

@@ -38,7 +38,8 @@ using namespace CR::Engine::Core::Literals;
 
 export namespace CR::Engine::Graphics::Textures {
 	void Initialize();
-	void Update();
+	// should be first thing in command buffer. for sure before the renderpass begins
+	void Update(VkCommandBuffer a_cmdBuffer);
 	void Shutdown();
 
 	Handles::Texture GetHandle(uint64_t hash);
@@ -84,7 +85,9 @@ namespace {
 		std::array<VkImage, cegraph::Constants::c_maxTextures> Images;
 		std::array<VmaAllocation, cegraph::Constants::c_maxTextures> Allocations;
 		std::array<VkImageView, cegraph::Constants::c_maxTextures> Views;
-		std::array<std::atomic_bool, cegraph::Constants::c_maxTextures> LoadCompleted;
+		std::array<uint16_t, cegraph::Constants::c_maxTextures> NumFrames;
+		cecore::BitSet<cegraph::Constants::c_maxTextures> NeedsTransferBarrier;
+
 		// Should be the union of all used TextureSets
 		TextureSet TexturesLoaded;
 
@@ -203,6 +206,12 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 	TextureSet toLoad      = newCombined ^ g_data->TexturesLoaded;
 
 	uint32_t stagingBuffer{};
+	std::atomic_bool loadComplete[2];
+	loadComplete[0].store(true, std::memory_order_release);
+	loadComplete[1].store(true, std::memory_order_release);
+
+	bool dedicatedTransfer = GetContext().TransferQueueIndex != GetContext().GraphicsQueueIndex;
+
 	for(uint16_t texture : toLoad) {
 		CR_ASSERT(g_data->Used.contains(texture), "Tried to load a texture that doesn't exist");
 
@@ -240,6 +249,9 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 		pixelFormat.data_type    = JXL_TYPE_UINT8;
 		pixelFormat.endianness   = JXL_LITTLE_ENDIAN;
 		pixelFormat.align        = 1;
+
+		loadComplete[stagingBuffer].wait(false, std::memory_order_acquire);
+		loadComplete[stagingBuffer].store(false, std::memory_order_release);
 
 		JxlDecoderStatus loopStatus{};
 		size_t bufferSize{};
@@ -312,12 +324,14 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 
 		JxlDecoderReleaseInput(g_data->Decoder);
 
+		g_data->NumFrames[texture] = frameCopies.size();
+
 		VkImageCreateInfo createInfo;
 		ClearStruct(createInfo);
 		createInfo.extent.width  = width;
 		createInfo.extent.height = height;
 		createInfo.extent.depth  = 1;
-		createInfo.arrayLayers   = frameCopies.size();
+		createInfo.arrayLayers   = g_data->NumFrames[texture];
 		createInfo.mipLevels     = 1;
 		createInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
 		createInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
@@ -347,7 +361,7 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 		viewInfo.subresourceRange.baseMipLevel   = 0;
 		viewInfo.subresourceRange.levelCount     = 1;
 		viewInfo.subresourceRange.baseArrayLayer = 0;
-		viewInfo.subresourceRange.layerCount     = frameCopies.size();
+		viewInfo.subresourceRange.layerCount     = g_data->NumFrames[texture];
 
 		vkResult = vkCreateImageView(GetContext().Device, &viewInfo, nullptr, &imageView);
 		CR_ASSERT(status == VK_SUCCESS, "Failed to create vulkan image view");
@@ -355,17 +369,31 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 		g_data->Images[texture]      = image;
 		g_data->Allocations[texture] = imageAlloc;
 		g_data->Views[texture]       = imageView;
-		g_data->LoadCompleted[texture].store(false, std::memory_order_release);
 
+		// setting again, mostly just want the memory barrier. be sure task see latest on all our variables.
+		loadComplete[stagingBuffer].store(false, std::memory_order_release);
 		GraphicsThread::EnqueueTask(
-		    [image = image, buffer = g_data->StagingBuffer[stagingBuffer],
+		    [dedicatedTransfer = dedicatedTransfer, texture = texture, image = image,
+		     buffer      = g_data->StagingBuffer[stagingBuffer],
 		     frameCopies = std::move(frameCopies)](VkCommandBuffer& cmdBuffer) mutable {
-			    Commands::TransitionToDst(cmdBuffer, image, frameCopies.size());
+			    Commands::TransitionToDst(cmdBuffer, image, g_data->NumFrames[texture]);
 			    Commands::CopyBufferToImg(cmdBuffer, buffer, image, frameCopies);
-			    Commands::TransitionToGraphicsQueue(cmdBuffer, image, frameCopies.size());
+			    if(dedicatedTransfer) {
+				    Commands::TransitionToGraphicsQueue(cmdBuffer, image, g_data->NumFrames[texture]);
+			    } else {
+				    Commands::TransitionToReadOptimal(cmdBuffer, image, g_data->NumFrames[texture]);
+			    }
 		    },
-		    g_data->LoadCompleted[texture]);
+		    loadComplete[stagingBuffer]);
+
+		if(dedicatedTransfer) { g_data->NeedsTransferBarrier.insert(texture); }
+
+		stagingBuffer = (stagingBuffer + 1) % 2;
 	}
+
+	// wait for last of remaining loads to finish.
+	loadComplete[0].wait(false, std::memory_order_acquire);
+	loadComplete[1].wait(false, std::memory_order_acquire);
 
 	g_data->TexturesLoaded = newCombined;
 	return Handles::TextureSet(result);
@@ -383,6 +411,8 @@ void cegraph::Textures::ReleaseTextureSet(Handles::TextureSet set) {
 	TextureSet toUnLoad  = newLoaded ^ g_data->TexturesLoaded;
 
 	for(uint16_t texture : toUnLoad) {
+		g_data->NeedsTransferBarrier.erase(texture);
+
 		vkDestroyImageView(GetContext().Device, g_data->Views[texture], nullptr);
 		vmaDestroyImage(GetContext().Allocator, g_data->Images[texture], g_data->Allocations[texture]);
 	}
@@ -390,6 +420,11 @@ void cegraph::Textures::ReleaseTextureSet(Handles::TextureSet set) {
 	g_data->TexturesLoaded = newLoaded;
 }
 
-void cegraph::Textures::Update() {
+void cegraph::Textures::Update(VkCommandBuffer a_cmdBuffer) {
 	CR_ASSERT(g_data != nullptr, "Textures not initialized");
+
+	for(uint16_t texture : g_data->NeedsTransferBarrier) {
+		Commands::TransitionFromTransferQueue(a_cmdBuffer, g_data->Images[texture],
+		                                      g_data->NumFrames[texture]);
+	}
 }

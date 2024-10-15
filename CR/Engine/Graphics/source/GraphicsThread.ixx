@@ -93,12 +93,14 @@ namespace {
 				g_data->CommandPool.ResetAll();
 
 				request.Completed->store(true, std::memory_order_release);
+				request.Completed->notify_one();
 				request = Request{};
 
 			} else if(request.SimpleTask) {
 				// CR_ASSERT(request.Completed != nullptr, "Completed should never be null");
 				request.SimpleTask();
 				request.Completed->store(true, std::memory_order_release);
+				request.Completed->notify_one();
 				request = Request{};
 			}
 		}

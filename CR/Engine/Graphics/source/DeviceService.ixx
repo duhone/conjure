@@ -193,7 +193,6 @@ void cegraph::DeviceService::Update() {
 
 	m_materials->Update(*m_shaders, m_renderPass);
 	m_computePipelines->Update(*m_shaders);
-	Textures::Update();
 
 	vkAcquireNextImageKHR(context.Device, m_primarySwapChain, UINT64_MAX, VK_NULL_HANDLE, m_frameFence,
 	                      &m_currentFrameBuffer);
@@ -203,6 +202,9 @@ void cegraph::DeviceService::Update() {
 
 	m_commandPool.ResetAll();
 	auto commandBuffer = m_commandPool.Begin();
+
+	Textures::Update(commandBuffer);
+
 	Commands::RenderPassBegin(commandBuffer, m_renderPass, m_frameBuffers[m_currentFrameBuffer], m_windowSize,
 	                          m_clearColor);
 	Commands::RenderPassEnd(commandBuffer);
