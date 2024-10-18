@@ -21,6 +21,7 @@ set(SOURCE_FILES
     ${root}/source/Materials.ixx
     ${root}/source/Shaders.ixx
     ${root}/source/Textures.ixx
+    ${root}/source/UniformBuffers.ixx
     ${root}/source/Utils.ixx
     ${root}/source/VkMemAllocator.cpp
 )

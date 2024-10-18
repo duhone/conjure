@@ -16,6 +16,7 @@ import CR.Engine.Graphics.GraphicsThread;
 import CR.Engine.Graphics.Materials;
 import CR.Engine.Graphics.Shaders;
 import CR.Engine.Graphics.Textures;
+import CR.Engine.Graphics.UniformBuffers;
 import CR.Engine.Graphics.Utils;
 
 import <algorithm>;
@@ -149,6 +150,7 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 	m_materials.emplace();
 	m_computePipelines.emplace();
 	Textures::Initialize();
+	UniformBuffers::Initialize();
 }
 
 void cegraph::DeviceService::Stop() {
@@ -156,6 +158,7 @@ void cegraph::DeviceService::Stop() {
 
 	vkDeviceWaitIdle(context.Device);
 
+	UniformBuffers::Shutdown();
 	Textures::Shutdown();
 	m_computePipelines.reset();
 	m_materials.reset();
@@ -204,6 +207,7 @@ void cegraph::DeviceService::Update() {
 	auto commandBuffer = m_commandPool.Begin();
 
 	Textures::Update(commandBuffer);
+	UniformBuffers::Update();
 
 	Commands::RenderPassBegin(commandBuffer, m_renderPass, m_frameBuffers[m_currentFrameBuffer], m_windowSize,
 	                          m_clearColor);
