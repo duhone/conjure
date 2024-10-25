@@ -18,6 +18,7 @@ import CR.Engine.Graphics.Shaders;
 import CR.Engine.Graphics.Textures;
 import CR.Engine.Graphics.UniformBuffers;
 import CR.Engine.Graphics.Utils;
+import CR.Engine.Graphics.VertexBuffers;
 
 import <algorithm>;
 import <optional>;
@@ -151,6 +152,7 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 	m_computePipelines.emplace();
 	Textures::Initialize();
 	UniformBuffers::Initialize();
+	VertexBuffers::Initialize();
 }
 
 void cegraph::DeviceService::Stop() {
@@ -158,6 +160,7 @@ void cegraph::DeviceService::Stop() {
 
 	vkDeviceWaitIdle(context.Device);
 
+	VertexBuffers::Shutdown();
 	UniformBuffers::Shutdown();
 	Textures::Shutdown();
 	m_computePipelines.reset();

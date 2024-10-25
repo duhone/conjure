@@ -19,11 +19,14 @@ set(SOURCE_FILES
     ${root}/source/ComputePipelines.ixx
     ${root}/source/Formats.ixx
     ${root}/source/GraphicsThread.ixx
+    ${root}/source/InternalHandles.ixx
     ${root}/source/Materials.ixx
     ${root}/source/Shaders.ixx
     ${root}/source/Textures.ixx
     ${root}/source/UniformBuffers.ixx
     ${root}/source/Utils.ixx
+    ${root}/source/VertexLayout.ixx
+    ${root}/source/VertexBuffers.ixx
     ${root}/source/VkMemAllocator.cpp
 )
 
