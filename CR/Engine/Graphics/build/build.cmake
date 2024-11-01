@@ -7,6 +7,7 @@ set(INTERFACE_FILES
     ${root}/interface/Graphics.ixx
     ${root}/interface/HandleTypes.ixx
     ${root}/interface/Service.ixx
+    ${root}/interface/Sprites.ixx
 )
 
 set(SOURCE_FILES
@@ -23,6 +24,8 @@ set(SOURCE_FILES
     ${root}/source/InternalHandles.ixx
     ${root}/source/Materials.ixx
     ${root}/source/Shaders.ixx
+    ${root}/source/Sprites.cpp
+    ${root}/source/SpritesInternal.ixx
     ${root}/source/Textures.ixx
     ${root}/source/UniformBuffers.ixx
     ${root}/source/Utils.ixx

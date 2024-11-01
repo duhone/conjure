@@ -16,6 +16,7 @@ import CR.Engine.Graphics.DescriptorPool;
 import CR.Engine.Graphics.GraphicsThread;
 import CR.Engine.Graphics.Materials;
 import CR.Engine.Graphics.Shaders;
+import CR.Engine.Graphics.SpritesInternal;
 import CR.Engine.Graphics.Textures;
 import CR.Engine.Graphics.UniformBuffers;
 import CR.Engine.Graphics.Utils;
@@ -155,6 +156,7 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 	UniformBuffers::Initialize();
 	VertexBuffers::Initialize();
 	DescriptorPool::Initialize();
+	Sprites::Initialize();
 }
 
 void cegraph::DeviceService::Stop() {
@@ -162,6 +164,7 @@ void cegraph::DeviceService::Stop() {
 
 	vkDeviceWaitIdle(context.Device);
 
+	Sprites::Shutdown();
 	DescriptorPool::Shutdown();
 	VertexBuffers::Shutdown();
 	UniformBuffers::Shutdown();
