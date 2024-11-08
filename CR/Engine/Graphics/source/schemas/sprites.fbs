@@ -1,0 +1,13 @@
+namespace CR.Engine.Graphics.Flatbuffers;
+
+table Sprite{
+	name:string;
+	texture:string;
+	frame_rate_divisor:uint8 = 1;
+}
+ 
+table Sprites {
+  sprites:[Sprite];
+}
+
+root_type Sprites;

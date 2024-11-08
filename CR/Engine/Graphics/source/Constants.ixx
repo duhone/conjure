@@ -9,4 +9,7 @@ export namespace CR::Engine::Graphics::Constants {
 	// can be larger if needed. just have to have some max.
 	inline constexpr uint32_t c_maxTexturesInASet = 256;
 	inline constexpr int32_t c_maxTextures        = c_maxTexturesInASet * c_maxTextureSets;
+	// can handle up to 64K if needed, some things(bitset, ect) probably need some work though. This is total
+	// number created in "world", not number rendered, or the number of "templates" in sprites.json.
+	inline constexpr int32_t c_maxSprites = 4096;
 }    // namespace CR::Engine::Graphics::Constants

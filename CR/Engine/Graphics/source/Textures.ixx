@@ -46,6 +46,8 @@ export namespace CR::Engine::Graphics::Textures {
 	Handles::TextureSet LoadTextureSet(std::span<uint64_t> hashes);
 	void ReleaseTextureSet(Handles::TextureSet set);
 
+	// can only get this for loaded textures
+	uint32_t GetNumFrames(Handles::Texture a_texture);
 }    // namespace CR::Engine::Graphics::Textures
 
 module :private;
@@ -427,4 +429,12 @@ void cegraph::Textures::Update(VkCommandBuffer a_cmdBuffer) {
 		Commands::TransitionFromTransferQueue(a_cmdBuffer, g_data->Images[texture],
 		                                      g_data->NumFrames[texture]);
 	}
+}
+
+uint32_t cegraph::Textures::GetNumFrames(Handles::Texture a_texture) {
+	CR_ASSERT(g_data != nullptr, "Textures not initialized");
+	CR_ASSERT(g_data->TexturesLoaded.contains(a_texture.asInt()),
+	          "Texture not loaded, cant get number of frames");
+
+	return g_data->NumFrames[a_texture.asInt()];
 }

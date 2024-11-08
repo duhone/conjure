@@ -48,6 +48,7 @@ set(SCHEMA_FILES
     ${root}/source/schemas/computePipelines.fbs
     ${root}/source/schemas/materials.fbs
     ${root}/source/schemas/shaders.fbs
+    ${root}/source/schemas/sprites.fbs
     ${root}/source/schemas/textures.fbs
 )
 
@@ -55,6 +56,7 @@ set(GENERATED_FILES
   ${generated_root}/graphics/computePipelines_generated.h
   ${generated_root}/graphics/materials_generated.h
   ${generated_root}/graphics/shaders_generated.h
+  ${generated_root}/graphics/sprites_generated.h
   ${generated_root}/graphics/textures_generated.h
 )
 
@@ -79,6 +81,7 @@ file(MAKE_DIRECTORY ${generated_root}/graphics)
 compileFlatbuffersSchema(graphics materials)
 compileFlatbuffersSchema(graphics computePipelines)
 compileFlatbuffersSchema(graphics shaders)
+compileFlatbuffersSchema(graphics sprites)
 compileFlatbuffersSchema(graphics textures)
 
 target_link_libraries(graphics PUBLIC
