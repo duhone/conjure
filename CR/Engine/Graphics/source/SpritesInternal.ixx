@@ -7,6 +7,7 @@ module;
 #include <core/Log.h>
 
 #include "ankerl/unordered_dense.h"
+#include <glm/glm.hpp>
 
 export module CR.Engine.Graphics.SpritesInternal;
 
@@ -16,12 +17,16 @@ import CR.Engine.Graphics.Handles;
 import CR.Engine.Assets;
 import CR.Engine.Core;
 
+import <array>;
+import <span>;
 import <vector>;
 
 export namespace CR::Engine::Graphics::Sprites {
 	// public API
-	Handles::Sprite CreateInternal();
+	Handles::Sprite CreateInternal(uint64_t a_hash);
 	void DeleteInternal(Handles::Sprite a_sprite);
+	void SetPositionsInternal(std::span<Handles::Sprite> a_sprites, std::span<glm::vec2> a_positions);
+	void SetRotationsInternal(std::span<Handles::Sprite> a_sprites, std::span<float> a_rotations);
 
 	void Initialize();
 	void Shutdown();
@@ -37,6 +42,8 @@ namespace cegraph = CR::Engine::Graphics;
 namespace {
 	struct Data {
 		cecore::BitSet<cegraph::Constants::c_maxSprites> Used;
+		std::array<glm::vec2, cegraph::Constants::c_maxSprites> Positions;
+		std::array<float, cegraph::Constants::c_maxSprites> Rotations;
 
 		// templates
 		std::vector<std::string> TemplateNames;
@@ -48,7 +55,7 @@ namespace {
 	Data* g_data = nullptr;
 }    // namespace
 
-cegraph::Handles::Sprite cegraph::Sprites::CreateInternal() {
+cegraph::Handles::Sprite cegraph::Sprites::CreateInternal(uint64_t a_hash) {
 	cegraph::Handles::Sprite result{g_data->Used.FindNotInSet()};
 	CR_ASSERT(result.isValid(), "ran out of Sprites");
 	g_data->Used.insert(result.asInt());
@@ -92,4 +99,22 @@ void cegraph::Sprites::Shutdown() {
 	CR_ASSERT(g_data->Used.empty(), "Sprites weren't all freed before shutdown");
 
 	delete g_data;
+}
+
+void cegraph::Sprites::SetPositionsInternal(std::span<Handles::Sprite> a_sprites,
+                                            std::span<glm::vec2> a_positions) {
+	CR_ASSERT(g_data != nullptr, "Sprites are shutdown");
+	CR_ASSERT(a_sprites.size() == a_positions.size(), "Sprites SetPositionsInternal bad arguments");
+	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
+		CR_ASSERT(g_data->Used.contains(a_sprites[i].asInt()), "Sprite doesn't exist");
+	}
+}
+
+void cegraph::Sprites::SetRotationsInternal(std::span<Handles::Sprite> a_sprites,
+                                            std::span<float> a_rotations) {
+	CR_ASSERT(g_data != nullptr, "Sprites are shutdown");
+	CR_ASSERT(a_sprites.size() == a_rotations.size(), "Sprites SetRotationsInternal bad arguments");
+	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
+		CR_ASSERT(g_data->Used.contains(a_sprites[i].asInt()), "Sprite doesn't exist");
+	}
 }

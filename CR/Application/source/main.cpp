@@ -73,15 +73,27 @@ int main(int, char*) {
 		textureSetHashes.emplace_back(cecore::C_Hash64("wood"));
 		auto textureSet = graphicsService.LoadTextureSet(textureSetHashes);
 
+		std::vector<cegraph::Handles::Sprite> sprites;
+		std::vector<glm::vec2> spritePositions;
+		std::vector<float> spriteRotations;
+		sprites.emplace_back(cegraph::Sprites::Create(cecore::C_Hash64("brick")));
+		spritePositions.emplace_back(glm::vec2{1024.0f, 512.0f});
+		cegraph::Sprites::SetPositions(sprites, spritePositions);
+		spriteRotations.emplace_back(0.0f);
+
 		while(!done) {
 			window.UpdateInput();
 			inputService.Update();
+
+			spriteRotations[0] += 0.01f;
+			cegraph::Sprites::SetRotations(sprites, spriteRotations);
 
 			if(regions.GetActive() == region && regions.WasActiveClicked()) { fanfareFX.Play(); }
 
 			graphicsService.Update();
 		}
 
+		cegraph::Sprites::Delete(sprites[0]);
 		graphicsService.ReleaseTextureSet(textureSet);
 	}
 
