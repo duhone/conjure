@@ -76,10 +76,16 @@ int main(int, char*) {
 		std::vector<cegraph::Handles::Sprite> sprites;
 		std::vector<glm::vec2> spritePositions;
 		std::vector<float> spriteRotations;
-		sprites.emplace_back(cegraph::Sprites::Create(cecore::C_Hash64("brick")));
-		spritePositions.emplace_back(glm::vec2{1024.0f, 512.0f});
-		cegraph::Sprites::SetPositions(sprites, spritePositions);
-		spriteRotations.emplace_back(0.0f);
+
+		{
+			std::vector<uint64_t> spriteHashes;
+			spriteHashes.emplace_back(cecore::C_Hash64("brick"));
+			sprites.resize(spriteHashes.size());
+			cegraph::Sprites::Create(spriteHashes, sprites);
+			spritePositions.emplace_back(glm::vec2{1024.0f, 512.0f});
+			cegraph::Sprites::SetPositions(sprites, spritePositions);
+			spriteRotations.emplace_back(0.0f);
+		}
 
 		while(!done) {
 			window.UpdateInput();
@@ -93,7 +99,7 @@ int main(int, char*) {
 			graphicsService.Update();
 		}
 
-		cegraph::Sprites::Delete(sprites[0]);
+		cegraph::Sprites::Delete(sprites);
 		graphicsService.ReleaseTextureSet(textureSet);
 	}
 

@@ -8,12 +8,12 @@ import CR.Engine.Graphics.SpritesInternal;
 
 namespace cegraph = CR::Engine::Graphics;
 
-cegraph::Handles::Sprite cegraph::Sprites::Create(uint64_t a_hash) {
-	return cegraph::Sprites::CreateInternal(a_hash);
+void cegraph::Sprites::Create(std::span<uint64_t> a_hashes, std::span<Handles::Sprite> handles) {
+	cegraph::Sprites::CreateInternal(a_hashes, handles);
 }
 
-void cegraph::Sprites::Delete(cegraph::Handles::Sprite a_sprite) {
-	cegraph::Sprites::DeleteInternal(a_sprite);
+void cegraph::Sprites::Delete(std::span<Handles::Sprite> a_sprites) {
+	cegraph::Sprites::DeleteInternal(a_sprites);
 }
 
 void cegraph::Sprites::SetPositions(std::span<Handles::Sprite> a_sprites, std::span<glm::vec2> a_positions) {

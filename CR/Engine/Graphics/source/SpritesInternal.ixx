@@ -23,8 +23,8 @@ import <vector>;
 
 export namespace CR::Engine::Graphics::Sprites {
 	// public API
-	Handles::Sprite CreateInternal(uint64_t a_hash);
-	void DeleteInternal(Handles::Sprite a_sprite);
+	void CreateInternal(std::span<uint64_t> a_hashes, std::span<Handles::Sprite> handles);
+	void DeleteInternal(std::span<Handles::Sprite> a_sprites);
 	void SetPositionsInternal(std::span<Handles::Sprite> a_sprites, std::span<glm::vec2> a_positions);
 	void SetRotationsInternal(std::span<Handles::Sprite> a_sprites, std::span<float> a_rotations);
 
@@ -55,17 +55,26 @@ namespace {
 	Data* g_data = nullptr;
 }    // namespace
 
-cegraph::Handles::Sprite cegraph::Sprites::CreateInternal(uint64_t a_hash) {
+void cegraph::Sprites::CreateInternal(std::span<uint64_t> a_hashes, std::span<Handles::Sprite> handles) {
+	CR_ASSERT(a_hashes.size() == handles.size(), "bad arguments");
+	auto available = ~g_data->Used;
 	cegraph::Handles::Sprite result{g_data->Used.FindNotInSet()};
-	CR_ASSERT(result.isValid(), "ran out of Sprites");
-	g_data->Used.insert(result.asInt());
+	CR_ASSERT(available.size() >= a_hashes.size(), "ran out of Sprites");
 
-	return result;
+	auto nextAvailable = available.begin();
+
+	for(uint32_t i = 0; i < a_hashes.size(); ++i) {
+		g_data->Used.insert(*nextAvailable);
+		handles[i] = Handles::Sprite{*nextAvailable};
+		++nextAvailable;
+	}
 }
 
-void cegraph::Sprites::DeleteInternal(cegraph::Handles::Sprite a_sprite) {
-	CR_ASSERT(g_data->Used.contains(a_sprite.asInt()), "tried to delete a sprite that doesn't exist");
-	g_data->Used.erase(a_sprite.asInt());
+void cegraph::Sprites::DeleteInternal(std::span<Handles::Sprite> a_sprites) {
+	for(auto sprite : a_sprites) {
+		CR_ASSERT(g_data->Used.contains(sprite.asInt()), "tried to delete a sprite that doesn't exist");
+		g_data->Used.erase(sprite.asInt());
+	}
 }
 
 void cegraph::Sprites::Initialize() {
