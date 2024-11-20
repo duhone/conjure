@@ -33,10 +33,10 @@ namespace CR::Engine::Graphics {
 		// For simple tasks that don't need to issue GPU commands. Compile a shader/ect.
 		// a_completed will be set to true once the task has finished. It is callers responsibility to ensure
 		// a_completed is still alive until the task completes.
-		void EnqueueTask(taskSimple_t&& a_task, std::atomic_bool& a_completed);
+		void EnqueueTask(taskSimple_t&& a_task, std::atomic_flag& a_completed);
 		// For tasks that need to issue GPU commands. a_completed won't be set until after all GPU commands
 		// added to the command buffer have completed on the GPU as well.
-		void EnqueueTask(taskGPUCommands_t&& a_task, std::atomic_bool& a_completed);
+		void EnqueueTask(taskGPUCommands_t&& a_task, std::atomic_flag& a_completed);
 
 	};    // namespace GraphicsThread
 }    // namespace CR::Engine::Graphics
@@ -50,7 +50,7 @@ namespace {
 		// This is either the complete task, or if ComplexTask exists then this is the completion task.
 		cegraph::GraphicsThread::taskSimple_t SimpleTask;
 		cegraph::GraphicsThread::taskGPUCommands_t ComplexTask;
-		std::atomic_bool* Completed{nullptr};
+		std::atomic_flag* Completed{nullptr};
 	};
 
 	struct Data {
@@ -79,7 +79,7 @@ namespace {
 				}
 			}
 			if(request.ComplexTask) {
-				// CR_ASSERT(request.Completed != nullptr, "Completed should never be null");
+				CR_ASSERT(request.Completed != nullptr, "Completed should never be null");
 				VkCommandBuffer buffer = g_data->CommandPool.Begin();
 				request.ComplexTask(buffer);
 				g_data->CommandPool.End(buffer);
@@ -92,15 +92,15 @@ namespace {
 				vkQueueWaitIdle(g_data->TransferQueue);
 				g_data->CommandPool.ResetAll();
 
-				request.Completed->store(true, std::memory_order_release);
-				request.Completed->notify_one();
+				request.Completed->test_and_set(std::memory_order_release);
+				request.Completed->notify_all();
 				request = Request{};
 
 			} else if(request.SimpleTask) {
 				// CR_ASSERT(request.Completed != nullptr, "Completed should never be null");
 				request.SimpleTask();
-				request.Completed->store(true, std::memory_order_release);
-				request.Completed->notify_one();
+				request.Completed->test_and_set(std::memory_order_release);
+				request.Completed->notify_all();
 				request = Request{};
 			}
 		}
@@ -129,7 +129,7 @@ void cegraph::GraphicsThread::Shutdown() {
 	delete g_data;
 }
 
-void cegraph::GraphicsThread::EnqueueTask(taskSimple_t&& a_task, std::atomic_bool& a_completed) {
+void cegraph::GraphicsThread::EnqueueTask(taskSimple_t&& a_task, std::atomic_flag& a_completed) {
 	{
 		std::unique_lock<std::mutex> lock(g_data->RequestMutex);
 		g_data->Requests.push_back({std::move(a_task), nullptr, &a_completed});
@@ -137,7 +137,7 @@ void cegraph::GraphicsThread::EnqueueTask(taskSimple_t&& a_task, std::atomic_boo
 	g_data->Notify.notify_one();
 }
 
-void cegraph::GraphicsThread::EnqueueTask(taskGPUCommands_t&& a_task, std::atomic_bool& a_completed) {
+void cegraph::GraphicsThread::EnqueueTask(taskGPUCommands_t&& a_task, std::atomic_flag& a_completed) {
 	{
 		std::unique_lock<std::mutex> lock(g_data->RequestMutex);
 		g_data->Requests.push_back({nullptr, std::move(a_task), &a_completed});

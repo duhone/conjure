@@ -4,6 +4,7 @@ module;
 
 #include "flatbuffers/idl.h"
 
+#include "ankerl/unordered_dense.h"
 #include <function2/function2.hpp>
 
 #include "core/Log.h"
@@ -24,29 +25,11 @@ import CR.Engine.Platform;
 
 import <vector>;
 
-namespace CR::Engine::Graphics {
-	export class ComputePipelines {
-	  public:
-		ComputePipelines();
-		~ComputePipelines();
-		ComputePipelines(const ComputePipelines&)               = delete;
-		ComputePipelines(ComputePipelines&& a_other)            = delete;
-		ComputePipelines& operator=(const ComputePipelines&)    = delete;
-		ComputePipelines& operator=(ComputePipelines&& a_other) = delete;
-
-		void Update(const Shaders& a_shaders);
-
-		bool IsReady() const { return m_ready.load(std::memory_order_acquire); }
-
-	  private:
-		VkPipelineLayout m_pipeLineLayout;
-		VkDescriptorSetLayout m_descriptorSetLayout;
-		std::vector<VkPipeline> m_pipelines;
-
-		std::atomic_bool m_ready;
-		bool m_startedLoad{};
-	};
-}    // namespace CR::Engine::Graphics
+export namespace CR::Engine::Graphics::ComputePipelines {
+	void Initialize();
+	void FinishInitialize();
+	void Shutdown();
+}    // namespace CR::Engine::Graphics::ComputePipelines
 
 module :private;
 
@@ -55,17 +38,20 @@ namespace cecore  = CR::Engine::Core;
 namespace ceplat  = CR::Engine::Platform;
 namespace cegraph = CR::Engine::Graphics;
 
-cegraph::ComputePipelines::ComputePipelines() {}
+namespace {
+	VkPipelineLayout m_pipeLineLayout;
+	VkDescriptorSetLayout m_descriptorSetLayout;
+	std::vector<VkPipeline> m_pipelines;
 
-void cegraph::ComputePipelines::Update(const Shaders& a_shaders) {
-	if(IsReady() || m_startedLoad) { return; }
+	std::atomic_flag m_ready;
 
-	if(!a_shaders.IsReady()) { return; }
+	std::vector<std::string> m_pipelineNames;
+	ankerl::unordered_dense::map<uint64_t, uint32_t> m_pipelineLookup;
+}    // namespace
 
-	m_startedLoad = true;
-
+void cegraph::ComputePipelines::Initialize() {
 	GraphicsThread::EnqueueTask(
-	    [this, &a_shaders]() {
+	    []() {
 		    auto& assetService = cecore::GetService<ceasset::Service>();
 
 		    // TODO: may want to just set the viewport and scissor here for platforms that are
@@ -119,7 +105,10 @@ void cegraph::ComputePipelines::Update(const Shaders& a_shaders) {
 		    auto computePipelines = Flatbuffers::GetComputePipelines(parser.builder_.GetBufferPointer());
 
 		    for(const auto& pipe : *computePipelines->pipelines()) {
-			    auto compShader = a_shaders.GetShader(cecore::Hash64(pipe->compute_shader()->c_str()));
+			    m_pipelineLookup[cecore::Hash64(pipe->name()->c_str())] = m_pipelineNames.size();
+			    m_pipelineNames.emplace_back(pipe->name()->c_str());
+
+			    auto compShader = Shaders::GetShader(cecore::Hash64(pipe->compute_shader()->c_str()));
 
 			    VkPipelineShaderStageCreateInfo shaderPipeInfo;
 			    ClearStruct(shaderPipeInfo);
@@ -141,7 +130,11 @@ void cegraph::ComputePipelines::Update(const Shaders& a_shaders) {
 	    m_ready);
 }
 
-cegraph::ComputePipelines::~ComputePipelines() {
+void cegraph::ComputePipelines::FinishInitialize() {
+	m_ready.wait(false);
+}
+
+void cegraph::ComputePipelines::Shutdown() {
 	for(auto& pipeline : m_pipelines) { vkDestroyPipeline(GetContext().Device, pipeline, nullptr); }
 	vkDestroyPipelineLayout(GetContext().Device, m_pipeLineLayout, nullptr);
 	vkDestroyDescriptorSetLayout(GetContext().Device, m_descriptorSetLayout, nullptr);

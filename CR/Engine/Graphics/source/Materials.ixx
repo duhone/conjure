@@ -24,30 +24,11 @@ import CR.Engine.Platform;
 
 import <vector>;
 
-namespace CR::Engine::Graphics {
-	export class Materials {
-	  public:
-		Materials();
-		~Materials();
-		Materials(const Materials&)               = delete;
-		Materials(Materials&& a_other)            = delete;
-		Materials& operator=(const Materials&)    = delete;
-		Materials& operator=(Materials&& a_other) = delete;
-
-		void Update(const Shaders& a_shaders, VkRenderPass a_renderPass);
-
-		bool IsReady() const { return m_ready.load(std::memory_order_acquire); }
-
-	  private:
-		VkPipelineLayout m_pipeLineLayout;
-		VkDescriptorSetLayout m_descriptorSetLayout;
-		VkSampler m_sampler;
-		std::vector<VkPipeline> m_pipelines;
-
-		std::atomic_bool m_ready;
-		bool m_startedLoad{};
-	};
-}    // namespace CR::Engine::Graphics
+export namespace CR::Engine::Graphics::Materials {
+	void Initialize(VkRenderPass a_renderPass);
+	void FinishInitialize();
+	void Shutdown();
+}    // namespace CR::Engine::Graphics::Materials
 
 module :private;
 
@@ -57,6 +38,13 @@ namespace ceplat  = CR::Engine::Platform;
 namespace cegraph = CR::Engine::Graphics;
 
 namespace {
+	VkPipelineLayout m_pipeLineLayout;
+	VkDescriptorSetLayout m_descriptorSetLayout;
+	VkSampler m_sampler;
+	std::vector<VkPipeline> m_pipelines;
+
+	std::atomic_flag m_ready;
+
 	VkFormat toVkFormat(cegraph::Flatbuffers::VertAttrFormat a_arg) {
 		switch(a_arg) {
 			case CR::Engine::Graphics::Flatbuffers::VertAttrFormat::f32x1:
@@ -139,17 +127,9 @@ namespace {
 	}
 }    // namespace
 
-cegraph::Materials::Materials() {}
-
-void cegraph::Materials::Update(const Shaders& a_shaders, VkRenderPass a_renderPass) {
-	if(IsReady() || m_startedLoad) { return; }
-
-	if(!a_shaders.IsReady()) { return; }
-
-	m_startedLoad = true;
-
+void cegraph::Materials::Initialize(VkRenderPass a_renderPass) {
 	GraphicsThread::EnqueueTask(
-	    [this, &a_shaders, a_renderPass]() {
+	    [a_renderPass]() {
 		    auto& assetService = cecore::GetService<ceasset::Service>();
 
 		    VkSpecializationMapEntry fragSpecInfoEntrys;
@@ -259,8 +239,8 @@ void cegraph::Materials::Update(const Shaders& a_shaders, VkRenderPass a_renderP
 		    auto materials = Flatbuffers::GetMaterials(parser.builder_.GetBufferPointer());
 
 		    for(const auto& mat : *materials->mats()) {
-			    auto vertShader = a_shaders.GetShader(cecore::Hash64(mat->vertex_shader()->c_str()));
-			    auto fragShader = a_shaders.GetShader(cecore::Hash64(mat->fragment_shader()->c_str()));
+			    auto vertShader = Shaders::GetShader(cecore::Hash64(mat->vertex_shader()->c_str()));
+			    auto fragShader = Shaders::GetShader(cecore::Hash64(mat->fragment_shader()->c_str()));
 
 			    VkPipelineShaderStageCreateInfo shaderPipeInfo[2];
 			    ClearStruct(shaderPipeInfo[0]);
@@ -329,8 +309,11 @@ void cegraph::Materials::Update(const Shaders& a_shaders, VkRenderPass a_renderP
 	    },
 	    m_ready);
 }
+void cegraph::Materials::FinishInitialize() {
+	m_ready.wait(false);
+}
 
-cegraph::Materials::~Materials() {
+void cegraph::Materials::Shutdown() {
 	for(auto& pipeline : m_pipelines) { vkDestroyPipeline(GetContext().Device, pipeline, nullptr); }
 	vkDestroyPipelineLayout(GetContext().Device, m_pipeLineLayout, nullptr);
 	vkDestroyDescriptorSetLayout(GetContext().Device, m_descriptorSetLayout, nullptr);

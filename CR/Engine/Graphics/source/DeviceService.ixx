@@ -80,9 +80,6 @@ namespace CR::Engine::Graphics {
 		std::optional<glm::vec4> m_clearColor;
 
 		CommandPool m_commandPool;
-		cecore::Embedded<Shaders> m_shaders;
-		cecore::Embedded<Materials> m_materials;
-		cecore::Embedded<ComputePipelines> m_computePipelines;
 	};
 }    // namespace CR::Engine::Graphics
 
@@ -149,14 +146,17 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 
 	m_commandPool = CommandPool(context.GraphicsQueueIndex);
 	GraphicsThread::Initialize(m_transferQueue);
-	m_shaders.emplace();
-	m_materials.emplace();
-	m_computePipelines.emplace();
+	Shaders::Initialize();
+	Materials::Initialize(m_renderPass);
+	ComputePipelines::Initialize();
 	Textures::Initialize();
 	UniformBuffers::Initialize();
 	VertexBuffers::Initialize();
 	DescriptorPool::Initialize();
 	Sprites::Initialize();
+
+	ComputePipelines::FinishInitialize();
+	Materials::FinishInitialize();
 }
 
 void cegraph::DeviceService::Stop() {
@@ -169,9 +169,9 @@ void cegraph::DeviceService::Stop() {
 	VertexBuffers::Shutdown();
 	UniformBuffers::Shutdown();
 	Textures::Shutdown();
-	m_computePipelines.reset();
-	m_materials.reset();
-	m_shaders.reset();
+	ComputePipelines::Shutdown();
+	Materials::Shutdown();
+	Shaders::Shutdown();
 	GraphicsThread::Shutdown();
 
 	m_commandPool.ResetAll();
@@ -202,9 +202,6 @@ void cegraph::DeviceService::Stop() {
 
 void cegraph::DeviceService::Update() {
 	const Context& context = GetContext();
-
-	m_materials->Update(*m_shaders, m_renderPass);
-	m_computePipelines->Update(*m_shaders);
 
 	vkAcquireNextImageKHR(context.Device, m_primarySwapChain, UINT64_MAX, VK_NULL_HANDLE, m_frameFence,
 	                      &m_currentFrameBuffer);

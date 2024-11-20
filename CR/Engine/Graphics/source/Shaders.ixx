@@ -28,31 +28,12 @@ import <span>;
 import <string_view>;
 import <unordered_map>;
 
-namespace CR::Engine::Graphics {
-	export class Shaders {
-	  public:
-		Shaders();
-		~Shaders();
-		Shaders(const Shaders&)               = delete;
-		Shaders(Shaders&& a_other)            = delete;
-		Shaders& operator=(const Shaders&)    = delete;
-		Shaders& operator=(Shaders&& a_other) = delete;
+export namespace CR::Engine::Graphics::Shaders {
+	void Initialize();
+	void Shutdown();
 
-		VkShaderModule GetShader(uint64_t a_shaderHash) const {
-			auto shader = m_shaderModules.find(a_shaderHash);
-			if(shader != m_shaderModules.end()) { return shader->second; }
-			CR_ERROR("Could not find shader");
-			return nullptr;
-		}
-
-		bool IsReady() const { return m_ready.load(std::memory_order_acquire); }
-
-	  private:
-		std::unordered_map<uint64_t, VkShaderModule> m_shaderModules;
-
-		std::atomic_bool m_ready;
-	};
-}    // namespace CR::Engine::Graphics
+	VkShaderModule GetShader(uint64_t a_shaderHash);
+}    // namespace CR::Engine::Graphics::Shaders
 
 module :private;
 
@@ -67,7 +48,9 @@ using namespace std::chrono_literals;
 using namespace std::literals;
 
 namespace {
-	constexpr std::string_view shaderCompileFolder = "conjure_shaders"sv;
+	constexpr std::string_view c_shaderCompileFolder = "conjure_shaders"sv;
+
+	std::unordered_map<uint64_t, VkShaderModule> m_shaderModules;
 
 	ceplat::MemoryMappedFile CompileShader(const fs::path a_srcPath, const fs::path& a_workingFile) {
 		std::string cliArgs = fmt::format("{} -o {}", a_srcPath.string(), a_workingFile.string());
@@ -88,21 +71,36 @@ namespace {
 	}
 }    // namespace
 
-cegraph::Shaders::Shaders() {
-	GraphicsThread::EnqueueTask(
-	    [this]() {
-		    auto& assetService   = cecore::GetService<ceasset::Service>();
-		    const auto& rootPath = assetService.GetRootPath();
+void cegraph::Shaders::Initialize() {
+	std::atomic_flag shaderModuleCreated;
+	// don't block on first wait call, as no previous task first time;
+	shaderModuleCreated.test_and_set();
 
-		    fs::path workingFile = fs::temp_directory_path() / "conjure_compiled_shader.spirv";
+	auto& assetService   = cecore::GetService<ceasset::Service>();
+	const auto& rootPath = assetService.GetRootPath();
 
-		    flatbuffers::Parser parser =
-		        assetService.GetData(cecore::C_Hash64("Graphics/shaders.json"), SCHEMAS_SHADERS);
+	std::vector<fs::path> workingFiles;
+	auto getNextWorkingFile = [&] {
+		std::string fileName = fmt::format("conjure_compiled_shader_{}.spirv", workingFiles.size());
+		workingFiles.emplace_back(fs::temp_directory_path() / fileName);
+		return workingFiles.back();
+	};
 
-		    auto shaders = Flatbuffers::GetShaders(parser.builder_.GetBufferPointer());
+	flatbuffers::Parser parser =
+	    assetService.GetData(cecore::C_Hash64("Graphics/shaders.json"), SCHEMAS_SHADERS);
 
-		    for(const auto& shader : *shaders->shaders()) {
-			    auto spirvFile = CompileShader(rootPath / shader->path()->string_view(), workingFile);
+	auto shaders = Flatbuffers::GetShaders(parser.builder_.GetBufferPointer());
+
+	for(const auto& shader : *shaders->shaders()) {
+		auto workingFile = getNextWorkingFile();
+		auto spirvFile   = CompileShader(rootPath / shader->path()->string_view(), workingFile);
+
+		shaderModuleCreated.wait(false);
+		shaderModuleCreated.clear();
+		uint64_t shaderHash    = cecore::Hash64(shader->name()->string_view());
+		std::string shaderPath = shader->path()->str();
+		GraphicsThread::EnqueueTask(
+		    [shaderHash, shaderPath, spirvFile = std::move(spirvFile)]() {
 			    VkShaderModuleCreateInfo shaderInfo;
 			    ClearStruct(shaderInfo);
 			    shaderInfo.pCode    = (uint32_t*)spirvFile.data();
@@ -110,17 +108,25 @@ cegraph::Shaders::Shaders() {
 
 			    VkShaderModule shaderModule;
 			    auto result = vkCreateShaderModule(GetContext().Device, &shaderInfo, nullptr, &shaderModule);
-			    CR_ASSERT(result == VK_SUCCESS, "failed to load shader {}", shader->path()->string_view());
-			    m_shaderModules.emplace(cecore::Hash64(shader->name()->string_view()), shaderModule);
-		    }
+			    CR_ASSERT(result == VK_SUCCESS, "failed to load shader {}", shaderPath);
+			    m_shaderModules.emplace(shaderHash, shaderModule);
+		    },
+		    shaderModuleCreated);
+	}
 
-		    fs::remove(workingFile);
-	    },
-	    m_ready);
+	shaderModuleCreated.wait(false);
+	for(const auto& workingFile : workingFiles) { fs::remove(workingFile); }
 }
 
-cegraph::Shaders::~Shaders() {
+void cegraph::Shaders::Shutdown() {
 	for(const auto& shader : m_shaderModules) {
 		vkDestroyShaderModule(GetContext().Device, shader.second, nullptr);
 	}
+}
+
+VkShaderModule cegraph::Shaders::GetShader(uint64_t a_shaderHash) {
+	auto shader = m_shaderModules.find(a_shaderHash);
+	if(shader != m_shaderModules.end()) { return shader->second; }
+	CR_ERROR("Could not find shader");
+	return nullptr;
 }

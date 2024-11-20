@@ -208,9 +208,10 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 	TextureSet toLoad      = newCombined ^ g_data->TexturesLoaded;
 
 	uint32_t stagingBuffer{};
-	std::atomic_bool loadComplete[2];
-	loadComplete[0].store(true, std::memory_order_release);
-	loadComplete[1].store(true, std::memory_order_release);
+	std::atomic_flag loadComplete[2];
+	// don't block on first wait call, as no previous task first time;
+	loadComplete[0].test_and_set();
+	loadComplete[1].test_and_set();
 
 	bool dedicatedTransfer = GetContext().TransferQueueIndex != GetContext().GraphicsQueueIndex;
 
@@ -252,8 +253,8 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 		pixelFormat.endianness   = JXL_LITTLE_ENDIAN;
 		pixelFormat.align        = 1;
 
-		loadComplete[stagingBuffer].wait(false, std::memory_order_acquire);
-		loadComplete[stagingBuffer].store(false, std::memory_order_release);
+		loadComplete[stagingBuffer].wait(false);
+		loadComplete[stagingBuffer].clear();
 
 		JxlDecoderStatus loopStatus{};
 		size_t bufferSize{};
@@ -372,8 +373,8 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 		g_data->Allocations[texture] = imageAlloc;
 		g_data->Views[texture]       = imageView;
 
-		// setting again, mostly just want the memory barrier. be sure task see latest on all our variables.
-		loadComplete[stagingBuffer].store(false, std::memory_order_release);
+		// clearing again, mostly just want the memory barrier. be sure task see latest on all our variables.
+		loadComplete[stagingBuffer].clear();
 		GraphicsThread::EnqueueTask(
 		    [dedicatedTransfer = dedicatedTransfer, texture = texture, image = image,
 		     buffer      = g_data->StagingBuffer[stagingBuffer],
@@ -394,8 +395,8 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 	}
 
 	// wait for last of remaining loads to finish.
-	loadComplete[0].wait(false, std::memory_order_acquire);
-	loadComplete[1].wait(false, std::memory_order_acquire);
+	loadComplete[0].wait(false);
+	loadComplete[1].wait(false);
 
 	g_data->TexturesLoaded = newCombined;
 	return Handles::TextureSet(result);
