@@ -2,10 +2,12 @@
 
 #include <core/Log.h>
 
+import <chrono>;
 import <thread>;
 
 using namespace CR::Engine::Core;
 using namespace std;
+using namespace std::chrono_literals;
 
 TEST_CASE("Log") {
 	LogSystem logSystem;

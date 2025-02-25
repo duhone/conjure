@@ -27,5 +27,4 @@ target_link_libraries(headerUnits
 )
 
 set_property(TARGET headerUnits APPEND PROPERTY FOLDER HeaderUnits)
-set_property(TARGET headerUnits APPEND PROPERTY VS_USER_PROPS ${root}/HeaderUnits.props)
 	

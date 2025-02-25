@@ -15,6 +15,7 @@ export module CR.Engine.Graphics.ComputePipelines;
 
 import CR.Engine.Graphics.Constants;
 import CR.Engine.Graphics.Context;
+import CR.Engine.Graphics.DescriptorPool;
 import CR.Engine.Graphics.GraphicsThread;
 import CR.Engine.Graphics.Shaders;
 import CR.Engine.Graphics.Utils;
@@ -29,6 +30,8 @@ export namespace CR::Engine::Graphics::ComputePipelines {
 	void Initialize();
 	void FinishInitialize();
 	void Shutdown();
+
+	VkPipeline GetPipeline(uint64_t a_hash);
 }    // namespace CR::Engine::Graphics::ComputePipelines
 
 module :private;
@@ -138,4 +141,10 @@ void cegraph::ComputePipelines::Shutdown() {
 	for(auto& pipeline : m_pipelines) { vkDestroyPipeline(GetContext().Device, pipeline, nullptr); }
 	vkDestroyPipelineLayout(GetContext().Device, m_pipeLineLayout, nullptr);
 	vkDestroyDescriptorSetLayout(GetContext().Device, m_descriptorSetLayout, nullptr);
+}
+
+VkPipeline cegraph::ComputePipelines::GetPipeline(uint64_t a_hash) {
+	auto pipeIter = m_pipelineLookup.find(a_hash);
+	CR_ASSERT(pipeIter != m_pipelineLookup.end(), "Could not find compute pipeline");
+	return m_pipelines[pipeIter->second];
 }
