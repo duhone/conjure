@@ -32,6 +32,8 @@ namespace CR::Engine::Platform {
 		// call on main frame once per frame. as last as possible to minimize latency;
 		void UpdateInput();
 
+		uint32_t GetRefreshRate() const;
+
 		// OS States are for use in Editors, or non full screen apps, or anytime you need to make sure to line
 		// up to the onscreen cursor. Os States have OS processing applied, like mouse acceleration ect. OS
 		// States have higher latency though.
@@ -44,9 +46,7 @@ namespace CR::Engine::Platform {
 
 		// Below needs to be public(for now) but is not intended to be called by clients;
 		void OnDestroy();
-		struct WindowData* GetWindowData() {
-			return m_data.get();
-		}
+		struct WindowData* GetWindowData() { return m_data.get(); }
 
 		// Windows specific, cast back as needed
 		void* GetHInstance() const;

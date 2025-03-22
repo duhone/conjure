@@ -3,52 +3,52 @@
             {
                 "name" : "CompletionScreen",
                 "texture" : "CompletionScreen",
-                "frame_rate_divisor" : 1
+                "frame_rate" : "FPS60"
             },
             {
                 "name" : "brick",
                 "texture" : "brick",
-                "frame_rate_divisor" : 1
+                "frame_rate" : "FPS60"
             },
             {
                 "name" : "diamond",
                 "texture" : "diamond",
-                "frame_rate_divisor" : 1
+                "frame_rate" : "FPS60"
             },
             {
                 "name" : "gold",
                 "texture" : "gold",
-                "frame_rate_divisor" : 1
+                "frame_rate" : "FPS60"
             },
             {
                 "name" : "ice",
                 "texture" : "ice",
-                "frame_rate_divisor" : 1
+                "frame_rate" : "FPS60"
             },
             {
                 "name" : "leaf",
                 "texture" : "leaf",
-                "frame_rate_divisor" : 1
+                "frame_rate" : "FPS60"
             },
             {
                 "name" : "m",
                 "texture" : "m",
-                "frame_rate_divisor" : 1
+                "frame_rate" : "FPS60"
             },
             {
                 "name" : "question",
                 "texture" : "question",
-                "frame_rate_divisor" : 1
+                "frame_rate" : "FPS60"
             },
             {
                 "name" : "wood",
                 "texture" : "wood",
-                "frame_rate_divisor" : 1
+                "frame_rate" : "FPS60"
             },
             {
                 "name" : "BonusHarrySelect",
                 "texture" : "BonusHarrySelect",
-                "frame_rate_divisor" : 1
+                "frame_rate" : "FPS60"
             }
         ]
 }

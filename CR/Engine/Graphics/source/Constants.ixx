@@ -12,4 +12,6 @@ export namespace CR::Engine::Graphics::Constants {
 	// can handle up to 64K if needed, some things(bitset, ect) probably need some work though. This is total
 	// number created in "world", not number rendered, or the number of "templates" in sprites.json.
 	inline constexpr int32_t c_maxSprites = 4096;
+	// most common monitor refresh rates are evenly divisable by this.
+	inline constexpr uint32_t c_designRefreshRate = 720;
 }    // namespace CR::Engine::Graphics::Constants

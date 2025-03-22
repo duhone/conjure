@@ -1,9 +1,11 @@
 namespace CR.Engine.Graphics.Flatbuffers;
 
+enum FrameRate : byte { FPS10 , FPS12, FPS15, FPS20, FPS30, FPS60 }
+
 table Sprite{
 	name:string;
 	texture:string;
-	frame_rate_divisor:uint8 = 1;
+	frame_rate:FrameRate = FPS60;
 }
  
 table Sprites {

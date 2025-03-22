@@ -25,6 +25,8 @@ namespace CR::Engine::Platform {
 		std::jthread m_thread;
 		Window::OnDestroy_t m_onDestroy;
 
+		uint32_t m_refreshRate;
+
 		std::mutex m_inputMutex;
 		glm::ivec2 m_mousePos;
 		bool m_mouseLeftDown{false};
@@ -135,6 +137,9 @@ void* cep::Window::GetHInstance() const {
 void* cep::Window::GetHWND() const {
 	return m_data->m_HWND;
 }
+uint32_t cep::Window::GetRefreshRate() const {
+	return m_data->m_refreshRate;
+}
 
 void cep::WindowData::MyCreateWindow(std::string_view a_windowTitle, uint32_t a_width, uint32_t a_height,
                                      Window* self) {
@@ -159,6 +164,10 @@ void cep::WindowData::MyCreateWindow(std::string_view a_windowTitle, uint32_t a_
 	                        windowRect.bottom - windowRect.top, NULL, NULL, GetModuleHandle(NULL), NULL);
 
 	ShowWindow(m_HWND, TRUE);
+
+	DEVMODEA displayMode;
+	EnumDisplaySettingsA(nullptr, ENUM_CURRENT_SETTINGS, &displayMode);
+	m_refreshRate = displayMode.dmDisplayFrequency;
 
 	g_windowLookup([this, self](WindowLookup_t& winLookup) { winLookup[m_HWND] = self; });
 }

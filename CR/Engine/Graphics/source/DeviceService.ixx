@@ -11,6 +11,7 @@ import CR.Engine.Platform;
 import CR.Engine.Graphics.CommandPool;
 import CR.Engine.Graphics.Commands;
 import CR.Engine.Graphics.ComputePipelines;
+import CR.Engine.Graphics.Constants;
 import CR.Engine.Graphics.Context;
 import CR.Engine.Graphics.DescriptorPool;
 import CR.Engine.Graphics.GraphicsThread;
@@ -142,6 +143,8 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 
 	CreateSwapChain(context);
 
+	context.DisplayTicksPerFrame = Constants::c_designRefreshRate / a_window.GetRefreshRate();
+
 	SetContext(context);
 
 	m_commandPool = CommandPool(context.GraphicsQueueIndex);
@@ -214,6 +217,8 @@ void cegraph::DeviceService::Update() {
 
 	Textures::Update(commandBuffer);
 	UniformBuffers::Update();
+
+	Sprites::Update();
 
 	Commands::RenderPassBegin(commandBuffer, m_renderPass, m_frameBuffers[m_currentFrameBuffer], m_windowSize,
 	                          m_clearColor);
