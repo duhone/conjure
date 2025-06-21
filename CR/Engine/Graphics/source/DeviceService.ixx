@@ -150,9 +150,9 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 	m_commandPool = CommandPool(context.GraphicsQueueIndex);
 	GraphicsThread::Initialize(m_transferQueue);
 	Shaders::Initialize();
+	Textures::Initialize();
 	Materials::Initialize(m_renderPass);
 	ComputePipelines::Initialize();
-	Textures::Initialize();
 	UniformBuffers::Initialize();
 	VertexBuffers::Initialize();
 	DescriptorPool::Initialize();

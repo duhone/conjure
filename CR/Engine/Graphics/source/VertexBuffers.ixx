@@ -93,7 +93,7 @@ cegraph::Handles::VertexBuffer cegraph::VertexBuffers::Create(const VertexLayout
 
 	VmaAllocationInfo bufferAllocInfo{};
 	vmaCreateBuffer(GetContext().Allocator, &bufferCreateInfo, &bufferAllocCreateInfo, &mapping.Buffer,
-	                &g_data->Allocations[handle.asInt()], &bufferAllocInfo);
+	                &(g_data->Allocations[handle.asInt()]), &bufferAllocInfo);
 	mapping.Data = (std::byte*)bufferAllocInfo.pMappedData;
 	mapping.Size = bufferCreateInfo.size;
 
@@ -112,6 +112,8 @@ cegraph::Handles::VertexBuffer cegraph::VertexBuffers::Create(const VertexLayout
 		desc.offset   = entry.Offset;
 		desc.format   = entry.format;
 	}
+
+	g_data->Used.insert(handle.asInt());
 
 	return handle;
 }

@@ -48,6 +48,9 @@ export namespace CR::Engine::Graphics::Textures {
 
 	// can only get this for loaded textures
 	uint32_t GetNumFrames(Handles::Texture a_texture);
+
+	VkSampler GetSampler();
+
 }    // namespace CR::Engine::Graphics::Textures
 
 module :private;
@@ -103,6 +106,8 @@ namespace {
 
 		JxlDecoder* Decoder{nullptr};
 		void* parRunner{nullptr};
+
+		VkSampler m_sampler;
 	};
 
 	Data* g_data = nullptr;
@@ -169,10 +174,26 @@ void cegraph::Textures::Initialize() {
 	JxlDecoderStatus status =
 	    JxlDecoderSetParallelRunner(g_data->Decoder, JxlResizableParallelRunner, g_data->parRunner);
 	CR_ASSERT(status == JXL_DEC_SUCCESS, "failed to set jpeg xl parallel runner");
+
+	// we only have 1 sampler for now. basic trilinear
+	VkSamplerCreateInfo samplerInfo;
+	ClearStruct(samplerInfo);
+	samplerInfo.addressModeU     = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.addressModeV     = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.addressModeW     = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerInfo.minFilter        = VK_FILTER_LINEAR;
+	samplerInfo.magFilter        = VK_FILTER_LINEAR;
+	samplerInfo.mipmapMode       = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	samplerInfo.anisotropyEnable = false;
+
+	auto result = vkCreateSampler(GetContext().Device, &samplerInfo, nullptr, &g_data->m_sampler);
+	CR_ASSERT(result == VK_SUCCESS, "failed to create a sampler");
 }
 
 void cegraph::Textures::Shutdown() {
 	CR_ASSERT(g_data != nullptr, "Textures are already shutdown");
+
+	vkDestroySampler(GetContext().Device, g_data->m_sampler, nullptr);
 
 	JxlResizableParallelRunnerDestroy(g_data->parRunner);
 	JxlDecoderDestroy(g_data->Decoder);
@@ -327,7 +348,7 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 
 		JxlDecoderReleaseInput(g_data->Decoder);
 
-		g_data->NumFrames[texture] = frameCopies.size();
+		g_data->NumFrames[texture] = (uint16_t)frameCopies.size();
 
 		VkImageCreateInfo createInfo;
 		ClearStruct(createInfo);
@@ -353,7 +374,7 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 		VkImageView imageView{};
 		VkResult vkResult = vmaCreateImage(GetContext().Allocator, &createInfo, &allocCreateInfo, &image,
 		                                   &imageAlloc, nullptr);
-		CR_ASSERT(status == VK_SUCCESS, "Failed to create vulkan image");
+		CR_ASSERT(vkResult == VK_SUCCESS, "Failed to create vulkan image");
 
 		VkImageViewCreateInfo viewInfo;
 		ClearStruct(viewInfo);
@@ -367,7 +388,7 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 		viewInfo.subresourceRange.layerCount     = g_data->NumFrames[texture];
 
 		vkResult = vkCreateImageView(GetContext().Device, &viewInfo, nullptr, &imageView);
-		CR_ASSERT(status == VK_SUCCESS, "Failed to create vulkan image view");
+		CR_ASSERT(vkResult == VK_SUCCESS, "Failed to create vulkan image view");
 
 		g_data->Images[texture]      = image;
 		g_data->Allocations[texture] = imageAlloc;
@@ -438,4 +459,7 @@ uint32_t cegraph::Textures::GetNumFrames(Handles::Texture a_texture) {
 	          "Texture not loaded, cant get number of frames");
 
 	return g_data->NumFrames[a_texture.asInt()];
+}
+VkSampler cegraph::Textures::GetSampler() {
+	return g_data->m_sampler;
 }

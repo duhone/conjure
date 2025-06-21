@@ -108,7 +108,7 @@ void cegraph::ComputePipelines::Initialize() {
 		    auto computePipelines = Flatbuffers::GetComputePipelines(parser.builder_.GetBufferPointer());
 
 		    for(const auto& pipe : *computePipelines->pipelines()) {
-			    m_pipelineLookup[cecore::Hash64(pipe->name()->c_str())] = m_pipelineNames.size();
+			    m_pipelineLookup[cecore::Hash64(pipe->name()->c_str())] = (uint32_t)m_pipelineNames.size();
 			    m_pipelineNames.emplace_back(pipe->name()->c_str());
 
 			    auto compShader = Shaders::GetShader(cecore::Hash64(pipe->compute_shader()->c_str()));

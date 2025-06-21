@@ -4,6 +4,7 @@ module;
 
 #include "flatbuffers/idl.h"
 
+#include "ankerl/unordered_dense.h"
 #include <function2/function2.hpp>
 
 #include "core/Log.h"
@@ -15,8 +16,10 @@ export module CR.Engine.Graphics.Materials;
 import CR.Engine.Graphics.Constants;
 import CR.Engine.Graphics.Context;
 import CR.Engine.Graphics.GraphicsThread;
+import CR.Engine.Graphics.InternalHandles;
 import CR.Engine.Graphics.Shaders;
 import CR.Engine.Graphics.Utils;
+import CR.Engine.Graphics.Textures;
 
 import CR.Engine.Assets;
 import CR.Engine.Core;
@@ -28,6 +31,11 @@ export namespace CR::Engine::Graphics::Materials {
 	void Initialize(VkRenderPass a_renderPass);
 	void FinishInitialize();
 	void Shutdown();
+
+	Handles::Material GetMaterial(std::string_view a_name);
+	VkPipeline GetPipeline(Handles::Material material);
+	VkDescriptorSetLayout GetDescriptorSetLayout();
+
 }    // namespace CR::Engine::Graphics::Materials
 
 module :private;
@@ -40,8 +48,8 @@ namespace cegraph = CR::Engine::Graphics;
 namespace {
 	VkPipelineLayout m_pipeLineLayout;
 	VkDescriptorSetLayout m_descriptorSetLayout;
-	VkSampler m_sampler;
 	std::vector<VkPipeline> m_pipelines;
+	ankerl::unordered_dense::map<std::string, uint16_t> m_materialLookup;
 
 	std::atomic_flag m_ready;
 
@@ -185,23 +193,12 @@ void cegraph::Materials::Initialize(VkRenderPass a_renderPass) {
 		    blendStateInfo.pAttachments    = &blendAttachState;
 		    blendStateInfo.attachmentCount = 1;
 
-		    VkSamplerCreateInfo samplerInfo;
-		    ClearStruct(samplerInfo);
-		    samplerInfo.addressModeU     = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		    samplerInfo.addressModeV     = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		    samplerInfo.addressModeW     = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		    samplerInfo.minFilter        = VK_FILTER_LINEAR;
-		    samplerInfo.magFilter        = VK_FILTER_LINEAR;
-		    samplerInfo.mipmapMode       = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-		    samplerInfo.anisotropyEnable = false;
-
-		    auto result = vkCreateSampler(GetContext().Device, &samplerInfo, nullptr, &m_sampler);
-		    CR_ASSERT(result == VK_SUCCESS, "failed to create a sampler");
-
 		    // Have to pass one sampler per descriptor. but only using one sampler, so just have to duplicate
 		    std::vector<VkSampler> samplers;
 		    samplers.reserve(Constants::c_maxTextures);
-		    for(int32_t i = 0; i < Constants::c_maxTextures; ++i) { samplers.push_back(m_sampler); }
+		    for(int32_t i = 0; i < Constants::c_maxTextures; ++i) {
+			    samplers.push_back(Textures::GetSampler());
+		    }
 
 		    VkDescriptorSetLayoutBinding dslBinding[1];
 		    ClearStruct(dslBinding[0]);
@@ -216,7 +213,7 @@ void cegraph::Materials::Initialize(VkRenderPass a_renderPass) {
 		    dslInfo.bindingCount = (uint32_t)std::size(dslBinding);
 		    dslInfo.pBindings    = dslBinding;
 
-		    result =
+		    VkResult result =
 		        vkCreateDescriptorSetLayout(GetContext().Device, &dslInfo, nullptr, &m_descriptorSetLayout);
 		    CR_ASSERT(result == VK_SUCCESS, "failed to create a descriptor set layout");
 
@@ -305,6 +302,8 @@ void cegraph::Materials::Initialize(VkRenderPass a_renderPass) {
 			    result = vkCreateGraphicsPipelines(GetContext().Device, VK_NULL_HANDLE, 1, &pipeInfo, nullptr,
 			                                       &m_pipelines.emplace_back());
 			    CR_ASSERT(result == VK_SUCCESS, "failed to create a graphics pipeline");
+
+			    m_materialLookup.emplace(mat->name()->string_view(), uint16_t(m_pipelines.size() - 1));
 		    }
 	    },
 	    m_ready);
@@ -317,5 +316,20 @@ void cegraph::Materials::Shutdown() {
 	for(auto& pipeline : m_pipelines) { vkDestroyPipeline(GetContext().Device, pipeline, nullptr); }
 	vkDestroyPipelineLayout(GetContext().Device, m_pipeLineLayout, nullptr);
 	vkDestroyDescriptorSetLayout(GetContext().Device, m_descriptorSetLayout, nullptr);
-	vkDestroySampler(GetContext().Device, m_sampler, nullptr);
+}
+
+cegraph::Handles::Material cegraph::Materials::GetMaterial(std::string_view a_name) {
+	auto matIter = m_materialLookup.find(std::string(a_name));
+	CR_ASSERT(matIter != m_materialLookup.end(), "asked for material that didn't existd. {}", a_name);
+	return Handles::Material{matIter->second};
+}
+
+VkPipeline cegraph::Materials::GetPipeline(Handles::Material material) {
+	uint16_t handleInt = material.asInt();
+	CR_ASSERT(handleInt < m_pipelines.size(), "no such material {}", handleInt);
+	return m_pipelines[handleInt];
+}
+
+VkDescriptorSetLayout cegraph::Materials::GetDescriptorSetLayout() {
+	return m_descriptorSetLayout;
 }

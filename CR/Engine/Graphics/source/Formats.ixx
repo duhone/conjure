@@ -24,6 +24,10 @@ export namespace CR::Engine::Graphics::Formats {
 		return VK_FORMAT_R32G32B32A32_SFLOAT;
 	}
 
+	[[nodiscard]] inline VkFormat GetVKFormat(const glm::mat2x2&) noexcept {
+		return VK_FORMAT_R32G32B32A32_SFLOAT;
+	}
+
 	[[nodiscard]] inline VkFormat GetVKFormat(const glm::i8&) noexcept {
 		return VK_FORMAT_R8_SINT;
 	}

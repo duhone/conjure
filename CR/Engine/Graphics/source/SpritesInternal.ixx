@@ -15,6 +15,9 @@ import CR.Engine.Graphics.Constants;
 import CR.Engine.Graphics.Context;
 import CR.Engine.Graphics.Handles;
 import CR.Engine.Graphics.Textures;
+import CR.Engine.Graphics.VertexLayout;
+import CR.Engine.Graphics.InternalHandles;
+import CR.Engine.Graphics.VertexBuffers;
 
 import CR.Engine.Assets;
 import CR.Engine.Core;
@@ -43,6 +46,17 @@ namespace cecore  = CR::Engine::Core;
 namespace cegraph = CR::Engine::Graphics;
 
 namespace {
+#pragma pack(push)
+#pragma pack(1)
+	struct Vertex {
+		glm::vec2 Offset;
+		glm::u16vec2 TextureFrame;
+		glm::u8vec4 Color;
+		glm::u16vec2 FrameSize;
+		glm::mat2x2 Rotation;
+	};
+#pragma pack(pop)
+
 	struct Data {
 		cecore::BitSet<cegraph::Constants::c_maxSprites> Used;
 		std::array<cegraph::Handles::Texture, cegraph::Constants::c_maxSprites> TextureHandles;
@@ -50,7 +64,9 @@ namespace {
 		std::array<float, cegraph::Constants::c_maxSprites> Rotations;
 		// these aren't the display frame. its the display frame * fps divisor.
 		std::array<uint32_t, cegraph::Constants::c_maxSprites> NumFrames;
-		std::array<uint32_t, cegraph::Constants::c_maxSprites> CurrentFrame;
+		std::array<uint32_t, cegraph::Constants::c_maxSprites> CurrentFrames;
+		// actual display frames. i.e. the traditional sprite frame
+		std::array<uint32_t, cegraph::Constants::c_maxSprites> DisplayFrames;
 		std::array<uint16_t, cegraph::Constants::c_maxSprites> TemplateIndices;
 
 		// templates
@@ -59,6 +75,9 @@ namespace {
 		std::vector<uint8_t> TemplateFrameRates;
 		std::vector<uint64_t> TemplateTextureHashes;
 		ankerl::unordered_dense::map<uint64_t, uint16_t> TemplateLookup;
+
+		// GPU
+		cegraph::Handles::VertexBuffer VertBuffer;
 	};
 
 	Data* g_data = nullptr;
@@ -88,7 +107,7 @@ void cegraph::Sprites::CreateInternal(std::span<uint64_t> a_hashes, std::span<Ha
 		g_data->NumFrames[*nextAvailable]       = ((uint16_t)cegraph::Textures::GetNumFrames(textureHandle) *
                                              cegraph::Constants::c_designRefreshRate) /
 		                                    g_data->TemplateFrameRates[spriteTemplate->second];
-		g_data->CurrentFrame[*nextAvailable] = 0;
+		g_data->CurrentFrames[*nextAvailable] = 0;
 
 		++nextAvailable;
 	}
@@ -149,11 +168,22 @@ void cegraph::Sprites::Initialize() {
 
 		g_data->TemplateLookup[hash] = i;
 	}
+
+	Vertex dummy;
+	cegraph::VertexLayout vertLayout;
+	vertLayout.AddVariable(dummy.Offset);
+	vertLayout.AddVariable(dummy.TextureFrame);
+	vertLayout.AddVariable(dummy.Color);
+	vertLayout.AddVariable(dummy.FrameSize);
+	vertLayout.AddVariable(dummy.Rotation);
+	g_data->VertBuffer = VertexBuffers::Create(vertLayout, Constants::c_maxSprites);
 }
 
 void cegraph::Sprites::Shutdown() {
 	CR_ASSERT(g_data != nullptr, "Sprites are already shutdown");
 	CR_ASSERT(g_data->Used.empty(), "Sprites weren't all freed before shutdown");
+
+	VertexBuffers::Release(g_data->VertBuffer);
 
 	delete g_data;
 }
@@ -164,6 +194,7 @@ void cegraph::Sprites::SetPositionsInternal(std::span<Handles::Sprite> a_sprites
 	CR_ASSERT(a_sprites.size() == a_positions.size(), "Sprites SetPositionsInternal bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
 		CR_ASSERT(g_data->Used.contains(a_sprites[i].asInt()), "Sprite doesn't exist");
+		g_data->Positions[a_sprites[i].asInt()] = a_positions[i];
 	}
 }
 
@@ -173,17 +204,18 @@ void cegraph::Sprites::SetRotationsInternal(std::span<Handles::Sprite> a_sprites
 	CR_ASSERT(a_sprites.size() == a_rotations.size(), "Sprites SetRotationsInternal bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
 		CR_ASSERT(g_data->Used.contains(a_sprites[i].asInt()), "Sprite doesn't exist");
+		g_data->Rotations[a_sprites[i].asInt()] = a_rotations[i];
 	}
 }
 
 void cegraph::Sprites::Update() {
 	for(uint16_t sprite : g_data->Used) {
-		g_data->CurrentFrame[sprite] += cegraph::GetContext().DisplayTicksPerFrame;
-		if(g_data->CurrentFrame[sprite] > g_data->NumFrames[sprite]) {
-			g_data->CurrentFrame[sprite] -= g_data->NumFrames[sprite];
+		g_data->CurrentFrames[sprite] += cegraph::GetContext().DisplayTicksPerFrame;
+		if(g_data->CurrentFrames[sprite] > g_data->NumFrames[sprite]) {
+			g_data->CurrentFrames[sprite] -= g_data->NumFrames[sprite];
 		}
-		uint32_t frame =
-		    g_data->CurrentFrame[sprite] / (cegraph::Constants::c_designRefreshRate /
-		                                    g_data->TemplateFrameRates[g_data->TemplateIndices[sprite]]);
+		g_data->DisplayFrames[sprite] =
+		    g_data->CurrentFrames[sprite] / (cegraph::Constants::c_designRefreshRate /
+		                                     g_data->TemplateFrameRates[g_data->TemplateIndices[sprite]]);
 	}
 }
