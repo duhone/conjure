@@ -49,7 +49,8 @@ export namespace CR::Engine::Graphics::Textures {
 	// can only get this for loaded textures
 	uint32_t GetNumFrames(Handles::Texture a_texture);
 
-	VkSampler GetSampler();
+	const VkDescriptorSetLayout& GetDescriptorSetLayout();
+	const VkDescriptorSet& GetDescriptorSet();
 
 }    // namespace CR::Engine::Graphics::Textures
 
@@ -107,7 +108,11 @@ namespace {
 		JxlDecoder* Decoder{nullptr};
 		void* parRunner{nullptr};
 
-		VkSampler m_sampler;
+		VkDescriptorPool m_descriptorPool{};
+		VkDescriptorSetLayout m_descriptorSetLayout{};
+		VkDescriptorSet m_descriptorSet{};
+
+		VkSampler m_sampler{};
 	};
 
 	Data* g_data = nullptr;
@@ -188,10 +193,56 @@ void cegraph::Textures::Initialize() {
 
 	auto result = vkCreateSampler(GetContext().Device, &samplerInfo, nullptr, &g_data->m_sampler);
 	CR_ASSERT(result == VK_SUCCESS, "failed to create a sampler");
+
+	// set up global texture descriptor. only 1 frame in flight, so easy.
+	VkDescriptorPoolSize poolSize;
+	poolSize.type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	poolSize.descriptorCount = cegraph::Constants::c_maxTextures;
+
+	VkDescriptorPoolCreateInfo poolInfo{};
+	ClearStruct(poolInfo);
+	poolInfo.poolSizeCount = 1;
+	poolInfo.pPoolSizes    = &poolSize;
+	poolInfo.maxSets       = 1;
+
+	result = vkCreateDescriptorPool(GetContext().Device, &poolInfo, nullptr, &g_data->m_descriptorPool);
+	CR_ASSERT(result == VK_SUCCESS, "Failed to create descriptor pool");
+
+	VkDescriptorSetLayoutBinding dslBinding[1];
+	ClearStruct(dslBinding[0]);
+	dslBinding[0].binding         = 0;
+	dslBinding[0].descriptorCount = Constants::c_maxTextures;
+	dslBinding[0].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	dslBinding[0].stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	VkDescriptorSetLayoutCreateInfo dslInfo;
+	ClearStruct(dslInfo);
+	dslInfo.bindingCount = (uint32_t)std::size(dslBinding);
+	dslInfo.pBindings    = dslBinding;
+	dslInfo.flags        = 0;
+
+	result =
+	    vkCreateDescriptorSetLayout(GetContext().Device, &dslInfo, nullptr, &g_data->m_descriptorSetLayout);
+	CR_ASSERT(result == VK_SUCCESS, "failed to create a descriptor set layout");
+
+	VkDescriptorSetAllocateInfo info{};
+	ClearStruct(info);
+	info.descriptorPool     = g_data->m_descriptorPool;
+	info.descriptorSetCount = 1;
+	info.pSetLayouts        = &g_data->m_descriptorSetLayout;
+
+	result = vkAllocateDescriptorSets(GetContext().Device, &info, &g_data->m_descriptorSet);
+	CR_ASSERT(result == VK_SUCCESS, "Failed to create descriptor set");
 }
 
 void cegraph::Textures::Shutdown() {
 	CR_ASSERT(g_data != nullptr, "Textures are already shutdown");
+
+	vkDestroyDescriptorPool(GetContext().Device, g_data->m_descriptorPool, nullptr);
+	g_data->m_descriptorPool = nullptr;
+
+	vkDestroyDescriptorSetLayout(GetContext().Device, g_data->m_descriptorSetLayout, nullptr);
+	g_data->m_descriptorSetLayout = nullptr;
 
 	vkDestroySampler(GetContext().Device, g_data->m_sampler, nullptr);
 
@@ -261,7 +312,7 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 		CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to set input on jpeg xl decoder");
 		JxlDecoderCloseInput(g_data->Decoder);
 
-		JxlBasicInfo basicInfo;
+		JxlBasicInfo basicInfo{};
 		uint32_t width{};
 		uint32_t height{};
 
@@ -439,6 +490,8 @@ void cegraph::Textures::ReleaseTextureSet(Handles::TextureSet set) {
 
 		vkDestroyImageView(GetContext().Device, g_data->Views[texture], nullptr);
 		vmaDestroyImage(GetContext().Allocator, g_data->Images[texture], g_data->Allocations[texture]);
+		g_data->Views[texture]  = VK_NULL_HANDLE;
+		g_data->Images[texture] = VK_NULL_HANDLE;
 	}
 
 	g_data->TexturesLoaded = newLoaded;
@@ -451,6 +504,27 @@ void cegraph::Textures::Update(VkCommandBuffer a_cmdBuffer) {
 		Commands::TransitionFromTransferQueue(a_cmdBuffer, g_data->Images[texture],
 		                                      g_data->NumFrames[texture]);
 	}
+	g_data->NeedsTransferBarrier.clear();
+
+	VkWriteDescriptorSet writeSet;
+	std::vector<VkDescriptorImageInfo> imgInfos;
+	imgInfos.reserve(g_data->Views.size());
+
+	for(uint32_t i = 0; i < g_data->Views.size(); ++i) {
+		VkDescriptorImageInfo& imgInfo = imgInfos.emplace_back();
+		imgInfo.imageLayout            = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imgInfo.imageView              = g_data->Views[i];
+		imgInfo.sampler                = g_data->m_sampler;
+	}
+
+	ClearStruct(writeSet);
+	writeSet.dstBinding      = 0;
+	writeSet.dstArrayElement = 0;
+	writeSet.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	writeSet.descriptorCount = (uint32_t)imgInfos.size();
+	writeSet.pImageInfo      = imgInfos.data();
+	writeSet.dstSet          = g_data->m_descriptorSet;
+	vkUpdateDescriptorSets(GetContext().Device, 1, &writeSet, 0, nullptr);
 }
 
 uint32_t cegraph::Textures::GetNumFrames(Handles::Texture a_texture) {
@@ -460,6 +534,11 @@ uint32_t cegraph::Textures::GetNumFrames(Handles::Texture a_texture) {
 
 	return g_data->NumFrames[a_texture.asInt()];
 }
-VkSampler cegraph::Textures::GetSampler() {
-	return g_data->m_sampler;
+
+const VkDescriptorSetLayout& cegraph::Textures::GetDescriptorSetLayout() {
+	return g_data->m_descriptorSetLayout;
+}
+
+const VkDescriptorSet& cegraph::Textures::GetDescriptorSet() {
+	return g_data->m_descriptorSet;
 }

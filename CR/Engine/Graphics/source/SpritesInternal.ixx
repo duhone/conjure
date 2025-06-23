@@ -6,6 +6,8 @@ module;
 
 #include <core/Log.h>
 
+#include "Core.h"
+
 #include "ankerl/unordered_dense.h"
 #include <glm/glm.hpp>
 
@@ -14,6 +16,7 @@ export module CR.Engine.Graphics.SpritesInternal;
 import CR.Engine.Graphics.Constants;
 import CR.Engine.Graphics.Context;
 import CR.Engine.Graphics.Handles;
+import CR.Engine.Graphics.Materials;
 import CR.Engine.Graphics.Textures;
 import CR.Engine.Graphics.VertexLayout;
 import CR.Engine.Graphics.InternalHandles;
@@ -36,6 +39,7 @@ export namespace CR::Engine::Graphics::Sprites {
 	void Initialize();
 	void Shutdown();
 	void Update();
+	void Render(VkCommandBuffer& a_cmdBuffer);
 
 }    // namespace CR::Engine::Graphics::Sprites
 
@@ -78,6 +82,7 @@ namespace {
 
 		// GPU
 		cegraph::Handles::VertexBuffer VertBuffer;
+		cegraph::Handles::Material m_material;
 	};
 
 	Data* g_data = nullptr;
@@ -111,6 +116,8 @@ void cegraph::Sprites::CreateInternal(std::span<uint64_t> a_hashes, std::span<Ha
 
 		++nextAvailable;
 	}
+
+	g_data->m_material = cegraph::Materials::GetMaterial("sprite");
 }
 
 void cegraph::Sprites::DeleteInternal(std::span<Handles::Sprite> a_sprites) {
@@ -218,4 +225,10 @@ void cegraph::Sprites::Update() {
 		    g_data->CurrentFrames[sprite] / (cegraph::Constants::c_designRefreshRate /
 		                                     g_data->TemplateFrameRates[g_data->TemplateIndices[sprite]]);
 	}
+}
+
+void cegraph::Sprites::Render(VkCommandBuffer& a_cmdBuffer) {
+	CR_ASSERT(g_data != nullptr, "Sprites are shutdown");
+
+	Materials::Bind(g_data->m_material, a_cmdBuffer);
 }

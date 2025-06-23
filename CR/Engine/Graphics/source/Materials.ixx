@@ -33,9 +33,8 @@ export namespace CR::Engine::Graphics::Materials {
 	void Shutdown();
 
 	Handles::Material GetMaterial(std::string_view a_name);
-	VkPipeline GetPipeline(Handles::Material material);
-	VkDescriptorSetLayout GetDescriptorSetLayout();
 
+	void Bind(Handles::Material a_material, VkCommandBuffer& a_cmdBuffer);
 }    // namespace CR::Engine::Graphics::Materials
 
 module :private;
@@ -47,7 +46,6 @@ namespace cegraph = CR::Engine::Graphics;
 
 namespace {
 	VkPipelineLayout m_pipeLineLayout;
-	VkDescriptorSetLayout m_descriptorSetLayout;
 	std::vector<VkPipeline> m_pipelines;
 	ankerl::unordered_dense::map<std::string, uint16_t> m_materialLookup;
 
@@ -193,38 +191,15 @@ void cegraph::Materials::Initialize(VkRenderPass a_renderPass) {
 		    blendStateInfo.pAttachments    = &blendAttachState;
 		    blendStateInfo.attachmentCount = 1;
 
-		    // Have to pass one sampler per descriptor. but only using one sampler, so just have to duplicate
-		    std::vector<VkSampler> samplers;
-		    samplers.reserve(Constants::c_maxTextures);
-		    for(int32_t i = 0; i < Constants::c_maxTextures; ++i) {
-			    samplers.push_back(Textures::GetSampler());
-		    }
-
-		    VkDescriptorSetLayoutBinding dslBinding[1];
-		    ClearStruct(dslBinding[0]);
-		    dslBinding[0].binding            = 0;
-		    dslBinding[0].descriptorCount    = Constants::c_maxTextures;
-		    dslBinding[0].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		    dslBinding[0].stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
-		    dslBinding[0].pImmutableSamplers = samplers.data();
-
-		    VkDescriptorSetLayoutCreateInfo dslInfo;
-		    ClearStruct(dslInfo);
-		    dslInfo.bindingCount = (uint32_t)std::size(dslBinding);
-		    dslInfo.pBindings    = dslBinding;
-
-		    VkResult result =
-		        vkCreateDescriptorSetLayout(GetContext().Device, &dslInfo, nullptr, &m_descriptorSetLayout);
-		    CR_ASSERT(result == VK_SUCCESS, "failed to create a descriptor set layout");
-
 		    VkPipelineLayoutCreateInfo layoutInfo;
 		    ClearStruct(layoutInfo);
 		    layoutInfo.pushConstantRangeCount = 0;
 		    layoutInfo.pPushConstantRanges    = nullptr;
 		    layoutInfo.setLayoutCount         = 1;
-		    layoutInfo.pSetLayouts            = &m_descriptorSetLayout;
+		    layoutInfo.pSetLayouts            = &cegraph::Textures::GetDescriptorSetLayout();
 
-		    result = vkCreatePipelineLayout(GetContext().Device, &layoutInfo, nullptr, &m_pipeLineLayout);
+		    VkResult result =
+		        vkCreatePipelineLayout(GetContext().Device, &layoutInfo, nullptr, &m_pipeLineLayout);
 		    CR_ASSERT(result == VK_SUCCESS, "failed to create a pipeline layout");
 
 		    VkPipelineInputAssemblyStateCreateInfo vertAssemblyInfo;
@@ -315,7 +290,6 @@ void cegraph::Materials::FinishInitialize() {
 void cegraph::Materials::Shutdown() {
 	for(auto& pipeline : m_pipelines) { vkDestroyPipeline(GetContext().Device, pipeline, nullptr); }
 	vkDestroyPipelineLayout(GetContext().Device, m_pipeLineLayout, nullptr);
-	vkDestroyDescriptorSetLayout(GetContext().Device, m_descriptorSetLayout, nullptr);
 }
 
 cegraph::Handles::Material cegraph::Materials::GetMaterial(std::string_view a_name) {
@@ -324,12 +298,41 @@ cegraph::Handles::Material cegraph::Materials::GetMaterial(std::string_view a_na
 	return Handles::Material{matIter->second};
 }
 
-VkPipeline cegraph::Materials::GetPipeline(Handles::Material material) {
-	uint16_t handleInt = material.asInt();
-	CR_ASSERT(handleInt < m_pipelines.size(), "no such material {}", handleInt);
-	return m_pipelines[handleInt];
-}
+void cegraph::Materials::Bind(Handles::Material a_material, VkCommandBuffer& a_cmdBuffer) {
+	CR_ASSERT(a_material.isValid() && a_material.asInt() < m_pipelines.size(),
+	          "Tried to bind an invalid material");
 
-VkDescriptorSetLayout cegraph::Materials::GetDescriptorSetLayout() {
-	return m_descriptorSetLayout;
+	vkCmdBindPipeline(a_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines[a_material.asInt()]);
+
+	vkCmdBindDescriptorSets(a_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeLineLayout, 0, 1,
+	                        &cegraph::Textures::GetDescriptorSet(), 0, nullptr);
+
+	/* won't need descriptor for textures anymore. redo this code if we need buffers in future
+	VkWriteDescriptorSet writeSet{};
+	std::array<VkDescriptorImageInfo, Constants::c_maxTextures> imgInfos{};
+
+	std::span<VkImageView> imgViews = cegraph::Textures::GetImageViews();
+	CR_ASSERT(imgViews.size() == Constants::c_maxTextures, "Unexpected number of texture image views");
+
+	VkSampler sampler = cegraph::Textures::GetSampler();
+
+	for(uint32_t i = 0; i < Constants::c_maxTextures; ++i) {
+	    VkDescriptorImageInfo& imgInfo = imgInfos[i];
+	    imgInfo.imageLayout            = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	    imgInfo.imageView              = imgViews[i];
+	    imgInfo.sampler                = sampler;
+	}
+
+	ClearStruct(writeSet);
+	writeSet.dstBinding      = 0;
+	writeSet.dstArrayElement = 0;
+	writeSet.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	writeSet.descriptorCount = Constants::c_maxTextures;
+	writeSet.pImageInfo      = imgInfos.data();
+
+	VkPushDescriptorSetInfo pushDescriptor;
+	ClearStruct(pushDescriptor);
+
+	vkCmdPushDescriptorSet(a_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeLineLayout, 0, 1, &writeSet);
+	*/
 }

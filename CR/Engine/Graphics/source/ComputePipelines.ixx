@@ -15,7 +15,6 @@ export module CR.Engine.Graphics.ComputePipelines;
 
 import CR.Engine.Graphics.Constants;
 import CR.Engine.Graphics.Context;
-import CR.Engine.Graphics.DescriptorPool;
 import CR.Engine.Graphics.GraphicsThread;
 import CR.Engine.Graphics.Shaders;
 import CR.Engine.Graphics.Utils;

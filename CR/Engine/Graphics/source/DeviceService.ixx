@@ -13,7 +13,6 @@ import CR.Engine.Graphics.Commands;
 import CR.Engine.Graphics.ComputePipelines;
 import CR.Engine.Graphics.Constants;
 import CR.Engine.Graphics.Context;
-import CR.Engine.Graphics.DescriptorPool;
 import CR.Engine.Graphics.GraphicsThread;
 import CR.Engine.Graphics.Materials;
 import CR.Engine.Graphics.Shaders;
@@ -101,7 +100,7 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 	appInfo.applicationVersion = CR_VERSION_APP;
 	appInfo.pEngineName        = CR_ENGINE_NAME;
 	appInfo.engineVersion      = CR_VERSION_ENGINE;
-	appInfo.apiVersion         = VK_API_VERSION_1_2;
+	appInfo.apiVersion         = VK_API_VERSION_1_4;
 
 	VkInstanceCreateInfo createInfo;
 	ClearStruct(createInfo);
@@ -134,7 +133,7 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 
 	VmaAllocatorCreateInfo allocatorCreateInfo;
 	memset(&allocatorCreateInfo, 0, sizeof(VmaAllocatorCreateInfo));
-	allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_2;
+	allocatorCreateInfo.vulkanApiVersion = VK_API_VERSION_1_4;
 	allocatorCreateInfo.physicalDevice   = context.PhysicalDevice;
 	allocatorCreateInfo.device           = context.Device;
 	allocatorCreateInfo.instance         = m_instance;
@@ -155,7 +154,6 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 	ComputePipelines::Initialize();
 	UniformBuffers::Initialize();
 	VertexBuffers::Initialize();
-	DescriptorPool::Initialize();
 	Sprites::Initialize();
 
 	ComputePipelines::FinishInitialize();
@@ -168,7 +166,6 @@ void cegraph::DeviceService::Stop() {
 	vkDeviceWaitIdle(context.Device);
 
 	Sprites::Shutdown();
-	DescriptorPool::Shutdown();
 	VertexBuffers::Shutdown();
 	UniformBuffers::Shutdown();
 	Textures::Shutdown();
@@ -222,6 +219,9 @@ void cegraph::DeviceService::Update() {
 
 	Commands::RenderPassBegin(commandBuffer, m_renderPass, m_frameBuffers[m_currentFrameBuffer], m_windowSize,
 	                          m_clearColor);
+
+	Sprites::Render(commandBuffer);
+
 	Commands::RenderPassEnd(commandBuffer);
 	m_commandPool.End(commandBuffer);
 
@@ -383,9 +383,21 @@ void cegraph::DeviceService::FindDevice(Context& context) {
 	CR_LOG("graphics queue family: {} transfer queue index: {} presentation queue index: {}",
 	       context.GraphicsQueueIndex, context.TransferQueueIndex, m_presentationQueueIndex);
 
+	VkPhysicalDeviceRobustness2FeaturesKHR featuresRobust;
+	ClearStruct(featuresRobust);
+	featuresRobust.pNext = nullptr;
+
+	VkPhysicalDeviceVulkan14Features features14;
+	ClearStruct(features14);
+	features14.pNext = &featuresRobust;
+
+	VkPhysicalDeviceVulkan13Features features13;
+	ClearStruct(features13);
+	features13.pNext = &features14;
+
 	VkPhysicalDeviceVulkan12Features features12;
 	ClearStruct(features12);
-	features12.pNext = nullptr;
+	features12.pNext = &features13;
 
 	VkPhysicalDeviceVulkan11Features features11;
 	ClearStruct(features11);
@@ -468,9 +480,12 @@ void cegraph::DeviceService::BuildDevice(Context& context) {
 	requiredFeatures.features.fullDrawIndexUint32  = true;
 	requiredFeatures.features.shaderSampledImageArrayDynamicIndexing = true;
 
+	VkPhysicalDeviceVulkan11Features requiredFeatures11;
+	ClearStruct(requiredFeatures11);
+	requiredFeatures.pNext = &requiredFeatures11;
+
 	VkPhysicalDeviceVulkan12Features requiredFeatures12;
 	ClearStruct(requiredFeatures12);
-	requiredFeatures12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
 	requiredFeatures12.descriptorBindingPartiallyBound              = true;
 	requiredFeatures12.descriptorBindingVariableDescriptorCount     = true;
 	requiredFeatures12.descriptorIndexing                           = true;
@@ -478,7 +493,21 @@ void cegraph::DeviceService::BuildDevice(Context& context) {
 	requiredFeatures12.shaderInputAttachmentArrayDynamicIndexing    = true;
 	requiredFeatures12.runtimeDescriptorArray                       = true;
 	requiredFeatures12.descriptorBindingSampledImageUpdateAfterBind = true;
-	requiredFeatures.pNext                                          = &requiredFeatures12;
+	requiredFeatures11.pNext                                        = &requiredFeatures12;
+
+	VkPhysicalDeviceVulkan13Features requiredFeatures13;
+	ClearStruct(requiredFeatures13);
+	requiredFeatures12.pNext = &requiredFeatures13;
+
+	VkPhysicalDeviceVulkan14Features requiredFeatures14;
+	ClearStruct(requiredFeatures14);
+	requiredFeatures14.pushDescriptor = true;
+	requiredFeatures13.pNext          = &requiredFeatures14;
+
+	VkPhysicalDeviceRobustness2FeaturesKHR requiredFeaturesRobust;
+	ClearStruct(requiredFeaturesRobust);
+	requiredFeaturesRobust.nullDescriptor = VK_TRUE;
+	// requiredFeatures14.pNext              = &requiredFeaturesRobust;
 
 	int32_t graphicsQueueIndex     = 0;
 	int32_t presentationQueueIndex = 0;
@@ -523,6 +552,7 @@ void cegraph::DeviceService::BuildDevice(Context& context) {
 	createLogDevInfo.ppEnabledLayerNames     = nullptr;
 	createLogDevInfo.enabledExtensionCount   = (uint32_t)size(deviceExtensions);
 	createLogDevInfo.ppEnabledExtensionNames = data(deviceExtensions);
+	createLogDevInfo.pNext                   = &requiredFeaturesRobust;
 
 	if(vkCreateDevice(context.PhysicalDevice, &createLogDevInfo, nullptr, &context.Device) != VK_SUCCESS) {
 		CR_ERROR("Failed to create a vulkan device");
