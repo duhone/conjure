@@ -217,6 +217,21 @@ void cegraph::DeviceService::Update() {
 
 	Sprites::Update();
 
+	VkViewport viewport;
+	viewport.x        = 0.0f;
+	viewport.y        = 0.0f;
+	viewport.width    = (float)m_windowSize.x;
+	viewport.height   = (float)m_windowSize.y;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
+	vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+	VkRect2D scissor{};
+	scissor.extent.width  = m_windowSize.x;
+	scissor.extent.height = m_windowSize.y;
+
+	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
 	Commands::RenderPassBegin(commandBuffer, m_renderPass, m_frameBuffers[m_currentFrameBuffer], m_windowSize,
 	                          m_clearColor);
 

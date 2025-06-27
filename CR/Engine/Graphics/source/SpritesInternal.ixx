@@ -71,6 +71,7 @@ namespace {
 		std::array<uint32_t, cegraph::Constants::c_maxSprites> CurrentFrames;
 		// actual display frames. i.e. the traditional sprite frame
 		std::array<uint32_t, cegraph::Constants::c_maxSprites> DisplayFrames;
+		std::array<glm::uvec2, cegraph::Constants::c_maxSprites> Dimensions;
 		std::array<uint16_t, cegraph::Constants::c_maxSprites> TemplateIndices;
 
 		// templates
@@ -113,6 +114,7 @@ void cegraph::Sprites::CreateInternal(std::span<uint64_t> a_hashes, std::span<Ha
                                              cegraph::Constants::c_designRefreshRate) /
 		                                    g_data->TemplateFrameRates[spriteTemplate->second];
 		g_data->CurrentFrames[*nextAvailable] = 0;
+		g_data->Dimensions[*nextAvailable]    = Textures::GetDimensions(textureHandle);
 
 		++nextAvailable;
 	}
@@ -216,6 +218,9 @@ void cegraph::Sprites::SetRotationsInternal(std::span<Handles::Sprite> a_sprites
 }
 
 void cegraph::Sprites::Update() {
+	auto mapping        = VertexBuffers::Map(g_data->VertBuffer);
+	Vertex* spriteProps = (Vertex*)mapping.Data;
+
 	for(uint16_t sprite : g_data->Used) {
 		g_data->CurrentFrames[sprite] += cegraph::GetContext().DisplayTicksPerFrame;
 		if(g_data->CurrentFrames[sprite] > g_data->NumFrames[sprite]) {
@@ -224,6 +229,19 @@ void cegraph::Sprites::Update() {
 		g_data->DisplayFrames[sprite] =
 		    g_data->CurrentFrames[sprite] / (cegraph::Constants::c_designRefreshRate /
 		                                     g_data->TemplateFrameRates[g_data->TemplateIndices[sprite]]);
+
+		float sinAngle = sin(g_data->Rotations[sprite]);
+		float cosAngle = cos(g_data->Rotations[sprite]);
+
+		glm::mat2 rot = glm::mat2{cosAngle, -sinAngle, sinAngle, cosAngle};
+
+		spriteProps->Offset       = g_data->Positions[sprite];
+		spriteProps->TextureFrame = {g_data->TextureHandles[sprite].asInt(), g_data->DisplayFrames[sprite]};
+		spriteProps->Color        = glm::u8vec4{255, 255, 255, 255};
+		spriteProps->FrameSize    = g_data->Dimensions[sprite];
+		spriteProps->Rotation     = rot;
+
+		++spriteProps;
 	}
 }
 
@@ -231,4 +249,7 @@ void cegraph::Sprites::Render(VkCommandBuffer& a_cmdBuffer) {
 	CR_ASSERT(g_data != nullptr, "Sprites are shutdown");
 
 	Materials::Bind(g_data->m_material, a_cmdBuffer);
+	VertexBuffers::Bind(g_data->VertBuffer, a_cmdBuffer);
+
+	vkCmdDraw(a_cmdBuffer, 4, g_data->Used.size(), 0, 0);
 }

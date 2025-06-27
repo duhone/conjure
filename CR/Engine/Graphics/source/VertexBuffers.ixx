@@ -35,6 +35,8 @@ export namespace CR::Engine::Graphics::VertexBuffers {
 	void Release(Handles::VertexBuffer a_handle);
 
 	Mapping Map(Handles::VertexBuffer a_handle);
+
+	void Bind(Handles::VertexBuffer a_buffer, VkCommandBuffer& a_cmdBuffer);
 }    // namespace CR::Engine::Graphics::VertexBuffers
 
 module :private;
@@ -95,7 +97,7 @@ cegraph::Handles::VertexBuffer cegraph::VertexBuffers::Create(const VertexLayout
 	vmaCreateBuffer(GetContext().Allocator, &bufferCreateInfo, &bufferAllocCreateInfo, &mapping.Buffer,
 	                &(g_data->Allocations[handle.asInt()]), &bufferAllocInfo);
 	mapping.Data = (std::byte*)bufferAllocInfo.pMappedData;
-	mapping.Size = bufferCreateInfo.size;
+	mapping.Size = (uint32_t)bufferCreateInfo.size;
 
 	// Only support instance vertex buffers at the moment. And binding would need to be changed in the
 	// pipeline as appropriate, although only ever 1 binding at the moment.
@@ -132,4 +134,12 @@ cegraph::VertexBuffers::Mapping cegraph::VertexBuffers::Map(Handles::VertexBuffe
 	CR_ASSERT(g_data->Used.contains(a_handle.asInt()), "Mapping VertexBuffers that doesn't exist");
 
 	return g_data->Buffers[a_handle.asInt()];
+}
+
+void cegraph::VertexBuffers::Bind(Handles::VertexBuffer a_buffer, VkCommandBuffer& a_cmdBuffer) {
+	CR_ASSERT(g_data != nullptr, "VertexBuffers are not initialized");
+	CR_ASSERT(g_data->Used.contains(a_buffer.asInt()), "Mapping VertexBuffers that doesn't exist");
+
+	VkDeviceSize vertOffset{};
+	vkCmdBindVertexBuffers(a_cmdBuffer, 0, 1, &g_data->Buffers[a_buffer.asInt()].Buffer, &vertOffset);
 }

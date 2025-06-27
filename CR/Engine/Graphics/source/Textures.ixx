@@ -48,6 +48,7 @@ export namespace CR::Engine::Graphics::Textures {
 
 	// can only get this for loaded textures
 	uint32_t GetNumFrames(Handles::Texture a_texture);
+	glm::uvec2 GetDimensions(Handles::Texture a_texture);
 
 	const VkDescriptorSetLayout& GetDescriptorSetLayout();
 	const VkDescriptorSet& GetDescriptorSet();
@@ -92,6 +93,7 @@ namespace {
 		std::array<VmaAllocation, cegraph::Constants::c_maxTextures> Allocations;
 		std::array<VkImageView, cegraph::Constants::c_maxTextures> Views;
 		std::array<uint16_t, cegraph::Constants::c_maxTextures> NumFrames;
+		std::array<glm::uvec2, cegraph::Constants::c_maxTextures> Dimensions;
 		cecore::BitSet<cegraph::Constants::c_maxTextures> NeedsTransferBarrier;
 
 		// Should be the union of all used TextureSets
@@ -399,7 +401,8 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 
 		JxlDecoderReleaseInput(g_data->Decoder);
 
-		g_data->NumFrames[texture] = (uint16_t)frameCopies.size();
+		g_data->NumFrames[texture]  = (uint16_t)frameCopies.size();
+		g_data->Dimensions[texture] = glm::uvec2{width, height};
 
 		VkImageCreateInfo createInfo;
 		ClearStruct(createInfo);
@@ -533,6 +536,14 @@ uint32_t cegraph::Textures::GetNumFrames(Handles::Texture a_texture) {
 	          "Texture not loaded, cant get number of frames");
 
 	return g_data->NumFrames[a_texture.asInt()];
+}
+
+glm::uvec2 cegraph::Textures::GetDimensions(Handles::Texture a_texture) {
+	CR_ASSERT(g_data != nullptr, "Textures not initialized");
+	CR_ASSERT(g_data->TexturesLoaded.contains(a_texture.asInt()),
+	          "Texture not loaded, cant get number of frames");
+
+	return g_data->Dimensions[a_texture.asInt()];
 }
 
 const VkDescriptorSetLayout& cegraph::Textures::GetDescriptorSetLayout() {
