@@ -26,7 +26,7 @@ set(SOURCE_FILES
     ${root}/source/Sprites.cpp
     ${root}/source/SpritesInternal.ixx
     ${root}/source/Textures.ixx
-    ${root}/source/UniformBuffers.ixx
+    ${root}/source/UniformBuffer.ixx
     ${root}/source/Utils.ixx
     ${root}/source/VertexLayout.ixx
     ${root}/source/VertexBuffers.ixx

@@ -11,6 +11,8 @@ namespace CR::Engine::Graphics {
 		VkPhysicalDevice PhysicalDevice;
 		VkDevice Device;
 		VmaAllocator Allocator;
+		VkDescriptorSetLayout GlobalDescriptorSetLayout{};
+		VkDescriptorSet GlobalDescriptorSet{};
 		int32_t GraphicsQueueIndex{-1};
 		int32_t TransferQueueIndex{-1};
 		// If monitor refresh rate was half of c_designRefreshRate, then this would be 2.

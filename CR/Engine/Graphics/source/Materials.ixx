@@ -196,7 +196,7 @@ void cegraph::Materials::Initialize(VkRenderPass a_renderPass) {
 		    layoutInfo.pushConstantRangeCount = 0;
 		    layoutInfo.pPushConstantRanges    = nullptr;
 		    layoutInfo.setLayoutCount         = 1;
-		    layoutInfo.pSetLayouts            = &cegraph::Textures::GetDescriptorSetLayout();
+		    layoutInfo.pSetLayouts            = &GetContext().GlobalDescriptorSetLayout;
 
 		    VkResult result =
 		        vkCreatePipelineLayout(GetContext().Device, &layoutInfo, nullptr, &m_pipeLineLayout);
@@ -305,34 +305,5 @@ void cegraph::Materials::Bind(Handles::Material a_material, VkCommandBuffer& a_c
 	vkCmdBindPipeline(a_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines[a_material.asInt()]);
 
 	vkCmdBindDescriptorSets(a_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeLineLayout, 0, 1,
-	                        &cegraph::Textures::GetDescriptorSet(), 0, nullptr);
-
-	/* won't need descriptor for textures anymore. redo this code if we need buffers in future
-	VkWriteDescriptorSet writeSet{};
-	std::array<VkDescriptorImageInfo, Constants::c_maxTextures> imgInfos{};
-
-	std::span<VkImageView> imgViews = cegraph::Textures::GetImageViews();
-	CR_ASSERT(imgViews.size() == Constants::c_maxTextures, "Unexpected number of texture image views");
-
-	VkSampler sampler = cegraph::Textures::GetSampler();
-
-	for(uint32_t i = 0; i < Constants::c_maxTextures; ++i) {
-	    VkDescriptorImageInfo& imgInfo = imgInfos[i];
-	    imgInfo.imageLayout            = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	    imgInfo.imageView              = imgViews[i];
-	    imgInfo.sampler                = sampler;
-	}
-
-	ClearStruct(writeSet);
-	writeSet.dstBinding      = 0;
-	writeSet.dstArrayElement = 0;
-	writeSet.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	writeSet.descriptorCount = Constants::c_maxTextures;
-	writeSet.pImageInfo      = imgInfos.data();
-
-	VkPushDescriptorSetInfo pushDescriptor;
-	ClearStruct(pushDescriptor);
-
-	vkCmdPushDescriptorSet(a_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeLineLayout, 0, 1, &writeSet);
-	*/
+	                        &GetContext().GlobalDescriptorSet, 0, nullptr);
 }

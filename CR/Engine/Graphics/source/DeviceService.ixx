@@ -18,7 +18,7 @@ import CR.Engine.Graphics.Materials;
 import CR.Engine.Graphics.Shaders;
 import CR.Engine.Graphics.SpritesInternal;
 import CR.Engine.Graphics.Textures;
-import CR.Engine.Graphics.UniformBuffers;
+import CR.Engine.Graphics.UniformBuffer;
 import CR.Engine.Graphics.Utils;
 import CR.Engine.Graphics.VertexBuffers;
 
@@ -67,6 +67,7 @@ namespace CR::Engine::Graphics {
 		std::vector<VkFramebuffer> m_frameBuffers;
 		VkSemaphore m_renderingFinished;    // need to block presenting until all rendering has completed
 		VkFence m_frameFence;
+		VkDescriptorPool m_globalDescriptorPool{};
 
 		VkQueue m_graphicsQueue;
 		VkQueue m_transferQueue;
@@ -88,6 +89,15 @@ namespace CR::Engine::Graphics {
 module :private;
 
 namespace cegraph = CR::Engine::Graphics;
+
+namespace {
+#pragma pack(push)
+#pragma pack(1)
+	struct GlobalUniformBuffer {
+		glm::vec2 InvScreenSize;
+	};
+#pragma pack(pop)
+}    // namespace
 
 cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<glm::vec4> a_clearColor) :
     m_window(a_window), m_clearColor(a_clearColor) {
@@ -155,6 +165,53 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 
 	context.DisplayTicksPerFrame = Constants::c_designRefreshRate / a_window.GetRefreshRate();
 
+	// set up global texture descriptor. only 1 frame in flight, so easy.
+	VkDescriptorPoolSize poolSizes[2];
+	poolSizes[0].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	poolSizes[0].descriptorCount = cegraph::Constants::c_maxTextures;
+	poolSizes[1].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	poolSizes[1].descriptorCount = 1;
+
+	VkDescriptorPoolCreateInfo poolInfo{};
+	ClearStruct(poolInfo);
+	poolInfo.poolSizeCount = std::size(poolSizes);
+	poolInfo.pPoolSizes    = std::data(poolSizes);
+	poolInfo.maxSets       = 1;
+
+	result = vkCreateDescriptorPool(context.Device, &poolInfo, nullptr, &m_globalDescriptorPool);
+	CR_ASSERT(result == VK_SUCCESS, "Failed to create descriptor pool");
+
+	VkDescriptorSetLayoutBinding dslBinding[2];
+	ClearStruct(dslBinding[0]);
+	ClearStruct(dslBinding[1]);
+	dslBinding[0].binding         = 0;
+	dslBinding[0].descriptorCount = Constants::c_maxTextures;
+	dslBinding[0].descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	dslBinding[0].stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
+	dslBinding[1].binding         = 1;
+	dslBinding[1].descriptorCount = 1;
+	dslBinding[1].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	dslBinding[1].stageFlags      = VK_SHADER_STAGE_VERTEX_BIT;
+
+	VkDescriptorSetLayoutCreateInfo dslInfo;
+	ClearStruct(dslInfo);
+	dslInfo.bindingCount = (uint32_t)std::size(dslBinding);
+	dslInfo.pBindings    = dslBinding;
+	dslInfo.flags        = 0;
+
+	result =
+	    vkCreateDescriptorSetLayout(context.Device, &dslInfo, nullptr, &context.GlobalDescriptorSetLayout);
+	CR_ASSERT(result == VK_SUCCESS, "failed to create a descriptor set layout");
+
+	VkDescriptorSetAllocateInfo info{};
+	ClearStruct(info);
+	info.descriptorPool     = m_globalDescriptorPool;
+	info.descriptorSetCount = 1;
+	info.pSetLayouts        = &context.GlobalDescriptorSetLayout;
+
+	result = vkAllocateDescriptorSets(context.Device, &info, &context.GlobalDescriptorSet);
+	CR_ASSERT(result == VK_SUCCESS, "Failed to create descriptor set");
+
 	SetContext(context);
 
 	m_commandPool = CommandPool(context.GraphicsQueueIndex);
@@ -163,7 +220,7 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 	Textures::Initialize();
 	Materials::Initialize(m_renderPass);
 	ComputePipelines::Initialize();
-	UniformBuffers::Initialize();
+	UniformBuffer::Initialize();
 	VertexBuffers::Initialize();
 	Sprites::Initialize();
 
@@ -176,9 +233,14 @@ void cegraph::DeviceService::Stop() {
 
 	vkDeviceWaitIdle(context.Device);
 
+	vkDestroyDescriptorPool(context.Device, m_globalDescriptorPool, nullptr);
+	m_globalDescriptorPool = nullptr;
+
+	vkDestroyDescriptorSetLayout(context.Device, context.GlobalDescriptorSetLayout, nullptr);
+
 	Sprites::Shutdown();
 	VertexBuffers::Shutdown();
-	UniformBuffers::Shutdown();
+	UniformBuffer::Shutdown();
 	Textures::Shutdown();
 	ComputePipelines::Shutdown();
 	Materials::Shutdown();
@@ -218,7 +280,27 @@ bool cegraph::DeviceService::Update() {
 	auto commandBuffer = m_commandPool.Begin();
 
 	Textures::Update(commandBuffer);
-	UniformBuffers::Update();
+	UniformBuffer::Update();
+
+	auto uboMap              = UniformBuffer::Map(sizeof(GlobalUniformBuffer));
+	GlobalUniformBuffer* ubo = (GlobalUniformBuffer*)uboMap.Data;
+	ubo->InvScreenSize.x     = 1.0f / m_windowSize.x;
+	ubo->InvScreenSize.y     = 1.0f / m_windowSize.y;
+
+	VkDescriptorBufferInfo bufferInfo;
+	ClearStruct(bufferInfo);
+	bufferInfo.buffer = uboMap.Buffer;
+	bufferInfo.offset = 0;
+	bufferInfo.range  = uboMap.Size;
+
+	VkWriteDescriptorSet writeSet;
+	ClearStruct(writeSet);
+	writeSet.dstBinding      = 1;
+	writeSet.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	writeSet.descriptorCount = 1;
+	writeSet.pBufferInfo     = &bufferInfo;
+	writeSet.dstSet          = context.GlobalDescriptorSet;
+	vkUpdateDescriptorSets(context.Device, 1, &writeSet, 0, nullptr);
 
 	Sprites::Update();
 

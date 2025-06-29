@@ -82,7 +82,7 @@ int main(int, char*) {
 			spriteHashes.emplace_back(cecore::C_Hash64("brick"));
 			sprites.resize(spriteHashes.size());
 			cegraph::Sprites::Create(spriteHashes, sprites);
-			spritePositions.emplace_back(glm::vec2{1024.0f, 512.0f});
+			spritePositions.emplace_back(glm::vec2{512.0f, 256.0f});
 			cegraph::Sprites::SetPositions(sprites, spritePositions);
 			spriteRotations.emplace_back(0.0f);
 		}
