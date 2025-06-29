@@ -45,23 +45,25 @@ namespace CR::Engine::Graphics {
 		DeviceService& operator=(const DeviceService&) = delete;
 		DeviceService& operator=(DeviceService&&)      = delete;
 
-		void Update();
+		bool Update();
+		bool ReInitialize();
 
 		void Stop();
 
 	  private:
 		void FindDevice(Context& context);
 		void BuildDevice(Context& context);
-		void CreateSwapChain(const Context& context);
+		bool CreateSwapChain(const Context& context);
+		void DestroySwapChain();
 
 		ceplat::Window& m_window;
 		glm::ivec2 m_windowSize{0, 0};
-		VkInstance m_instance;
-		VkSurfaceKHR m_primarySurface;
-		VkSwapchainKHR m_primarySwapChain;
-		std::vector<VkImage> m_primarySwapChainImages;
-		std::vector<VkImageView> m_primarySwapChainImageViews;
-		VkRenderPass m_renderPass;    // only 1 currently, and only 1 subpass to go with it
+		VkInstance m_instance{};
+		VkSurfaceKHR m_primarySurface{};
+		VkSwapchainKHR m_primarySwapChain{};
+		std::vector<VkImage> m_primarySwapChainImages{};
+		std::vector<VkImageView> m_primarySwapChainImageViews{};
+		VkRenderPass m_renderPass{};    // only 1 currently, and only 1 subpass to go with it
 		std::vector<VkFramebuffer> m_frameBuffers;
 		VkSemaphore m_renderingFinished;    // need to block presenting until all rendering has completed
 		VkFence m_frameFence;
@@ -72,9 +74,9 @@ namespace CR::Engine::Graphics {
 		int32_t m_presentationQueueIndex{-1};
 
 		// MSAA
-		VkImage m_msaaImage;
-		VkImageView m_msaaView;
-		VmaAllocation m_msaaAlloc;
+		VkImage m_msaaImage{};
+		VkImageView m_msaaView{};
+		VmaAllocation m_msaaAlloc{};
 
 		uint32_t m_currentFrameBuffer{0};
 		std::optional<glm::vec4> m_clearColor;
@@ -140,7 +142,16 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 
 	vmaCreateAllocator(&allocatorCreateInfo, &context.Allocator);
 
-	CreateSwapChain(context);
+	bool swapChainCreated = CreateSwapChain(context);
+	CR_ASSERT(swapChainCreated, "Unable to create initial swap chain");
+
+	VkSemaphoreCreateInfo semInfo;
+	ClearStruct(semInfo);
+	vkCreateSemaphore(context.Device, &semInfo, nullptr, &m_renderingFinished);
+
+	VkFenceCreateInfo fenceInfo;
+	ClearStruct(fenceInfo);
+	vkCreateFence(context.Device, &fenceInfo, nullptr, &m_frameFence);
 
 	context.DisplayTicksPerFrame = Constants::c_designRefreshRate / a_window.GetRefreshRate();
 
@@ -179,19 +190,8 @@ void cegraph::DeviceService::Stop() {
 
 	vkDestroyFence(context.Device, m_frameFence, nullptr);
 	vkDestroySemaphore(context.Device, m_renderingFinished, nullptr);
-	for(auto& framebuffer : m_frameBuffers) { vkDestroyFramebuffer(context.Device, framebuffer, nullptr); }
 
-	vkDestroyRenderPass(context.Device, m_renderPass, nullptr);
-	for(auto& imageView : m_primarySwapChainImageViews) {
-		vkDestroyImageView(context.Device, imageView, nullptr);
-	}
-	m_primarySwapChainImageViews.clear();
-	m_primarySwapChainImages.clear();
-
-	vkDestroyImageView(context.Device, m_msaaView, nullptr);
-	vmaDestroyImage(context.Allocator, m_msaaImage, m_msaaAlloc);
-
-	vkDestroySwapchainKHR(context.Device, m_primarySwapChain, nullptr);
+	DestroySwapChain();
 
 	vmaDestroyAllocator(context.Allocator);
 
@@ -200,14 +200,19 @@ void cegraph::DeviceService::Stop() {
 	vkDestroyInstance(m_instance, nullptr);
 }
 
-void cegraph::DeviceService::Update() {
+bool cegraph::DeviceService::Update() {
 	const Context& context = GetContext();
 
-	vkAcquireNextImageKHR(context.Device, m_primarySwapChain, UINT64_MAX, VK_NULL_HANDLE, m_frameFence,
-	                      &m_currentFrameBuffer);
+	if(m_primarySwapChain == nullptr) { return false; }
+
+	VkResult result = vkAcquireNextImageKHR(context.Device, m_primarySwapChain, UINT64_MAX, VK_NULL_HANDLE,
+	                                        m_frameFence, &m_currentFrameBuffer);
+	if(result == VK_ERROR_OUT_OF_DATE_KHR) { return false; }
 
 	vkWaitForFences(context.Device, 1, &m_frameFence, VK_TRUE, UINT64_MAX);
 	vkResetFences(context.Device, 1, &m_frameFence);
+
+	if(result == VK_SUBOPTIMAL_KHR) { return false; }
 
 	m_commandPool.ResetAll();
 	auto commandBuffer = m_commandPool.Begin();
@@ -257,11 +262,14 @@ void cegraph::DeviceService::Update() {
 	presInfo.swapchainCount     = 1;
 	presInfo.pSwapchains        = &m_primarySwapChain;
 	presInfo.pImageIndices      = &m_currentFrameBuffer;
-	vkQueuePresentKHR(m_presentationQueue, &presInfo);
+	result                      = vkQueuePresentKHR(m_presentationQueue, &presInfo);
+	if(result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR) { return false; }
 
 	// Don't allow gpu to get behind, sacrifice performance for minimal latency.
 	vkQueueWaitIdle(m_graphicsQueue);
 	vkQueueWaitIdle(m_presentationQueue);
+
+	return true;
 }
 
 void cegraph::DeviceService::FindDevice(Context& context) {
@@ -578,13 +586,18 @@ void cegraph::DeviceService::BuildDevice(Context& context) {
 	vkGetDeviceQueue(context.Device, context.TransferQueueIndex, transferQueueIndex, &m_transferQueue);
 }
 
-void cegraph::DeviceService::CreateSwapChain(const Context& context) {
+bool cegraph::DeviceService::CreateSwapChain(const Context& context) {
 	VkSurfaceCapabilitiesKHR surfaceCaps;
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(context.PhysicalDevice, m_primarySurface, &surfaceCaps);
 	CR_LOG("current surface resolution: {}x{}", surfaceCaps.maxImageExtent.width,
 	       surfaceCaps.maxImageExtent.height);
 	CR_LOG("Min image count: {} Max image count: {}", surfaceCaps.minImageCount, surfaceCaps.maxImageCount);
 	m_windowSize = glm::ivec2(surfaceCaps.maxImageExtent.width, surfaceCaps.maxImageExtent.height);
+
+	if(m_windowSize.x == 0 || m_windowSize.y == 0) {
+		CR_LOG("Could not recreate swap chain, 0 size window");
+		return false;
+	}
 
 	std::vector<VkSurfaceFormatKHR> surfaceFormats;
 	uint32_t numFormats{};
@@ -612,6 +625,8 @@ void cegraph::DeviceService::CreateSwapChain(const Context& context) {
 		CR_LOG("    Presentation Mode: {}", string_VkPresentModeKHR(mode));
 	}
 
+	VkResult vkResult{};
+
 	{
 		// msaa image
 		VkImageCreateInfo msaaCreateInfo;
@@ -637,8 +652,13 @@ void cegraph::DeviceService::CreateSwapChain(const Context& context) {
 		allocCreateInfo.flags                   = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		allocCreateInfo.priority                = 1.0f;
 
-		vmaCreateImage(context.Allocator, &msaaCreateInfo, &allocCreateInfo, &m_msaaImage, &m_msaaAlloc,
-		               nullptr);
+		vkResult = vmaCreateImage(context.Allocator, &msaaCreateInfo, &allocCreateInfo, &m_msaaImage,
+		                          &m_msaaAlloc, nullptr);
+		if(vkResult != VK_SUCCESS) {
+			CR_LOG("Failed to create msaa image");
+			DestroySwapChain();
+			return false;
+		}
 
 		VkImageViewCreateInfo viewInfo;
 		ClearStruct(viewInfo);
@@ -651,7 +671,12 @@ void cegraph::DeviceService::CreateSwapChain(const Context& context) {
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount     = 1;
 
-		vkCreateImageView(context.Device, &viewInfo, nullptr, &m_msaaView);
+		vkResult = vkCreateImageView(context.Device, &viewInfo, nullptr, &m_msaaView);
+		if(vkResult != VK_SUCCESS) {
+			CR_LOG("Failed to create msaa image view");
+			DestroySwapChain();
+			return false;
+		}
 	}
 
 	VkSwapchainCreateInfoKHR swapCreateInfo;
@@ -680,7 +705,13 @@ void cegraph::DeviceService::CreateSwapChain(const Context& context) {
 	swapCreateInfo.surface          = m_primarySurface;
 	swapCreateInfo.imageArrayLayers = 1;
 
-	vkCreateSwapchainKHR(context.Device, &swapCreateInfo, nullptr, &m_primarySwapChain);
+	vkResult = vkCreateSwapchainKHR(context.Device, &swapCreateInfo, nullptr, &m_primarySwapChain);
+	if(vkResult != VK_SUCCESS) {
+		CR_LOG("Failed to create primary swap chain");
+		DestroySwapChain();
+		return false;
+	}
+
 	uint32_t numSwapChainImages{};
 	vkGetSwapchainImagesKHR(context.Device, m_primarySwapChain, &numSwapChainImages, nullptr);
 	m_primarySwapChainImages.resize(numSwapChainImages);
@@ -700,7 +731,13 @@ void cegraph::DeviceService::CreateSwapChain(const Context& context) {
 		viewInfo.subresourceRange.baseMipLevel   = 0;
 		viewInfo.subresourceRange.levelCount     = 1;
 		m_primarySwapChainImageViews.emplace_back();
-		vkCreateImageView(context.Device, &viewInfo, nullptr, &m_primarySwapChainImageViews.back());
+		vkResult =
+		    vkCreateImageView(context.Device, &viewInfo, nullptr, &m_primarySwapChainImageViews.back());
+		if(vkResult != VK_SUCCESS) {
+			CR_LOG("Failed to create primary swap chain image view");
+			DestroySwapChain();
+			return false;
+		}
 	}
 
 	VkAttachmentDescription attatchDescs[2];
@@ -751,7 +788,12 @@ void cegraph::DeviceService::CreateSwapChain(const Context& context) {
 	renderPassInfo.subpassCount    = 1;
 	renderPassInfo.pSubpasses      = &subpassDesc;
 
-	vkCreateRenderPass(context.Device, &renderPassInfo, nullptr, &m_renderPass);
+	vkResult = vkCreateRenderPass(context.Device, &renderPassInfo, nullptr, &m_renderPass);
+	if(vkResult != VK_SUCCESS) {
+		CR_LOG("Failed to create render pass");
+		DestroySwapChain();
+		return false;
+	}
 
 	for(auto& imageView : m_primarySwapChainImageViews) {
 		VkFramebufferCreateInfo framebufferInfo;
@@ -765,14 +807,46 @@ void cegraph::DeviceService::CreateSwapChain(const Context& context) {
 		framebufferInfo.layers          = 1;
 
 		m_frameBuffers.emplace_back();
-		vkCreateFramebuffer(context.Device, &framebufferInfo, nullptr, &m_frameBuffers.back());
+		vkResult = vkCreateFramebuffer(context.Device, &framebufferInfo, nullptr, &m_frameBuffers.back());
+		if(vkResult != VK_SUCCESS) {
+			CR_LOG("Failed to create frame buffer");
+			DestroySwapChain();
+			return false;
+		}
 	}
+	return true;
+}
 
-	VkSemaphoreCreateInfo semInfo;
-	ClearStruct(semInfo);
-	vkCreateSemaphore(context.Device, &semInfo, nullptr, &m_renderingFinished);
+void cegraph::DeviceService::DestroySwapChain() {
+	const Context& context = GetContext();
 
-	VkFenceCreateInfo fenceInfo;
-	ClearStruct(fenceInfo);
-	vkCreateFence(context.Device, &fenceInfo, nullptr, &m_frameFence);
+	for(auto& framebuffer : m_frameBuffers) { vkDestroyFramebuffer(context.Device, framebuffer, nullptr); }
+	m_frameBuffers.clear();
+
+	if(m_renderPass) { vkDestroyRenderPass(context.Device, m_renderPass, nullptr); }
+	m_renderPass = nullptr;
+
+	for(auto& imageView : m_primarySwapChainImageViews) {
+		vkDestroyImageView(context.Device, imageView, nullptr);
+	}
+	m_primarySwapChainImageViews.clear();
+	m_primarySwapChainImages.clear();
+
+	if(m_msaaView) { vkDestroyImageView(context.Device, m_msaaView, nullptr); }
+	m_msaaView = nullptr;
+	if(m_msaaAlloc) { vmaDestroyImage(context.Allocator, m_msaaImage, m_msaaAlloc); }
+	m_msaaAlloc = nullptr;
+
+	if(m_primarySwapChain) { vkDestroySwapchainKHR(context.Device, m_primarySwapChain, nullptr); }
+	m_primarySwapChain = nullptr;
+}
+
+bool cegraph::DeviceService::ReInitialize() {
+	const Context& context = GetContext();
+
+	vkDeviceWaitIdle(context.Device);
+
+	DestroySwapChain();
+
+	return CreateSwapChain(context);
 }

@@ -33,7 +33,14 @@ namespace CR::Engine::Graphics {
 		Service& operator=(const Service&) = delete;
 		Service& operator=(Service&&)      = delete;
 
-		void Update();
+		// If this returns false, then you must ReInitialize() the service. This can happen if the app was
+		// resized for instance. May not be fool proof on your platform, you should also check OS for resize
+		// as well.
+		bool Update();
+		// If this returns false, you can't call Update(). Maybe app was minimized? Check for that yourself.
+		// ReInitialize again once you detect app isn't minimized, or just try again once in a while. Should
+		// pause app while you can't render anything.
+		bool ReInitialize();
 
 		Handles::Texture GetHandle(uint64_t hash);
 		Handles::TextureSet LoadTextureSet(std::span<uint64_t> hashes);
@@ -51,8 +58,12 @@ namespace cegraph = CR::Engine::Graphics;
 cegraph::Service::Service(ceplat::Window& a_window, std::optional<glm::vec4> a_clearColor) :
     m_deviceService(cecore::AddService<DeviceService>(a_window, a_clearColor)) {}
 
-void cegraph::Service::Update() {
-	m_deviceService.Update();
+bool cegraph::Service::Update() {
+	return m_deviceService.Update();
+}
+
+bool cegraph::Service::ReInitialize() {
+	return m_deviceService.ReInitialize();
 }
 
 cegraph::Handles::Texture cegraph::Service::GetHandle(uint64_t hash) {

@@ -88,6 +88,10 @@ int main(int, char*) {
 		}
 
 		while(!done) {
+			// Should really check for windows resize from OS as well. and minimized. the ReInitialize
+			// graphics engine. Do that once we are using GLFW at top of loop. Not a problem so far on
+			// windows, return value of graphics Update is taking care of it.
+
 			window.UpdateInput();
 			inputService.Update();
 
@@ -96,7 +100,11 @@ int main(int, char*) {
 
 			if(regions.GetActive() == region && regions.WasActiveClicked()) { fanfareFX.Play(); }
 
-			graphicsService.Update();
+			bool gsAvailable = graphicsService.Update();
+			if(!gsAvailable && !done) {
+				gsAvailable = graphicsService.ReInitialize();
+				if(!gsAvailable && !done) { std::this_thread::sleep_for(100ms); }
+			}
 		}
 
 		cegraph::Sprites::Delete(sprites);
