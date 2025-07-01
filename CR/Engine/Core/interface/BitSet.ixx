@@ -65,23 +65,28 @@ namespace CR::Engine::Core {
 			CR_ASSERT_AUDIT((a_first + a_count) <= Size,
 			                "bitset capacity not large enough to hold integers from {} to {}", a_first,
 			                (a_first + a_count));
-			uint64_t currentWord = a_first / 64;
-			uint16_t numFirst    = a_first % 64;
+			uint64_t first       = a_first;
+			uint64_t count       = a_count;
+			uint64_t currentWord = first / 64;
+			uint64_t numFirst    = std::min((64 - first) % 64, count);
+			uint64_t allOnes     = ~uint64_t(0);
 			if(numFirst > 0) {
-				a_count -= numFirst;
-				uint64_t numFirstMask = ~(~uint64_t(0) >> (64 - numFirst));
-				auto& word            = m_words[currentWord];
-				word |= numFirstMask;
+				count -= numFirst;
+				uint64_t mask = (allOnes >> (uint64_t(64) - numFirst));
+				mask          = mask << first;
+				auto& word    = m_words[currentWord];
+				word |= mask;
 				++currentWord;
 			}
-			uint64_t numWords = a_count / 64;
+			uint64_t numWords = count / 64;
 			while(numWords > 0) {
 				m_words[currentWord] = ~uint64_t(0);
 				++currentWord;
+				--numWords;
 			}
-			uint64_t numLast = a_count % 64;
+			uint64_t numLast = count % 64;
 			if(numLast > 0) {
-				uint64_t numLastMask = (~uint64_t(0) >> (64 - numFirst));
+				uint64_t numLastMask = (allOnes >> (uint64_t(64) - numLast));
 				auto& word           = m_words[currentWord];
 				word |= numLastMask;
 			}
@@ -219,7 +224,6 @@ namespace CR::Engine::Core {
 		ConstIterator cend() const { return ConstIterator{*this, true}; }
 
 	  private:
-		// failing to compile as a std::array for some reason
 		std::array<std::uint64_t, Size / 64> m_words{};
 	};
 }    // namespace CR::Engine::Core

@@ -87,7 +87,7 @@ TEST_CASE("BitSet iterate") {
 	}
 }
 
-TEST_CASE("BitSet Insert Range") {
+TEST_CASE("BitSet Insert Multiple") {
 	BitSet<512> bitset;
 	CHECK(bitset.size() == 0);
 	bitset.insert(6);
@@ -132,4 +132,25 @@ TEST_CASE("BitSet bitwise") {
 	CHECK(bitsetComplement.contains(5));
 	CHECK(!bitsetComplement.contains(6));
 	CHECK(bitsetComplement.contains(7));
+}
+
+TEST_CASE("BitSet Insert Range") {
+	BitSet<512> bitset;
+	CHECK(bitset.size() == 0);
+	bitset.insertRange(0, 10);
+	CHECK(bitset.FindNotInSet() == 10);
+	for(std::uint16_t i = 0; i < 10; ++i) { CHECK(bitset.contains(i)); }
+	for(std::uint16_t i = 10; i < 512; ++i) { CHECK(!bitset.contains(i)); }
+
+	bitset.clear();
+	bitset.insertRange(10, 12);
+	for(std::uint16_t i = 0; i < 10; ++i) { CHECK(!bitset.contains(i)); }
+	for(std::uint16_t i = 10; i < 22; ++i) { CHECK(bitset.contains(i)); }
+	for(std::uint16_t i = 22; i < 512; ++i) { CHECK(!bitset.contains(i)); }
+
+	bitset.clear();
+	bitset.insertRange(10, 140);
+	for(std::uint16_t i = 0; i < 10; ++i) { CHECK(!bitset.contains(i)); }
+	for(std::uint16_t i = 10; i < 150; ++i) { CHECK(bitset.contains(i)); }
+	for(std::uint16_t i = 150; i < 512; ++i) { CHECK(!bitset.contains(i)); }
 }

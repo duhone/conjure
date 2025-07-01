@@ -24,8 +24,8 @@ cep::MemoryMappedFile::MemoryMappedFile(const std::filesystem::path& a_filePath)
 	CR_ASSERT(handle != INVALID_HANDLE_VALUE, "Could not open file {}", a_filePath.string());
 
 	LARGE_INTEGER fileSize;
-	if(!GetFileSizeEx(handle, &fileSize)) {
-		CR_ASSERT(false, "Could not get file size for {}", a_filePath.string());
+	if(GetFileSizeEx(handle, &fileSize) == FALSE) {
+		CR_ASSERT(false, "Could not get file size for {} error {}", a_filePath.string(), GetLastError());
 	}
 	CR_ASSERT(fileSize.QuadPart != 0, "File {} was 0 sized", a_filePath.string());
 

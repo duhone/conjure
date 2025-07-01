@@ -88,7 +88,7 @@ void cegraph::Commands::TransitionToDst(VkCommandBuffer& a_cmdBuffer, const VkIm
 void cegraph::Commands::CopyBufferToImg(VkCommandBuffer& a_cmdBuffer, const VkBuffer& a_buffer,
                                         VkImage& a_image, std::span<VkBufferImageCopy> a_copies) {
 	vkCmdCopyBufferToImage(a_cmdBuffer, a_buffer, a_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-	                       a_copies.size(), a_copies.data());
+	                       (uint32_t)a_copies.size(), a_copies.data());
 }
 
 void cegraph::Commands::TransitionToGraphicsQueue(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image,

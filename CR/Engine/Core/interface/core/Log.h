@@ -32,8 +32,7 @@ import CR.Engine.Core.Log;
 #define CR_ASSERT_AUDIT(condition, fmtString, ...)                                                           \
 	do {                                                                                                     \
 		if(!(condition)) { CR_ERROR(fmtString __VA_OPT__(, ) __VA_ARGS__); }                                 \
-	} while(false);                                                                                          \
-	__assume(!(condition));
+	} while(false);
 
 #else
 
@@ -50,8 +49,7 @@ import CR.Engine.Core.Log;
 #define CR_ASSERT(condition, fmtString, ...)                                                                 \
 	do {                                                                                                     \
 		if(!(condition)) { CR_ERROR(fmtString __VA_OPT__(, ) __VA_ARGS__); }                                 \
-	} while(false);                                                                                          \
-	__assume(!(condition));
+	} while(false);
 
 #define CR_REQUIRES(condition, fmtString, ...) CR_ASSERT(condition, fmtString __VA_OPT__(, ) __VA_ARGS__);
 
