@@ -181,11 +181,11 @@ namespace CR::Engine::Core {
 					}
 				}
 				CR_ASSERT_AUDIT(m_word != 0, "logic error, m_word should never be 0 here");
-				auto bitPos = std::countr_zero(m_word);
+				std::uint64_t bitPos = std::countr_zero(m_word);
 				CR_ASSERT_AUDIT(bitPos + m_wordIdx * 64 <= std::numeric_limits<std::uint16_t>::max(),
 				                "logic error, impossible value");
 				m_value                = static_cast<std::uint16_t>(bitPos + m_wordIdx * 64);
-				std::uint16_t bitClear = ~(1 << bitPos);
+				std::uint64_t bitClear = ~(1ull << bitPos);
 				m_word &= bitClear;
 				return m_value;
 			}

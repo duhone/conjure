@@ -4,7 +4,7 @@
                 "name" : "sprite",
                 "vertex_shader" : "sprite_vertex",
                 "fragment_shader" : "sprite_fragment",
-                "bindings" :[{"binding" : 0, "stride": 24, "rate" : "PerInstance"}],
+                "bindings" :[{"binding" : 0, "stride": 36, "rate" : "PerInstance"}],
                 "attr_descs" :[{"location" : 0, "binding" : 0, "offset": 0, "format" : "f32x2"},
                                {"location" : 1, "binding" : 0, "offset": 8, "format" : "uint16x2"},
                                {"location" : 2, "binding" : 0, "offset": 12, "format" : "unorm8x4"},

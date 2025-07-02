@@ -77,14 +77,35 @@ int main(int, char*) {
 		std::vector<glm::vec2> spritePositions;
 		std::vector<float> spriteRotations;
 
+		constexpr uint32_t numSprites = 64;
 		{
 			std::vector<uint64_t> spriteHashes;
-			spriteHashes.emplace_back(cecore::C_Hash64("brick"));
+			for(uint32_t i = 0; i < numSprites; ++i) {
+				spriteHashes.emplace_back(
+				    textureSetHashes[cecore::Random(2, (int32_t)textureSetHashes.size() - 1)]);
+
+				spritePositions.emplace_back(
+				    glm::vec2{cecore::Random(0.0f, 700.0f), cecore::Random(0.0f, 400.0f)});
+				spriteRotations.emplace_back(cecore::Random(0.0f, 3.14f));
+			}
+
+			spriteHashes.emplace_back(cecore::C_Hash64("CompletionScreen"));
+			spritePositions.emplace_back(glm::vec2{400.0f, 300.0f});
+			spriteRotations.emplace_back(0.0f);
+
+			spriteHashes.emplace_back(cecore::C_Hash64("BonusHarrySelect"));
+			spritePositions.emplace_back(glm::vec2{100.0f, 100.0f});
+			spriteRotations.emplace_back(0.0f);
+
 			sprites.resize(spriteHashes.size());
 			cegraph::Sprites::Create(spriteHashes, sprites);
-			spritePositions.emplace_back(glm::vec2{512.0f, 256.0f});
 			cegraph::Sprites::SetPositions(sprites, spritePositions);
-			spriteRotations.emplace_back(0.0f);
+			cegraph::Sprites::SetRotations(sprites, spriteRotations);
+		}
+
+		std::vector<float> spriteRotSpeeds;
+		for(uint32_t i = 0; i < numSprites; ++i) {
+			spriteRotSpeeds.emplace_back(cecore::Random(0.005f, 0.05f));
 		}
 
 		while(!done) {
@@ -95,7 +116,7 @@ int main(int, char*) {
 			window.UpdateInput();
 			inputService.Update();
 
-			spriteRotations[0] += 0.01f;
+			for(uint32_t i = 0; i < numSprites; ++i) { spriteRotations[i] += spriteRotSpeeds[i]; }
 			cegraph::Sprites::SetRotations(sprites, spriteRotations);
 
 			if(regions.GetActive() == region && regions.WasActiveClicked()) { fanfareFX.Play(); }

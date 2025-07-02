@@ -428,6 +428,8 @@ void cegraph::Textures::ReleaseTextureSet(Handles::TextureSet set) {
 	CR_ASSERT(set.isValid(), "invalid texture set handle");
 	CR_ASSERT(set.asInt() != g_data->TextureSetsUsed.size(), "Ran out of available texture sets");
 
+	vkDeviceWaitIdle(GetContext().Device);
+
 	g_data->TextureSets[set.asInt()].clear();
 	g_data->TextureSetsUsed.erase(set.asInt());
 
