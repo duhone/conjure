@@ -169,20 +169,25 @@ void cegraph::Materials::Initialize(VkRenderPass a_renderPass) {
 		    ClearStruct(rasterInfo);
 		    rasterInfo.cullMode         = VK_CULL_MODE_NONE;
 		    rasterInfo.lineWidth        = 1.0f;
-		    rasterInfo.depthClampEnable = false;
+		    rasterInfo.depthClampEnable = VK_FALSE;
 		    rasterInfo.polygonMode      = VkPolygonMode::VK_POLYGON_MODE_FILL;
 
 		    VkPipelineMultisampleStateCreateInfo multisampleInfo;
 		    ClearStruct(multisampleInfo);
-		    multisampleInfo.alphaToCoverageEnable = true;
+		    multisampleInfo.alphaToCoverageEnable = VK_FALSE;
 		    multisampleInfo.rasterizationSamples  = VK_SAMPLE_COUNT_4_BIT;
-		    multisampleInfo.sampleShadingEnable   = true;
+		    multisampleInfo.sampleShadingEnable   = VK_TRUE;
 		    multisampleInfo.minSampleShading      = 1.0f;
 
 		    VkPipelineColorBlendAttachmentState blendAttachState;
 		    ClearStruct(blendAttachState);
+		    blendAttachState.blendEnable         = VK_TRUE;
 		    blendAttachState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-		    blendAttachState.blendEnable         = false;
+		    blendAttachState.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		    blendAttachState.colorBlendOp        = VK_BLEND_OP_ADD;
+		    blendAttachState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		    blendAttachState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		    blendAttachState.alphaBlendOp        = VK_BLEND_OP_ADD;
 		    blendAttachState.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
 		                                      VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 

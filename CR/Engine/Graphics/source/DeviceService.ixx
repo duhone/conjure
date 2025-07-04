@@ -267,7 +267,6 @@ bool cegraph::DeviceService::Update() {
 
 	if(m_primarySwapChain == nullptr) { return false; }
 
-	vkDeviceWaitIdle(GetContext().Device);
 	VkResult result = vkAcquireNextImageKHR(context.Device, m_primarySwapChain, UINT64_MAX, VK_NULL_HANDLE,
 	                                        m_frameFence, &m_currentFrameBuffer);
 	if(result == VK_ERROR_OUT_OF_DATE_KHR) { return false; }
@@ -277,7 +276,6 @@ bool cegraph::DeviceService::Update() {
 
 	if(result == VK_SUBOPTIMAL_KHR) { return false; }
 
-	vkDeviceWaitIdle(GetContext().Device);
 	m_commandPool.ResetAll();
 	auto commandBuffer = m_commandPool.Begin();
 

@@ -18,15 +18,4 @@ void main()
 {	
     vec4 tex = texture(textureSampler[TextureIndex], UV);
     fragColor = Color*tex;
-
-    // improve alpha to coverage
-    if(fragColor.a > 0.5){
-        fragColor.a = 1.0;
-    }
-    else{
-        fragColor.a = 0.0;
-    }
-    //float alpha = (fragColor.a*4.0 + 0.1); //0.1-4.1
-    //alpha = floor(alpha); //0-4
-    //fragColor.a = alpha/4.0;
 }
