@@ -1,3 +1,5 @@
+#include <core/Log.h>
+
 #include <function2/function2.hpp>
 
 #include <glm/glm.hpp>
@@ -108,6 +110,8 @@ int main(int, char*) {
 			spriteRotSpeeds.emplace_back(cecore::Random(0.005f, 0.05f));
 		}
 
+		uint32_t frameCount = 0;
+		auto startFPSTime   = std::chrono::high_resolution_clock::now();
 		while(!done) {
 			// Should really check for windows resize from OS as well. and minimized. the ReInitialize
 			// graphics engine. Do that once we are using GLFW at top of loop. Not a problem so far on
@@ -125,6 +129,17 @@ int main(int, char*) {
 			if(!gsAvailable && !done) {
 				gsAvailable = graphicsService.ReInitialize();
 				if(!gsAvailable && !done) { std::this_thread::sleep_for(100ms); }
+			}
+
+			++frameCount;
+			if(frameCount == 1024) {
+				frameCount      = 0;
+				auto endFPSTime = std::chrono::high_resolution_clock::now();
+				double times =
+				    std::chrono::duration_cast<std::chrono::milliseconds>(endFPSTime - startFPSTime).count() /
+				    1000.0f;
+				startFPSTime = endFPSTime;
+				CR_LOG("FPS {:.2f}", (1024.0f / times));
 			}
 		}
 
