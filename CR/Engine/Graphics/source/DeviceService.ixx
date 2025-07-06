@@ -15,6 +15,7 @@ import CR.Engine.Graphics.Constants;
 import CR.Engine.Graphics.Context;
 import CR.Engine.Graphics.GraphicsThread;
 import CR.Engine.Graphics.Materials;
+import CR.Engine.Graphics.MultiDrawBuffer;
 import CR.Engine.Graphics.Shaders;
 import CR.Engine.Graphics.SpritesInternal;
 import CR.Engine.Graphics.Textures;
@@ -221,6 +222,7 @@ cegraph::DeviceService::DeviceService(ceplat::Window& a_window, std::optional<gl
 	Materials::Initialize(m_renderPass);
 	ComputePipelines::Initialize();
 	UniformBuffer::Initialize();
+	MultiDrawBuffer::Initialize();
 	VertexBuffers::Initialize();
 	Sprites::Initialize();
 
@@ -240,6 +242,7 @@ void cegraph::DeviceService::Stop() {
 
 	Sprites::Shutdown();
 	VertexBuffers::Shutdown();
+	MultiDrawBuffer::Shutdown();
 	UniformBuffer::Shutdown();
 	Textures::Shutdown();
 	ComputePipelines::Shutdown();
@@ -280,6 +283,7 @@ bool cegraph::DeviceService::Update() {
 	auto commandBuffer = m_commandPool.Begin();
 
 	Textures::Update(commandBuffer);
+	MultiDrawBuffer::Update();
 	UniformBuffer::Update();
 
 	auto uboMap              = UniformBuffer::Map(sizeof(GlobalUniformBuffer));
@@ -514,6 +518,7 @@ void cegraph::DeviceService::FindDevice(Context& context) {
 	vkGetPhysicalDeviceFeatures2(physicalDevices[foundDevice], &features);
 	CR_ASSERT(features.features.textureCompressionBC, "Require support for BC texture compression");
 	CR_ASSERT(features.features.multiDrawIndirect, "Require support for multi draw indirect");
+	CR_ASSERT(features.features.drawIndirectFirstInstance, "Require support for multi draw indirect");
 	CR_ASSERT(features11.uniformAndStorageBuffer16BitAccess, "Require support for 16 bit types in buffers");
 	CR_ASSERT(features12.drawIndirectCount, "Require support for multi draw indirect");
 	CR_ASSERT(features12.descriptorIndexing, "Require support for descriptor indexing");
@@ -584,6 +589,8 @@ void cegraph::DeviceService::BuildDevice(Context& context) {
 	requiredFeatures.features.textureCompressionBC = true;
 	requiredFeatures.features.fullDrawIndexUint32  = true;
 	requiredFeatures.features.shaderSampledImageArrayDynamicIndexing = true;
+	requiredFeatures.features.multiDrawIndirect                      = true;
+	requiredFeatures.features.drawIndirectFirstInstance              = true;
 
 	VkPhysicalDeviceVulkan11Features requiredFeatures11;
 	ClearStruct(requiredFeatures11);

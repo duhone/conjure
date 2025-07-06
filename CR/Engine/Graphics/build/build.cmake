@@ -22,6 +22,7 @@ set(SOURCE_FILES
     ${root}/source/GraphicsThread.ixx
     ${root}/source/InternalHandles.ixx
     ${root}/source/Materials.ixx
+    ${root}/source/MultiDrawBuffer.ixx
     ${root}/source/Shaders.ixx
     ${root}/source/Sprites.cpp
     ${root}/source/SpritesInternal.ixx

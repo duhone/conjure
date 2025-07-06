@@ -17,6 +17,7 @@ import CR.Engine.Graphics.Constants;
 import CR.Engine.Graphics.Context;
 import CR.Engine.Graphics.Handles;
 import CR.Engine.Graphics.Materials;
+import CR.Engine.Graphics.MultiDrawBuffer;
 import CR.Engine.Graphics.Textures;
 import CR.Engine.Graphics.VertexLayout;
 import CR.Engine.Graphics.InternalHandles;
@@ -251,5 +252,16 @@ void cegraph::Sprites::Render(VkCommandBuffer& a_cmdBuffer) {
 	Materials::Bind(g_data->m_material, a_cmdBuffer);
 	VertexBuffers::Bind(g_data->VertBuffer, a_cmdBuffer);
 
-	vkCmdDraw(a_cmdBuffer, 4, g_data->Used.size(), 0, 0);
+	auto spriteCount = g_data->Used.size();
+
+	auto drawMap  = MultiDrawBuffer::Map(spriteCount);
+	auto commands = drawMap.Data;
+	for(uint32_t i = 0; i < spriteCount; ++i) {
+		commands->vertexCount   = 4;
+		commands->instanceCount = 1;
+		commands->firstVertex   = 0;
+		commands->firstInstance = i;
+		++commands;
+	}
+	vkCmdDrawIndirect(a_cmdBuffer, drawMap.Buffer, 0, spriteCount, sizeof(VkDrawIndirectCommand));
 }
