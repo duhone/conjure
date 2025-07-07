@@ -467,6 +467,24 @@ class CppGenerator : public BaseGenerator {
         }
         if (opts_.generate_object_based_api) {
           auto nativeName = NativeName(Name(*struct_def), struct_def, opts_);
+
+          // Check that nativeName doesn't collide the name of another struct.
+          for (const auto &other_struct_def : parser_.structs_.vec) {
+            if (other_struct_def == struct_def ||
+                other_struct_def->defined_namespace !=
+                    struct_def->defined_namespace) {
+              continue;
+            }
+
+            auto other_name = Name(*other_struct_def);
+            if (nativeName == other_name) {
+              LogCompilerError("Generated Object API type for " +
+                               Name(*struct_def) + " collides with " +
+                               other_name);
+              FLATBUFFERS_ASSERT(true);
+            }
+          }
+
           if (!struct_def->fixed) { code_ += "struct " + nativeName + ";"; }
         }
         code_ += "";
@@ -777,10 +795,10 @@ class CppGenerator : public BaseGenerator {
       if (type.enum_def) return WrapInNameSpace(*type.enum_def);
       if (type.base_type == BASE_TYPE_BOOL) return "bool";
     }
-    // Get real underlying type for union type 
+    // Get real underlying type for union type
     auto base_type = type.base_type;
     if (type.base_type == BASE_TYPE_UTYPE && type.enum_def != nullptr) {
-        base_type = type.enum_def->underlying_type.base_type;
+      base_type = type.enum_def->underlying_type.base_type;
     }
     return StringOf(base_type);
   }
@@ -1051,7 +1069,9 @@ class CppGenerator : public BaseGenerator {
 
   std::string UnionVectorVerifySignature(const EnumDef &enum_def) {
     const std::string name = Name(enum_def);
-    const std::string &type = opts_.scoped_enums ? name : GenTypeBasic(enum_def.underlying_type, false); 
+    const std::string &type =
+        opts_.scoped_enums ? name
+                           : GenTypeBasic(enum_def.underlying_type, false);
     return "bool Verify" + name + "Vector" +
            "(::flatbuffers::Verifier &verifier, " +
            "const ::flatbuffers::Vector<::flatbuffers::Offset<void>> "
@@ -2415,8 +2435,20 @@ class CppGenerator : public BaseGenerator {
 
     // Generate KeyCompareWithValue function
     if (is_string) {
+      // Compares key against a null-terminated char array.
       code_ += "  int KeyCompareWithValue(const char *_{{FIELD_NAME}}) const {";
       code_ += "    return strcmp({{FIELD_NAME}}()->c_str(), _{{FIELD_NAME}});";
+      code_ += "  }";
+      // Compares key against any string-like object (e.g. std::string_view or
+      // std::string) that implements operator< comparison with const char*.
+      code_ += "  template<typename StringType>";
+      code_ +=
+          "  int KeyCompareWithValue(const StringType& _{{FIELD_NAME}}) const "
+          "{";
+      code_ +=
+          "    if ({{FIELD_NAME}}()->c_str() < _{{FIELD_NAME}}) return -1;";
+      code_ += "    if (_{{FIELD_NAME}} < {{FIELD_NAME}}()->c_str()) return 1;";
+      code_ += "    return 0;";
     } else if (is_array) {
       const auto &elem_type = field.value.type.VectorType();
       std::string input_type = "::flatbuffers::Array<" +
@@ -2621,7 +2653,7 @@ class CppGenerator : public BaseGenerator {
       code_ += "if constexpr (Index == {{FIELD_INDEX}}) \\";
       code_ += "return {{FIELD_NAME}}();";
     }
-    code_ += "    else static_assert(Index != Index, \"Invalid Field Index\");";
+    code_ += "    else static_assert(Index != -1, \"Invalid Field Index\");";
     code_ += "  }";
   }
 
@@ -2930,8 +2962,10 @@ class CppGenerator : public BaseGenerator {
       const std::string &type =
           IsStruct(vtype) ? WrapInNameSpace(*vtype.struct_def)
                           : GenTypeWire(vtype, "", false, field.offset64);
-      return "_fbb.ForceVectorAlignment(" + field_size + ", sizeof(" + type +
-             "), " + std::to_string(static_cast<long long>(align)) + ");";
+      return std::string("_fbb.ForceVectorAlignment") +
+             (field.offset64 ? "64" : "") + "(" + field_size + ", sizeof(" +
+             type + "), " + std::to_string(static_cast<long long>(align)) +
+             ");";
     }
     return "";
   }
@@ -3275,7 +3309,7 @@ class CppGenerator : public BaseGenerator {
                 "static_cast<::flatbuffers::hash_value_t>(" + indexing + "));";
             if (PtrType(&field) == "naked") {
               code += " else ";
-              code += "_o->" + name + "[_i]" + access + " = nullptr";
+              code += "_o->" + name + "[_i]" + access + " = nullptr; ";
             } else {
               // code += " else ";
               // code += "_o->" + name + "[_i]" + access + " = " +
@@ -3293,9 +3327,10 @@ class CppGenerator : public BaseGenerator {
             code += "_o->" + name + "[_i]" + access + " = ";
             code += GenUnpackVal(field.value.type.VectorType(), indexing, true,
                                  field);
-            if (is_pointer) { code += "; }"; }
+            code += "; ";
+            if (is_pointer) { code += "} "; }
           }
-          code += "; } } else { " + vector_field + ".resize(0); }";
+          code += "} } else { " + vector_field + ".resize(0); }";
         }
         break;
       }
@@ -3505,7 +3540,8 @@ class CppGenerator : public BaseGenerator {
                                           : underlying_type;
             auto enum_value = "__va->_" + value + "[i].type";
             if (!opts_.scoped_enums)
-              enum_value = "static_cast<" + underlying_type + ">(" + enum_value + ")";
+              enum_value =
+                  "static_cast<" + underlying_type + ">(" + enum_value + ")";
 
             code += "_fbb.CreateVector<" + type + ">(" + value +
                     ".size(), [](size_t i, _VectorArgs *__va) { return " +

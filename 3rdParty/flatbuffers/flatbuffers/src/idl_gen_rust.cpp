@@ -131,8 +131,6 @@ static std::set<std::string> RustKeywords() {
     // Terms that we use ourselves
     "follow",
     "push",
-    "size",
-    "alignment",
     "to_little_endian",
     "from_little_endian",
     "ENUM_MAX",
@@ -729,7 +727,7 @@ class RustGenerator : public BaseGenerator {
       code_ += "mod bitflags_{{ENUM_NAMESPACE}} {";
       code_ += "  flatbuffers::bitflags::bitflags! {";
       GenComment(enum_def.doc_comment, "    ");
-      code_ += "    #[derive(Default)]";
+      code_ += "    #[derive(Default, Debug, Clone, Copy, PartialEq)]";
       code_ += "    {{ACCESS_TYPE}} struct {{ENUM_TY}}: {{BASE_TYPE}} {";
       ForAllEnumValues1(enum_def, [&](const EnumVal &ev) {
         this->GenComment(ev.doc_comment, "    ");
@@ -845,20 +843,7 @@ class RustGenerator : public BaseGenerator {
     code_ +=
         "    let b = flatbuffers::read_scalar_at::<{{BASE_TYPE}}>(buf, loc);";
     if (IsBitFlagsEnum(enum_def)) {
-      // Safety:
-      // This is safe because we know bitflags is implemented with a repr
-      // transparent uint of the correct size. from_bits_unchecked will be
-      // replaced by an equivalent but safe from_bits_retain in bitflags 2.0
-      // https://github.com/bitflags/bitflags/issues/262
-      code_ += "    // Safety:";
-      code_ +=
-          "    // This is safe because we know bitflags is implemented with a "
-          "repr transparent uint of the correct size.";
-      code_ +=
-          "    // from_bits_unchecked will be replaced by an equivalent but "
-          "safe from_bits_retain in bitflags 2.0";
-      code_ += "    // https://github.com/bitflags/bitflags/issues/262";
-      code_ += "    Self::from_bits_unchecked(b)";
+      code_ += "    Self::from_bits_retain(b)";
     } else {
       code_ += "    Self(b)";
     }
@@ -886,20 +871,7 @@ class RustGenerator : public BaseGenerator {
     code_ += "  fn from_little_endian(v: {{BASE_TYPE}}) -> Self {";
     code_ += "    let b = {{BASE_TYPE}}::from_le(v);";
     if (IsBitFlagsEnum(enum_def)) {
-      // Safety:
-      // This is safe because we know bitflags is implemented with a repr
-      // transparent uint of the correct size. from_bits_unchecked will be
-      // replaced by an equivalent but safe from_bits_retain in bitflags 2.0
-      // https://github.com/bitflags/bitflags/issues/262
-      code_ += "    // Safety:";
-      code_ +=
-          "    // This is safe because we know bitflags is implemented with a "
-          "repr transparent uint of the correct size.";
-      code_ +=
-          "    // from_bits_unchecked will be replaced by an equivalent but "
-          "safe from_bits_retain in bitflags 2.0";
-      code_ += "    // https://github.com/bitflags/bitflags/issues/262";
-      code_ += "    unsafe { Self::from_bits_unchecked(b) }";
+      code_ += "    Self::from_bits_retain(b)";
     } else {
       code_ += "    Self(b)";
     }
@@ -989,7 +961,8 @@ class RustGenerator : public BaseGenerator {
     code_ += "  }";
     // Pack flatbuffers union value
     code_ +=
-        "  pub fn pack(&self, fbb: &mut flatbuffers::FlatBufferBuilder)"
+        "  pub fn pack<'b, A: flatbuffers::Allocator + 'b>(&self, fbb: &mut "
+        "flatbuffers::FlatBufferBuilder<'b, A>)"
         " -> Option<flatbuffers::WIPOffset<flatbuffers::UnionWIPOffset>>"
         " {";
     code_ += "    match self {";
@@ -1717,8 +1690,11 @@ class RustGenerator : public BaseGenerator {
     code_.SetValue("MAYBE_LT",
                    TableBuilderArgsNeedsLifetime(struct_def) ? "<'args>" : "");
     code_ += "  #[allow(unused_mut)]";
-    code_ += "  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(";
-    code_ += "    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,";
+    code_ +=
+        "  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr, A: "
+        "flatbuffers::Allocator + 'bldr>(";
+    code_ +=
+        "    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr, A>,";
     code_ += "    {{MAYBE_US}}args: &'args {{STRUCT_TY}}Args{{MAYBE_LT}}";
     code_ += "  ) -> flatbuffers::WIPOffset<{{STRUCT_TY}}<'bldr>> {";
 
@@ -2117,15 +2093,20 @@ class RustGenerator : public BaseGenerator {
     }
 
     // Generate a builder struct:
-    code_ += "{{ACCESS_TYPE}} struct {{STRUCT_TY}}Builder<'a: 'b, 'b> {";
-    code_ += "  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,";
+    code_ +=
+        "{{ACCESS_TYPE}} struct {{STRUCT_TY}}Builder<'a: 'b, 'b, A: "
+        "flatbuffers::Allocator + 'a> {";
+    code_ += "  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a, A>,";
     code_ +=
         "  start_: flatbuffers::WIPOffset<"
         "flatbuffers::TableUnfinishedWIPOffset>,";
     code_ += "}";
 
     // Generate builder functions:
-    code_ += "impl<'a: 'b, 'b> {{STRUCT_TY}}Builder<'a, 'b> {";
+    code_ +=
+        "impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> "
+        "{{STRUCT_TY}}Builder<'a, "
+        "'b, A> {";
     ForAllTableFields(struct_def, [&](const FieldDef &field) {
       const bool is_scalar = IsScalar(field.value.type.base_type);
       std::string offset = namer_.LegacyRustFieldOffsetName(field);
@@ -2160,8 +2141,8 @@ class RustGenerator : public BaseGenerator {
     // Struct initializer (all fields required);
     code_ += "  #[inline]";
     code_ +=
-        "  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> "
-        "{{STRUCT_TY}}Builder<'a, 'b> {";
+        "  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>) -> "
+        "{{STRUCT_TY}}Builder<'a, 'b, A> {";
     code_.SetValue("NUM_FIELDS", NumToString(struct_def.fields.vec.size()));
     code_ += "    let start = _fbb.start_table();";
     code_ += "    {{STRUCT_TY}}Builder {";
@@ -2264,9 +2245,9 @@ class RustGenerator : public BaseGenerator {
 
     // Generate pack function.
     code_ += "impl {{STRUCT_OTY}} {";
-    code_ += "  pub fn pack<'b>(";
+    code_ += "  pub fn pack<'b, A: flatbuffers::Allocator + 'b>(";
     code_ += "    &self,";
-    code_ += "    _fbb: &mut flatbuffers::FlatBufferBuilder<'b>";
+    code_ += "    _fbb: &mut flatbuffers::FlatBufferBuilder<'b, A>";
     code_ += "  ) -> flatbuffers::WIPOffset<{{STRUCT_TY}}<'b>> {";
     // First we generate variables for each field and then later assemble them
     // using "StructArgs" to more easily manage ownership of the builder.
@@ -2551,8 +2532,10 @@ class RustGenerator : public BaseGenerator {
 
     // Finish a buffer with a given root object:
     code_ += "#[inline]";
-    code_ += "pub fn finish_{{STRUCT_FN}}_buffer<'a, 'b>(";
-    code_ += "    fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>,";
+    code_ +=
+        "pub fn finish_{{STRUCT_FN}}_buffer<'a, 'b, A: "
+        "flatbuffers::Allocator + 'a>(";
+    code_ += "    fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>,";
     code_ += "    root: flatbuffers::WIPOffset<{{STRUCT_TY}}<'a>>) {";
     if (parser_.file_identifier_.length()) {
       code_ += "  fbb.finish(root, Some({{STRUCT_CONST}}_IDENTIFIER));";
@@ -2564,8 +2547,8 @@ class RustGenerator : public BaseGenerator {
     code_ += "#[inline]";
     code_ +=
         "pub fn finish_size_prefixed_{{STRUCT_FN}}_buffer"
-        "<'a, 'b>("
-        "fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>, "
+        "<'a, 'b, A: flatbuffers::Allocator + 'a>("
+        "fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>, "
         "root: flatbuffers::WIPOffset<{{STRUCT_TY}}<'a>>) {";
     if (parser_.file_identifier_.length()) {
       code_ +=
@@ -2689,8 +2672,12 @@ class RustGenerator : public BaseGenerator {
     code_ += "    unsafe fn push(&self, dst: &mut [u8], _written_len: usize) {";
     code_ +=
         "        let src = ::core::slice::from_raw_parts(self as *const "
-        "{{STRUCT_TY}} as *const u8, Self::size());";
+        "{{STRUCT_TY}} as *const u8, <Self as flatbuffers::Push>::size());";
     code_ += "        dst.copy_from_slice(src);";
+    code_ += "    }";
+    code_ += "    #[inline]";
+    code_ += "    fn alignment() -> flatbuffers::PushAlignment {";
+    code_ += "        flatbuffers::PushAlignment::new({{ALIGN}})";
     code_ += "    }";
     code_ += "}";
     code_ += "";
