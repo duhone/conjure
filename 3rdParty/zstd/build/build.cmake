@@ -1,10 +1,15 @@
+block()
+
 set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 
-set(INTERFACE_FILES
+set(CR_INTERFACE_HEADERS
     ${root}/zstd/lib/zstd.h
 )
 
-set(SOURCE_FILES
+set(CR_INTERFACE_MODULES
+)
+
+set(CR_IMPLEMENTATION
     ${root}/zstd/lib/common/debug.c
     ${root}/zstd/lib/common/entropy_common.c
     ${root}/zstd/lib/common/error_private.c
@@ -25,6 +30,7 @@ set(SOURCE_FILES
     ${root}/zstd/lib/compress/zstd_lazy.c
     ${root}/zstd/lib/compress/zstd_ldm.c
     ${root}/zstd/lib/compress/zstd_opt.c
+    ${root}/zstd/lib/compress/zstd_preSplit.c
     ${root}/zstd/lib/compress/zstdmt_compress.c
     ${root}/zstd/lib/decompress/huf_decompress.c
     ${root}/zstd/lib/decompress/zstd_ddict.c
@@ -35,15 +41,11 @@ set(SOURCE_FILES
     ${root}/zstd/lib/dictBuilder/fastcover.c
 )
 
-set(BUILD_FILES
+set(CR_BUILD_FILES
     ${root}/build/build.cmake
 )
 
-add_library(zstd OBJECT 
-	${INTERFACE_FILES} 
-	${SOURCE_FILES} 
-	${BUILD_FILES}
-)
+add_library(zstd)
 settings3rdParty(zstd)
 
 target_compile_definitions(zstd PRIVATE XXH_NAMESPACE=ZSTD_)
@@ -53,3 +55,5 @@ set_property(TARGET zstd APPEND PROPERTY LINKER_LANGUAGE CPP)
 
 target_include_directories(zstd SYSTEM PRIVATE "${root}/zstd/lib/common")
 target_include_directories(zstd SYSTEM PUBLIC "${root}/zstd/lib")
+
+endblock()
