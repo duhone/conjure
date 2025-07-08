@@ -18,7 +18,7 @@ include(GNUInstallDirs)
 # ---------------------------------------------------------------------------------------
 # Set default build to release
 # ---------------------------------------------------------------------------------------
-if(NOT CMAKE_BUILD_TYPE)
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose Release or Debug" FORCE)
 endif()
 
@@ -33,14 +33,9 @@ elseif(NOT CMAKE_CXX_STANDARD)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 
-# make sure __cplusplus is defined when using msvc and enable parallel build
-if(MSVC)
-    string(APPEND CMAKE_CXX_FLAGS " /Zc:__cplusplus /MP")
-endif()
-
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-if(CMAKE_SYSTEM_NAME MATCHES "CYGWIN" OR CMAKE_SYSTEM_NAME MATCHES "MSYS")
+if(CMAKE_SYSTEM_NAME MATCHES "CYGWIN" OR CMAKE_SYSTEM_NAME MATCHES "MSYS" OR CMAKE_SYSTEM_NAME MATCHES "MINGW")
     set(CMAKE_CXX_EXTENSIONS ON)
 endif()
 
@@ -80,6 +75,10 @@ option(SPDLOG_BUILD_BENCH "Build benchmarks (Requires https://github.com/google/
 
 # sanitizer options
 option(SPDLOG_SANITIZE_ADDRESS "Enable address sanitizer in tests" OFF)
+option(SPDLOG_SANITIZE_THREAD "Enable thread sanitizer in tests" OFF)
+if(SPDLOG_SANITIZE_ADDRESS AND SPDLOG_SANITIZE_THREAD)
+    message(FATAL_ERROR "SPDLOG_SANITIZE_ADDRESS and SPDLOG_SANITIZE_THREAD are mutually exclusive")
+endif()
 
 # warning options
 option(SPDLOG_BUILD_WARNINGS "Enable compiler warnings" OFF)
@@ -108,9 +107,15 @@ endif()
 if(WIN32)
     option(SPDLOG_WCHAR_SUPPORT "Support wchar api" OFF)
     option(SPDLOG_WCHAR_FILENAMES "Support wchar filenames" OFF)
+    option(SPDLOG_WCHAR_CONSOLE "Support wchar output to console" OFF)
 else()
     set(SPDLOG_WCHAR_SUPPORT OFF CACHE BOOL "non supported option" FORCE)
     set(SPDLOG_WCHAR_FILENAMES OFF CACHE BOOL "non supported option" FORCE)
+    set(SPDLOG_WCHAR_CONSOLE OFF CACHE BOOL "non supported option" FORCE)
+endif()
+
+if(MSVC)
+    option(SPDLOG_MSVC_UTF8 "Enable/disable msvc /utf-8 flag required by fmt lib" ON)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
@@ -127,11 +132,10 @@ option(
     "prevent spdlog from using of std::atomic log levels (use only if your code never modifies log levels concurrently"
     OFF)
 option(SPDLOG_DISABLE_DEFAULT_LOGGER "Disable default logger creation" OFF)
+option(SPDLOG_FWRITE_UNLOCKED "Use the unlocked variant of fwrite. Leave this on unless your libc doesn't have it" ON)
 
 # clang-tidy
-if(${CMAKE_VERSION} VERSION_GREATER "3.5")
-    option(SPDLOG_TIDY "run clang-tidy" OFF)
-endif()
+option(SPDLOG_TIDY "run clang-tidy" OFF)
 
 if(SPDLOG_TIDY)
     set(CMAKE_CXX_CLANG_TIDY "clang-tidy")
@@ -161,12 +165,12 @@ if(SPDLOG_BUILD_SHARED OR BUILD_SHARED_LIBS)
     endif()
     add_library(spdlog SHARED ${SPDLOG_SRCS} ${SPDLOG_ALL_HEADERS})
     target_compile_definitions(spdlog PUBLIC SPDLOG_SHARED_LIB)
-    if(MSVC)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
         target_compile_options(spdlog PUBLIC $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<NOT:$<COMPILE_LANGUAGE:CUDA>>>:/wd4251
                                              /wd4275>)
     endif()
     if(NOT SPDLOG_USE_STD_FORMAT AND NOT SPDLOG_FMT_EXTERNAL AND NOT SPDLOG_FMT_EXTERNAL_HO)
-        target_compile_definitions(spdlog PRIVATE FMT_EXPORT PUBLIC FMT_SHARED)
+        target_compile_definitions(spdlog PRIVATE FMT_LIB_EXPORT PUBLIC FMT_SHARED)
     endif()
 else()
     add_library(spdlog STATIC ${SPDLOG_SRCS} ${SPDLOG_ALL_HEADERS})
@@ -194,6 +198,13 @@ if(COMMAND target_precompile_headers AND SPDLOG_ENABLE_PCH)
     target_precompile_headers(spdlog PRIVATE ${PROJECT_BINARY_DIR}/spdlog_pch.h)
 endif()
 
+# sanitizer support
+if(SPDLOG_SANITIZE_ADDRESS)
+    spdlog_enable_addr_sanitizer(spdlog)
+elseif(SPDLOG_SANITIZE_THREAD)
+    spdlog_enable_thread_sanitizer(spdlog)
+endif()
+
 # ---------------------------------------------------------------------------------------
 # Header only version
 # ---------------------------------------------------------------------------------------
@@ -215,7 +226,7 @@ if(SPDLOG_FMT_EXTERNAL OR SPDLOG_FMT_EXTERNAL_HO)
     target_compile_definitions(spdlog PUBLIC SPDLOG_FMT_EXTERNAL)
     target_compile_definitions(spdlog_header_only INTERFACE SPDLOG_FMT_EXTERNAL)
 
-    # use external fmt-header-nly
+    # use external fmt-header-only
     if(SPDLOG_FMT_EXTERNAL_HO)
         target_link_libraries(spdlog PUBLIC fmt::fmt-header-only)
         target_link_libraries(spdlog_header_only INTERFACE fmt::fmt-header-only)
@@ -225,6 +236,22 @@ if(SPDLOG_FMT_EXTERNAL OR SPDLOG_FMT_EXTERNAL_HO)
     endif()
 
     set(PKG_CONFIG_REQUIRES fmt) # add dependency to pkg-config
+endif()
+
+# ---------------------------------------------------------------------------------------
+# Check if fwrite_unlocked/_fwrite_nolock is available
+# ---------------------------------------------------------------------------------------
+if(SPDLOG_FWRITE_UNLOCKED)
+    include(CheckSymbolExists)
+    if(WIN32)
+        check_symbol_exists(_fwrite_nolock "stdio.h" HAVE_FWRITE_UNLOCKED)
+    else()
+        check_symbol_exists(fwrite_unlocked "stdio.h" HAVE_FWRITE_UNLOCKED)
+    endif()
+    if(HAVE_FWRITE_UNLOCKED)
+        target_compile_definitions(spdlog PRIVATE SPDLOG_FWRITE_UNLOCKED)
+        target_compile_definitions(spdlog_header_only INTERFACE SPDLOG_FWRITE_UNLOCKED)
+    endif()
 endif()
 
 # ---------------------------------------------------------------------------------------
@@ -239,9 +266,11 @@ endif()
 # Misc definitions according to tweak options
 # ---------------------------------------------------------------------------------------
 set(SPDLOG_WCHAR_TO_UTF8_SUPPORT ${SPDLOG_WCHAR_SUPPORT})
+set(SPDLOG_UTF8_TO_WCHAR_CONSOLE ${SPDLOG_WCHAR_CONSOLE})
 foreach(
     SPDLOG_OPTION
     SPDLOG_WCHAR_TO_UTF8_SUPPORT
+    SPDLOG_UTF8_TO_WCHAR_CONSOLE
     SPDLOG_WCHAR_FILENAMES
     SPDLOG_NO_EXCEPTIONS
     SPDLOG_CLOCK_COARSE
@@ -257,17 +286,31 @@ foreach(
     endif()
 endforeach()
 
+if(MSVC)
+    target_compile_options(spdlog PRIVATE "/Zc:__cplusplus")
+    target_compile_options(spdlog_header_only INTERFACE "/Zc:__cplusplus")
+    if(SPDLOG_MSVC_UTF8)
+        # fmtlib requires the /utf-8 flag when building with msvc. see https://github.com/fmtlib/fmt/pull/4159 on the
+        # purpose of the additional
+        # "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:MSVC>>"
+        target_compile_options(spdlog PUBLIC $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:MSVC>>:/utf-8>)
+        target_compile_options(spdlog_header_only
+                               INTERFACE $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:MSVC>>:/utf-8>)
+    endif()
+endif()
+
 # ---------------------------------------------------------------------------------------
 # If exceptions are disabled, disable them in the bundled fmt as well
 # ---------------------------------------------------------------------------------------
 if(SPDLOG_NO_EXCEPTIONS)
     if(NOT SPDLOG_FMT_EXTERNAL AND NOT SPDLOG_FMT_EXTERNAL_HO)
-        target_compile_definitions(spdlog PUBLIC FMT_EXCEPTIONS=0)
+        target_compile_definitions(spdlog PUBLIC FMT_USE_EXCEPTIONS=0)
     endif()
     if(NOT MSVC)
         target_compile_options(spdlog PRIVATE -fno-exceptions)
     else()
-        target_compile_options(spdlog PRIVATE /EHsc)
+        target_compile_options(spdlog PRIVATE /EHs-c-)
+        target_compile_definitions(spdlog PRIVATE _HAS_EXCEPTIONS=0)
     endif()
 endif()
 # ---------------------------------------------------------------------------------------
@@ -344,7 +387,8 @@ if(SPDLOG_INSTALL)
     # ---------------------------------------------------------------------------------------
     # Install CMake config files
     # ---------------------------------------------------------------------------------------
-    export(TARGETS spdlog NAMESPACE spdlog:: FILE "${CMAKE_CURRENT_BINARY_DIR}/${config_targets_file}")
+    export(TARGETS spdlog spdlog_header_only NAMESPACE spdlog::
+           FILE "${CMAKE_CURRENT_BINARY_DIR}/${config_targets_file}")
     install(EXPORT spdlog DESTINATION ${export_dest_dir} NAMESPACE spdlog:: FILE ${config_targets_file})
 
     include(CMakePackageConfigHelpers)

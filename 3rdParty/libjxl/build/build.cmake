@@ -1,7 +1,9 @@
+block()
+
 set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 # at the moment we only care about decoding
 
-set(INTERFACE_FILES
+set(CR_INTERFACE_HEADERS
   ${root}/libjxl/lib/include/jxl/cms.h
   ${root}/libjxl/lib/include/jxl/cms_interface.h
   ${root}/libjxl/lib/include/jxl/codestream_header.h
@@ -21,7 +23,10 @@ set(INTERFACE_FILES
   ${root}/libjxl/lib/include/jxl/thread_parallel_runner_cxx.h
 )
 
-set(SOURCE_FILES
+set(CR_INTERFACE_MODULES
+)
+
+set(CR_IMPLEMENTATION
 # base files
   ${root}/libjxl/lib/jxl/base/arch_macros.h
   ${root}/libjxl/lib/jxl/base/bits.h
@@ -257,15 +262,11 @@ set(SOURCE_FILES
   ${root}/libjxl/lib/threads/thread_parallel_runner_internal.h
 )
 
-set(BUILD_FILES
+set(CR_BUILD_FILES
     ${root}/build/build.cmake
 )
 
-add_library(libjxl OBJECT 
-	${INTERFACE_FILES} 
-	${SOURCE_FILES} 
-	${BUILD_FILES}
-)
+add_library(libjxl)
 settings3rdParty(libjxl)
 
 target_link_libraries(libjxl PUBLIC
@@ -280,3 +281,5 @@ target_include_directories(libjxl SYSTEM PRIVATE "${root}/libjxl")
 target_include_directories(libjxl SYSTEM PRIVATE "${root}/libjxl/lib")
 target_include_directories(libjxl SYSTEM PUBLIC "${root}/libjxl/lib/include")
 target_include_directories(libjxl SYSTEM PUBLIC "${root}/generated")
+
+endblock()

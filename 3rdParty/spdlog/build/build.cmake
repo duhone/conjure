@@ -1,6 +1,8 @@
+block()
+
 set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 
-set(INTERFACE_FILES
+set(CR_INTERFACE_HEADERS
     ${root}/spdlog/include/spdlog/async.h
     ${root}/spdlog/include/spdlog/async_logger.h
     ${root}/spdlog/include/spdlog/common.h
@@ -12,7 +14,10 @@ set(INTERFACE_FILES
     ${root}/spdlog/include/spdlog/version.h
 )
 
-set(SOURCE_FILES
+set(CR_INTERFACE_MODULES
+)
+
+set(CR_IMPLEMENTATION
     ${root}/spdlog/src/async.cpp
     ${root}/spdlog/src/cfg.cpp
     ${root}/spdlog/src/color_sinks.cpp
@@ -21,24 +26,18 @@ set(SOURCE_FILES
     ${root}/spdlog/src/stdout_sinks.cpp
 )
 
-set(BUILD_FILES
+set(CR_BUILD_FILES
     ${root}/build/build.cmake
 )
 
-add_library(spdlog OBJECT 
-	${INTERFACE_FILES} 
-	${SOURCE_FILES} 
-	${BUILD_FILES}
-)
+add_library(spdlog)
 settings3rdParty(spdlog)
 
 set_property(TARGET spdlog APPEND PROPERTY LINKER_LANGUAGE CPP)
 
 target_compile_definitions(spdlog PUBLIC SPDLOG_COMPILED_LIB)
-target_compile_definitions(spdlog PUBLIC SPDLOG_FMT_EXTERNAL)
+target_compile_definitions(spdlog PUBLIC SPDLOG_USE_STD_FORMAT)
 
 target_include_directories(spdlog SYSTEM PUBLIC "${root}/spdlog/include")
 
-target_link_libraries(spdlog PUBLIC
-	fmt
-)
+endblock()

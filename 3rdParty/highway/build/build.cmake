@@ -1,11 +1,16 @@
+block()
+
 set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 # at the moment we only care about decoding
 
-set(INTERFACE_FILES
+set(CR_INTERFACE_HEADERS
     ${root}/highway/hwy/highway.h
 )
 
-set(SOURCE_FILES
+set(CR_INTERFACE_MODULES
+)
+
+set(CR_IMPLEMENTATION
 # base files
     ${root}/highway/hwy/aligned_allocator.cc
     ${root}/highway/hwy/aligned_allocator.h
@@ -61,15 +66,13 @@ set(SOURCE_FILES
     ${root}/highway/hwy/contrib/unroller/unroller-inl.h
 )
 
-set(BUILD_FILES
+set(CR_BUILD_FILES
     ${root}/build/build.cmake
 )
 
-add_library(highway OBJECT 
-	${INTERFACE_FILES} 
-	${SOURCE_FILES} 
-	${BUILD_FILES}
-)
+add_library(highway)
 settings3rdParty(highway)
 
 target_include_directories(highway SYSTEM PUBLIC "${root}/highway")
+
+endblock()
