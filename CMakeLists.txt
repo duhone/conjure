@@ -13,11 +13,10 @@ project (Conjure LANGUAGES CXX C)
   
 include (${root}/common.cmake)
 include (${root}/3rdParty/build/build.cmake)
-#include (${root}/CR/Engine/build/build.cmake)
+include (${root}/CR/Engine/build/build.cmake)
 #include (${root}/CR/Tools/build/build.cmake)
 #include (${root}/CR/Application/build/build.cmake)
 
-#include (${root}/CR/Engine/Core/build/build.cmake)
 #include (${root}/CR/Engine/Assets/build/build.cmake)
 #include (${root}/CR/Engine/Audio/build/build.cmake)
 #include (${root}/CR/Engine/Compression/build/build.cmake)

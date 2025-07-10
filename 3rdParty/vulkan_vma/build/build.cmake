@@ -16,7 +16,7 @@ set(CR_BUILD_FILES
     ${root}/build/build.cmake
 )
 
-add_library(vulkan_vma)
+add_library(vulkan_vma OBJECT)
 settings3rdParty(vulkan_vma)
 
 set_property(TARGET vulkan_vma APPEND PROPERTY LINKER_LANGUAGE CPP)

@@ -16,7 +16,7 @@ set(CR_BUILD_FILES
     ${root}/build/build.cmake
 )
 
-add_library(doctest)
+add_library(doctest OBJECT)
 settings3rdParty(doctest)
 
 set_property(TARGET doctest APPEND PROPERTY LINKER_LANGUAGE CPP)

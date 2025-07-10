@@ -16,7 +16,7 @@ set(CR_BUILD_FILES
     ${root}/build/build.cmake
 )
 
-add_library(unordered_dense)
+add_library(unordered_dense OBJECT)
 settings3rdParty(unordered_dense)
 
 set_property(TARGET unordered_dense APPEND PROPERTY LINKER_LANGUAGE CPP)

@@ -16,7 +16,7 @@ set(CR_BUILD_FILES
     ${root}/build/build.cmake
 )
 
-add_library(cli11)
+add_library(cli11 OBJECT)
 settings3rdParty(cli11)
 
 set_property(TARGET cli11 APPEND PROPERTY LINKER_LANGUAGE CPP)

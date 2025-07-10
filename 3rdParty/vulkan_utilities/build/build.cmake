@@ -18,7 +18,7 @@ set(CR_BUILD_FILES
     ${root}/build/build.cmake
 )
 
-add_library(vulkan_utilities)
+add_library(vulkan_utilities OBJECT)
 settings3rdParty(vulkan_utilities)
 
 set_property(TARGET vulkan_utilities APPEND PROPERTY LINKER_LANGUAGE CPP)

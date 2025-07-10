@@ -17,7 +17,7 @@ set(CR_BUILD_FILES
     ${root}/build/build.cmake
 )
 
-add_library(glm)
+add_library(glm OBJECT)
 settings3rdParty(glm)
 
 set_property(TARGET glm APPEND PROPERTY LINKER_LANGUAGE CPP)
