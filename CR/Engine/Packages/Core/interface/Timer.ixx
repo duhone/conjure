@@ -5,7 +5,7 @@ import std;
 export namespace CR::Engine::Core {
 	//! A high resolution timer.
 	/*!
-	    Uses high resolution performance counter to implement a timer. High precesion.
+	    Uses high resolution performance counter to implement a timer. High precession.
 	    All returned values are in seconds. You should only call Update once per frame.
 	    The LastFrameTime is always the amount of time between the last 2 calls to update.
 

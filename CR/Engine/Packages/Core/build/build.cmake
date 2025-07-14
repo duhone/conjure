@@ -3,6 +3,8 @@ block()
 set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 
 set(CR_INTERFACE_HEADERS
+    ${root}/interface/core/Core.h
+    ${root}/interface/core/Defer.h
     ${root}/interface/core/Log.h
     ${root}/interface/core/Reflection.h
 )
@@ -24,10 +26,9 @@ set(CR_INTERFACE_MODULES
     ${root}/interface/Log.ixx
     ${root}/interface/Random.ixx
     ${root}/interface/Rect.ixx
-    ${root}/interface/ScopeExit.ixx
+    ${root}/interface/Defer.ixx
     ${root}/interface/ServiceLocator.ixx
     ${root}/interface/Services.ixx
-    ${root}/interface/StorageBuffer.ixx
     ${root}/interface/Table.ixx
     ${root}/interface/Timer.ixx
     ${root}/interface/TypeTraits.ixx

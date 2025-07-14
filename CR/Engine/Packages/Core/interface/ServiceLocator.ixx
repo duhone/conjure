@@ -1,3 +1,4 @@
+// Not used at the moment. Services not initialized, so ServiceLocator won't work.
 module;
 
 #include <core/Log.h>

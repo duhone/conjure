@@ -1,3 +1,4 @@
+// Not used at the moment.
 module;
 
 #include "core/Log.h"

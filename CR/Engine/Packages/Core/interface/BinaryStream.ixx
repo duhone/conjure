@@ -7,6 +7,7 @@ export module CR.Engine.Core.BinaryStream;
 import CR.Engine.Core.FileHandle;
 
 import std;
+import std.compat;
 
 export namespace CR::Engine::Core {
 	// Returns offset in vector where argument was written
@@ -40,7 +41,7 @@ export namespace CR::Engine::Core {
 	struct BinaryReader final {
 		BinaryReader() = default;
 		// input stream must outlive the reader
-		BinaryReader(const std::vector<std::byte>& a_stream) :
+		BinaryReader(const std::span<std::byte>& a_stream) :
 		    Data(a_stream.data()), Size((uint32_t)a_stream.size()) {}
 
 		const std::byte* Data{nullptr};

@@ -14,11 +14,13 @@ namespace CR::Engine::Core {
 	// Size 512 means this set can hold integers from 0 to 511. Size must be a multiple of 64. Multiples of
 	// 512 may make more sense in practice, since you can fit 512 bits in a cache line.
 	//
-	// The current implementation is the fastest for sets with Size <= 2048 or so. Could use an alternate
-	// implementation for Sizes 2049-16384; Basically needs to burn one cache line for some simple
-	// acceleration data, current size(), min/max contained value, ect. And maybe switch the bitset itself to
-	// a heap allocation. Larger than 16384 probably faster to use something like roaring bitmap. With that in
-	// mind, this class has a hard cap at 64K.
+	// The current implementation is the "fast" for sets with Size <= 2048 or so. Could use an alternate
+	// implementation for Sizes 2049-64K; Basically needs to burn one cache line for some simple
+	// acceleration data, current size(), min/max contained value, ect. And a hierarchal bitmap. Maybe rename
+	// this to StaticBitset, fixed at 512 size. Then have a DynamicBitset that has 1 256 bit root bitset, and
+	// up to one 512 static bitsets in a single heap allocation, per 1 bit in root set. If ever need a really
+	// large bitset, probably faster to use something like roaring bitmap. With that in mind, this class has a
+	// hard cap at 64K.
 	export template<std::uint16_t SizeRequested>
 	class BitSet final {
 		constexpr inline static std::uint16_t Size     = ((SizeRequested + 63) / 64) * 64;

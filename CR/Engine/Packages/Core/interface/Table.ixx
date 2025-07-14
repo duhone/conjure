@@ -1,4 +1,5 @@
-﻿module;
+﻿// an experiment for data oriented design. not used anymore.
+module;
 
 #include <core/Log.h>
 

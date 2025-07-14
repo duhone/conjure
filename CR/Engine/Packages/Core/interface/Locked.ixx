@@ -1,6 +1,8 @@
-﻿export module CR.Engine.Core.Locked;
+﻿module;
 
-import CR.Engine.Core.ScopeExit;
+#include <core/Defer.h>
+
+export module CR.Engine.Core.Locked;
 
 import std;
 
@@ -138,8 +140,8 @@ export namespace CR::Engine::Core {
 		template<std::invocable<T&...> OperationType>
 		auto operator()(OperationType a_operation) {
 			std::apply(AcquireLock, m_locks);
-			auto release = make_scope_exit([this]() { std::apply(ReleaseLocks, m_locks); });
-			auto data    = std::apply(BuildTuple, m_locks);
+			defer({ std::apply(ReleaseLocks, m_locks); });
+			auto data = std::apply(BuildTuple, m_locks);
 			return std::apply(a_operation, data);
 		}
 
