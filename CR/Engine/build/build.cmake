@@ -6,6 +6,7 @@ include (${root}/Packages/Core/build/build.cmake)
 #include (${root}/Platform/build/build.cmake)
 
 set(CR_INTERFACE_HEADERS
+    ${root}/interface/engine/Engine.h
 )
 
 set(CR_INTERFACE_MODULES
@@ -26,6 +27,8 @@ target_link_libraries(engine PUBLIC
     core
     platform
 )
+
+target_include_directories(engine SYSTEM PUBLIC "${root}/interface")
 
 set_property(TARGET engine APPEND PROPERTY FOLDER Engine)
 

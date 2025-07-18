@@ -1,4 +1,5 @@
-﻿// an experiment for data oriented design. not used anymore.
+﻿// an experiment for data oriented design. not used anymore. Trying to make a database style table that holds
+// its values SOA.
 module;
 
 #include <core/Log.h>

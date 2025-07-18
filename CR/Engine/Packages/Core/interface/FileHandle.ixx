@@ -2,9 +2,9 @@
 
 import std;
 
-namespace CR::Engine::Core {
+export namespace CR::Engine::Core {
 	// Currently only for binary files
-	export class FileHandle final {
+	class FileHandle final {
 	  public:
 		FileHandle(const std::filesystem::path& a_path, bool a_forWriting);
 		~FileHandle();

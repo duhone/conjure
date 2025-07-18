@@ -6,7 +6,7 @@ export module CR.Engine.Core.BitSet;
 
 import std;
 
-namespace CR::Engine::Core {
+export namespace CR::Engine::Core {
 	// std::bitset is missing some fundamental operations, making it slow in practice.
 	// This is basically a std::bitset, except it can iterator 1 bits fast, and find the first 0 bit fast.
 	// The API is different that std::bitset, its treated more as a set of integers. The API follows std::set
@@ -21,7 +21,7 @@ namespace CR::Engine::Core {
 	// up to one 512 static bitsets in a single heap allocation, per 1 bit in root set. If ever need a really
 	// large bitset, probably faster to use something like roaring bitmap. With that in mind, this class has a
 	// hard cap at 64K.
-	export template<std::uint16_t SizeRequested>
+	template<std::uint16_t SizeRequested>
 	class BitSet final {
 		constexpr inline static std::uint16_t Size     = ((SizeRequested + 63) / 64) * 64;
 		constexpr inline static std::uint16_t c_endIDX = (Size / 64);

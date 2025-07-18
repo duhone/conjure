@@ -6,10 +6,10 @@ export module CR.Engine.Core.Embedded;
 
 import std;
 
-namespace CR::Engine::Core {
+export namespace CR::Engine::Core {
 	// For when you need to control when construction/destruction happens, but you want	the actual memory to
 	// be in-situ. follows std::optional api as appropriate. intended only for member variables.
-	export template<typename T>
+	template<typename T>
 	class Embedded final {
 	  public:
 		Embedded() = default;

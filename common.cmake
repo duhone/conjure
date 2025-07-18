@@ -22,9 +22,10 @@ function(addCommon target)
 	source_group("Implementation" FILES ${CR_IMPLEMENTATION})
 	source_group("Build" FILES ${CR_BUILD_FILES})
 
-	# using rtti for service locator, unused though.
-	#target_compile_options(${target} PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/GR->)
-	
+	# using rtti for service locator, not using service locator though, so disable.
+	target_compile_options(${target} PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/GR->)
+	# should also disable exceptions. cmake doesn't support that directly
+
 	# secure versions don't seem available in std module
 	target_compile_definitions(${target} PRIVATE $<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS>)
 	

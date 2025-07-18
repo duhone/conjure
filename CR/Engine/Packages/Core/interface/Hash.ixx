@@ -8,8 +8,8 @@ import std.compat;
 // though. It operates one byte at a time, so is not particularly fast. Current requirement is for both
 // runtime and compile time to produce exactly the same result. Good enough for now.
 
-namespace CR::Engine::Core {
-	export inline constexpr uint32_t Hash32(std::ranges::range auto a_data) {
+export namespace CR::Engine::Core {
+	inline constexpr uint32_t Hash32(std::ranges::range auto a_data) {
 		constexpr uint32_t c_offsetBias = 0x811c9dc5;
 		constexpr uint32_t c_prime      = 0x01000193;
 
@@ -24,15 +24,15 @@ namespace CR::Engine::Core {
 		return hash;
 	}
 
-	export inline consteval uint32_t C_Hash32(std::ranges::range auto a_data) {
+	inline consteval uint32_t C_Hash32(std::ranges::range auto a_data) {
 		return Hash32(a_data);
 	}
 
-	export inline consteval uint32_t C_Hash32(std::string_view a_data) {
+	inline consteval uint32_t C_Hash32(std::string_view a_data) {
 		return Hash32(a_data);
 	}
 
-	export inline constexpr uint64_t Hash64(std::ranges::range auto a_data) {
+	inline constexpr uint64_t Hash64(std::ranges::range auto a_data) {
 		constexpr uint64_t c_offsetBias = 0xcbf29ce484222325ull;
 		constexpr uint64_t c_prime      = 0x00000100000001B3ull;
 
@@ -47,7 +47,7 @@ namespace CR::Engine::Core {
 		return hash;
 	}
 
-	export inline constexpr uint64_t Hash64(const char* a_data) {
+	inline constexpr uint64_t Hash64(const char* a_data) {
 		constexpr uint64_t c_offsetBias = 0xcbf29ce484222325ull;
 		constexpr uint64_t c_prime      = 0x00000100000001B3ull;
 
@@ -63,11 +63,11 @@ namespace CR::Engine::Core {
 		return hash;
 	}
 
-	export inline consteval uint64_t C_Hash64(std::ranges::range auto a_data) {
+	inline consteval uint64_t C_Hash64(std::ranges::range auto a_data) {
 		return Hash64(a_data);
 	}
 
-	export inline consteval uint64_t C_Hash64(std::string_view a_data) {
+	inline consteval uint64_t C_Hash64(std::string_view a_data) {
 		return Hash64(a_data);
 	}
 }    // namespace CR::Engine::Core

@@ -36,8 +36,6 @@ set(CR_INTERFACE_MODULES
 
 set(CR_IMPLEMENTATION
     ${root}/implementation/Log.cpp
-    ${root}/implementation/Random.cpp
-    ${root}/implementation/Timer.cpp
 )
 
 set(CR_BUILD_FILES

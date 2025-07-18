@@ -9,8 +9,8 @@ import CR.Engine.Core.EightCC;
 
 import std;
 
-namespace CR::Engine::Core {
-	export class ServiceLocator final {
+export namespace CR::Engine::Core {
+	class ServiceLocator final {
 	  public:
 		ServiceLocator() = default;
 		~ServiceLocator();

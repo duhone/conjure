@@ -20,3 +20,20 @@ export import CR.Engine.Core.Services;
 export import CR.Engine.Core.Table;
 export import CR.Engine.Core.Timer;
 export import CR.Engine.Core.TypeTraits;
+
+export namespace CR::Engine::Core {
+	void Initialize();
+	void Update();
+	void Render();
+	void Shutdown();
+}    // namespace CR::Engine::Core
+
+module :private;
+
+namespace cecore = CR::Engine::Core;
+
+// core doesn't really have any systems. not much to do
+void cecore::Initialize() {}
+void cecore::Update() {}
+void cecore::Render() {}
+void cecore::Shutdown() {}
