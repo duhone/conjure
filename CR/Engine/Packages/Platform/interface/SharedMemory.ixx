@@ -1,10 +1,10 @@
 ﻿export module CR.Engine.Platform.SharedMemory;
 
-import<cstdint>;
-import<memory>;
+import std;
+import std.compat;
 
-namespace CR::Engine::Platform {
-	export class SharedMemory final {
+export namespace CR::Engine::Platform {
+	class SharedMemory final {
 	  public:
 		struct CreateNew {};
 		struct OpenExisting {};
@@ -16,7 +16,7 @@ namespace CR::Engine::Platform {
 		SharedMemory(const char* a_name, size_t a_size, OpenExisting);
 		~SharedMemory();
 
-		SharedMemory(const SharedMemory&) = delete;
+		SharedMemory(const SharedMemory&)            = delete;
 		SharedMemory& operator=(const SharedMemory&) = delete;
 		SharedMemory(SharedMemory&& a_other) noexcept;
 		SharedMemory& operator=(SharedMemory&& a_other) noexcept;

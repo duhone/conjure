@@ -1,12 +1,12 @@
 ﻿module;
 
-#include "core/Log.h"
-#include <platform/windows/CRWindows.h>
+#include "CRWindows.h"
+
+#include <core/Core.h>
 
 module CR.Engine.Platform.Process;
 
-import<optional>;
-import<string>;
+import std;
 
 namespace CR::Engine::Platform {
 	struct ProcessData {

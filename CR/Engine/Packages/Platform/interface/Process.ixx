@@ -1,16 +1,15 @@
 ﻿export module CR.Engine.Platform.Process;
 
-import<chrono>;
-import<memory>;
-import<optional>;
+import std;
+import std.compat;
 
-namespace CR::Engine::Platform {
-	export class Process final {
+export namespace CR::Engine::Platform {
+	class Process final {
 	  public:
 		Process() = default;
 		Process(const char* a_executablePath, const char* a_commandLine);
 		~Process();
-		Process(const Process&) = delete;
+		Process(const Process&)            = delete;
 		Process& operator=(const Process&) = delete;
 		Process(Process&& a_other) noexcept;
 		Process& operator=(Process&& a_other) noexcept;

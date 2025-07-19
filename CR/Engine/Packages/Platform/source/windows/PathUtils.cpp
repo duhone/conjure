@@ -1,8 +1,10 @@
 ﻿module;
 
-#include <platform/windows/CRWindows.h>
+#include "CRWindows.h"
 
 module CR.Engine.Platform.PathUtils;
+
+import std;
 
 namespace fs = std::filesystem;
 

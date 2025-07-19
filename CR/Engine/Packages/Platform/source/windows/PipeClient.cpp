@@ -1,16 +1,14 @@
 ﻿module;
 
-#include "core/Log.h"
-#include <function2/function2.hpp>
-#include <platform/windows/CRWindows.h>
+#include "CRWindows.h"
+
+#include <core/Core.h>
 
 module CR.Engine.Platform.PipeClient;
 
-import CR.Engine.Core.Literals;
+import CR.Engine.Core;
 
-import <cassert>;
-import <stdexcept>;
-import <thread>;
+import std;
 
 namespace CR::Engine::Platform {
 	struct PipeClientData {

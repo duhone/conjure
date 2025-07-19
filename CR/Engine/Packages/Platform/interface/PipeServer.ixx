@@ -1,17 +1,14 @@
 ﻿module;
 
-#include <function2/function2.hpp>
-
 export module CR.Engine.Platform.PipeServer;
 
-import <functional>;
-import <memory>;
+import std;
 
 namespace CR::Engine::Platform {
 	export class PipeServer final {
 	  public:
-		using WriteFinished_t = fu2::unique_function<void(void*, size_t)>;
-		using ReadFinished_t  = fu2::unique_function<void(void*, size_t)>;
+		using WriteFinished_t = std::move_only_function<void(void*, size_t)>;
+		using ReadFinished_t  = std::move_only_function<void(void*, size_t)>;
 
 		PipeServer(const char* a_name, PipeServer::WriteFinished_t a_writeFinished,
 		           PipeServer::ReadFinished_t a_readFinished);

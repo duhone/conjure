@@ -1,22 +1,18 @@
 ﻿module;
 
-#include <function2/function2.hpp>
-
 export module CR.Engine.Platform.PipeClient;
 
-import<functional>;
-import<memory>;
-import<type_traits>;
+import std;
 
 namespace CR::Engine::Platform {
 	export class PipeClient final {
 	  public:
-		using MsgHandlerT = fu2::unique_function<void(void*, size_t)>;
+		using MsgHandlerT = std::move_only_function<void(void*, size_t)>;
 
 		PipeClient() = default;
 		PipeClient(const char* a_name, PipeClient::MsgHandlerT a_msgHandler);
 		~PipeClient();
-		PipeClient(const PipeClient&) = delete;
+		PipeClient(const PipeClient&)            = delete;
 		PipeClient& operator=(const PipeClient&) = delete;
 		PipeClient(PipeClient&&) noexcept;
 		PipeClient& operator=(PipeClient&&) noexcept;

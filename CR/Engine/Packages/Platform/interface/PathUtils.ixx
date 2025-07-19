@@ -1,6 +1,6 @@
 export module CR.Engine.Platform.PathUtils;
 
-import<filesystem>;
+import std;
 
 export namespace CR::Engine::Platform {
 	std::filesystem::path GetCurrentProcessPath();

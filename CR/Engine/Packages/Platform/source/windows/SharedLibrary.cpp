@@ -1,7 +1,8 @@
 ﻿module;
 
-#include "core/Log.h"
-#include <platform/windows/CRWindows.h>
+#include "CRWindows.h"
+
+#include <core/Core.h>
 
 module CR.Engine.Platform.SharedLibrary;
 

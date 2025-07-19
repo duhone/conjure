@@ -1,16 +1,15 @@
 ﻿module;
 
-#include "core/Log.h"
-#include <platform/windows/CRWindows.h>
+#include <core/Core.h>
 
-#include <function2/function2.hpp>
-#include <glm/glm.hpp>
+#include "CRWindows.h"
 
 module CR.Engine.Platform.Window;
 
-import CR.Engine.Core.Locked;
-import <thread>;
-import <unordered_map>;
+import CR.Engine.Core;
+
+import std;
+import std.compat;
 
 namespace CR::Engine::Platform {
 	struct WindowData {
@@ -28,7 +27,8 @@ namespace CR::Engine::Platform {
 		uint32_t m_refreshRate;
 
 		std::mutex m_inputMutex;
-		glm::ivec2 m_mousePos;
+		// not a glm::ivec, can't include glm in this cpp, doesn't compile. some c++ modules/std issue
+		std::array<int, 2> m_mousePos;
 		bool m_mouseLeftDown{false};
 	};
 }    // namespace CR::Engine::Platform
@@ -126,8 +126,9 @@ void cep::Window::OnDestroy() {
 void cep::Window::UpdateInputPlatform() {
 	CR_ASSERT(m_data, "platform data not created");
 	std::scoped_lock lock(m_data->m_inputMutex);
-	m_mouseState.LeftDown = m_data->m_mouseLeftDown;
-	m_mouseState.Position = m_data->m_mousePos;
+	m_mouseState.LeftDown   = m_data->m_mouseLeftDown;
+	m_mouseState.Position.x = m_data->m_mousePos[0];
+	m_mouseState.Position.y = m_data->m_mousePos[1];
 }
 
 void* cep::Window::GetHInstance() const {
@@ -185,13 +186,13 @@ void cep::WindowData::RunMsgLoop() {
 
 void cep::WindowData::UpdateMousePos(int a_x, int a_y) {
 	std::scoped_lock lock(m_inputMutex);
-	m_mousePos.x = a_x;
-	m_mousePos.y = a_y;
+	m_mousePos[0] = a_x;
+	m_mousePos[1] = a_y;
 }
 
 void cep::WindowData::UpdateLeftMouse(bool a_down, int a_x, int a_y) {
 	std::scoped_lock lock(m_inputMutex);
 	m_mouseLeftDown = a_down;
-	m_mousePos.x    = a_x;
-	m_mousePos.y    = a_y;
+	m_mousePos[0]   = a_x;
+	m_mousePos[1]   = a_y;
 }

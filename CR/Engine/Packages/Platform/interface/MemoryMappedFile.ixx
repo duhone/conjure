@@ -1,10 +1,6 @@
 ﻿export module CR.Engine.Platform.MemoryMappedFile;
 
-import <cstddef>;
-import <cstdint>;
-import <filesystem>;
-import <memory>;
-import <span>;
+import std;
 
 namespace CR::Engine::Platform {
 	export class MemoryMappedFile final {

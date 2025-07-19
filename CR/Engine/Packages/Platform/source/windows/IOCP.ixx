@@ -1,18 +1,17 @@
 ﻿module;
 
-#include <platform/windows/CRWindows.h>
+#include "CRWindows.h"
 
-#include "core/Log.h"
-#include <function2/function2.hpp>
+#include <core/Core.h>
 
 export module CR.Engine.Platform.IOCP;
 
-import <thread>;
+import std;
 
-namespace CR::Engine::Platform {
-	export class IOCPPort final {
+export namespace CR::Engine::Platform {
+	class IOCPPort final {
 	  public:
-		using CompletionCallback_t = fu2::unique_function<void(OVERLAPPED*, std::size_t)>;
+		using CompletionCallback_t = std::move_only_function<void(OVERLAPPED*, std::size_t)>;
 
 		IOCPPort() = default;
 		IOCPPort(HANDLE a_handle, CompletionCallback_t a_completion);

@@ -3,7 +3,7 @@ block()
 set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 
 include (${root}/Packages/Core/build/build.cmake)
-#include (${root}/Platform/build/build.cmake)
+include (${root}/Packages/Platform/build/build.cmake)
 
 set(CR_INTERFACE_HEADERS
     ${root}/interface/engine/Engine.h
