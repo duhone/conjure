@@ -37,8 +37,7 @@ export namespace CR::Engine::Core {
 		[[nodiscard]] constexpr std::uint16_t size() const noexcept {
 			std::uint32_t result{};
 			for(const auto& word : m_words) { result += std::popcount(word); }
-			CR_ASSERT_AUDIT(result <= std::numeric_limits<std::uint16_t>::max(),
-			                "Bit set supports max of 64K");
+			CR_ASSERT(result <= std::numeric_limits<std::uint16_t>::max(), "Bit set supports max of 64K");
 			return static_cast<std::uint16_t>(result);
 		}
 
@@ -47,22 +46,22 @@ export namespace CR::Engine::Core {
 		[[nodiscard]] constexpr std::uint16_t capacity() const noexcept { return Size; }
 
 		[[nodiscard]] constexpr bool contains(std::uint16_t a_value) noexcept {
-			CR_ASSERT_AUDIT(a_value < Size, "bitset capacity not large enough to hold {}", a_value);
+			CR_ASSERT(a_value < Size, "bitset capacity not large enough to hold {}", a_value);
 			auto& word = m_words[a_value / 64];
 			return ((1ull << (a_value % 64)) & word) != 0ull;
 		}
 
 		constexpr void insert(std::uint16_t a_value) noexcept {
-			CR_ASSERT_AUDIT(a_value < Size, "bitset capacity not large enough to hold {}", a_value);
+			CR_ASSERT(a_value < Size, "bitset capacity not large enough to hold {}", a_value);
 			auto& word = m_words[a_value / 64];
 			word |= 1ull << (a_value % 64);
 		}
 
 		// insert a_count integers starting at a_first
 		constexpr void insertRange(std::uint16_t a_first, std::uint16_t a_count) noexcept {
-			CR_ASSERT_AUDIT((a_first + a_count) <= Size,
-			                "bitset capacity not large enough to hold integers from {} to {}", a_first,
-			                (a_first + a_count));
+			CR_ASSERT((a_first + a_count) <= Size,
+			          "bitset capacity not large enough to hold integers from {} to {}", a_first,
+			          (a_first + a_count));
 			std::uint64_t first       = a_first;
 			std::uint64_t count       = a_count;
 			std::uint64_t currentWord = first / 64;
@@ -91,7 +90,7 @@ export namespace CR::Engine::Core {
 		}
 
 		constexpr void erase(std::uint16_t a_value) noexcept {
-			CR_ASSERT_AUDIT(a_value < Size, "bitset capacity not large enough to hold {}", a_value);
+			CR_ASSERT(a_value < Size, "bitset capacity not large enough to hold {}", a_value);
 			auto& word = m_words[a_value / 64];
 			word &= ~(1ull << (a_value % 64));
 		}
@@ -101,7 +100,7 @@ export namespace CR::Engine::Core {
 		// TODO: I don't like the name of this function.
 		// Find an integer not in the set. Will be the smallest one
 		constexpr std::uint16_t FindNotInSet() const noexcept {
-			CR_ASSERT_AUDIT(size() != capacity(), "bit set is full, undefined behavior");
+			CR_ASSERT(size() != capacity(), "bit set is full, undefined behavior");
 			std::int32_t i{};
 			std::uint64_t word{};
 			while((word = m_words[i++]) == std::numeric_limits<std::uint64_t>::max()) {}
@@ -178,10 +177,10 @@ export namespace CR::Engine::Core {
 						return m_value;
 					}
 				}
-				CR_ASSERT_AUDIT(m_word != 0, "logic error, m_word should never be 0 here");
+				CR_ASSERT(m_word != 0, "logic error, m_word should never be 0 here");
 				std::uint64_t bitPos = std::countr_zero(m_word);
-				CR_ASSERT_AUDIT(bitPos + m_wordIdx * 64 <= std::numeric_limits<std::uint16_t>::max(),
-				                "logic error, impossible value");
+				CR_ASSERT(bitPos + m_wordIdx * 64 <= std::numeric_limits<std::uint16_t>::max(),
+				          "logic error, impossible value");
 				m_value                = static_cast<std::uint16_t>(bitPos + m_wordIdx * 64);
 				std::uint64_t bitClear = ~(1ull << bitPos);
 				m_word &= bitClear;
@@ -194,7 +193,7 @@ export namespace CR::Engine::Core {
 			}
 
 			bool operator==(const ConstIterator& a_other) const {
-				CR_ASSERT_AUDIT(&m_bitset == &a_other.m_bitset, "comparing iterators from different bitsets");
+				CR_ASSERT(&m_bitset == &a_other.m_bitset, "comparing iterators from different bitsets");
 				if(m_wordIdx != a_other.m_wordIdx) { return false; }
 				if(m_word != a_other.m_word) { return false; }
 				return true;

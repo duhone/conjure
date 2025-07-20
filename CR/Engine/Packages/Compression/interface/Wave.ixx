@@ -3,25 +3,22 @@ export module CR.Engine.Compression.Wav;
 import CR.Engine.Core;
 import CR.Engine.Platform;
 
-import <cstddef>;
-import <filesystem>;
-import <memory>;
-import <span>;
-import <string_view>;
+import std;
+import std.compat;
 
 namespace CR::Engine::Compression::Wave {
 	// Only 48Khz 16 bit mono uncompressed audio is supported.
-	export CR::Engine::Core::StorageBuffer<int16_t> Decompress(const std::span<const std::byte> a_inputData,
-	                                                           std::string_view a_debugName);
-	export CR::Engine::Core::StorageBuffer<int16_t> Decompress(const std::filesystem::path& a_inputPath);
+	export std::unique_ptr<std::byte[]> Decompress(const std::span<const std::byte> a_inputData,
+	                                               std::string_view a_debugName);
+	export std::unique_ptr<std::byte[]> Decompress(const std::filesystem::path& a_inputPath);
 }    // namespace CR::Engine::Compression::Wave
 
 module :private;
 
-#include "core/Log.h"
+#include "core/Core.h"
 
-namespace cec    = CR::Engine::Core;
-namespace cep    = CR::Engine::Platform;
+namespace cecore = CR::Engine::Core;
+namespace ceplat = CR::Engine::Platform;
 namespace cecomp = CR::Engine::Compression;
 
 namespace fs = std::filesystem;
@@ -52,11 +49,11 @@ struct FmtChunk {
 
 static_assert(sizeof(FmtChunk) == 16);
 
-CR::Engine::Core::StorageBuffer<int16_t>
-    cecomp::Wave::Decompress(const std::span<const std::byte> a_inputData, std::string_view a_debugName) {
-	CR::Engine::Core::StorageBuffer<int16_t> result;
+std::unique_ptr<std::byte[]> cecomp::Wave::Decompress(const std::span<const std::byte> a_inputData,
+                                                      std::string_view a_debugName) {
+	std::unique_ptr<std::byte[]> result;
 
-	cec::BinaryReader reader;
+	cecore::BinaryReader reader;
 	reader.Data = a_inputData.data();
 	reader.Size = (uint32_t)a_inputData.size();
 
@@ -72,26 +69,25 @@ CR::Engine::Core::StorageBuffer<int16_t>
 			reader.Offset += header.ChunkSize - sizeof(FmtChunk);    // skip extended fmts
 		} else if(header.ChunkID == 'atad') {
 			// handle data chunk specially
-			result.prepare(header.ChunkSize / 2);
-			memcpy(result.data(), reader.Data + reader.Offset, header.ChunkSize);
-			result.commit(header.ChunkSize / 2);
+			result = std::make_unique_for_overwrite<std::byte[]>(header.ChunkSize);
+			memcpy(result.get(), reader.Data + reader.Offset, header.ChunkSize);
 			reader.Offset += header.ChunkSize;
 		} else {
 			reader.Offset += header.ChunkSize;
 		}
 	}
 
-	CR_ASSERT(wavChunk.WavID == WavChunk::c_WavID,
-	          "Input wave file {} did not have expected riff chunk, invalid wave file", a_debugName);
-	CR_ASSERT(fmtChunk.FormatCode == 1, "Input wave file {} was not in raw pcm format", a_debugName);
-	CR_ASSERT(fmtChunk.NChannels == 1, "Input wave file {} not either mono or stereo", a_debugName);
-	CR_ASSERT(fmtChunk.BitsPerSample == 16, "Input wave file {} not 16 bits per sample", a_debugName);
-	CR_ASSERT(fmtChunk.SampleRate == 48000, "Input wave file {} not 48Khz", a_debugName);
+	CR_ASSERT_ALWAYS(wavChunk.WavID == WavChunk::c_WavID,
+	                 "Input wave file {} did not have expected riff chunk, invalid wave file", a_debugName);
+	CR_ASSERT_ALWAYS(fmtChunk.FormatCode == 1, "Input wave file {} was not in raw pcm format", a_debugName);
+	CR_ASSERT_ALWAYS(fmtChunk.NChannels == 1, "Input wave file {} not either mono or stereo", a_debugName);
+	CR_ASSERT_ALWAYS(fmtChunk.BitsPerSample == 16, "Input wave file {} not 16 bits per sample", a_debugName);
+	CR_ASSERT_ALWAYS(fmtChunk.SampleRate == 48000, "Input wave file {} not 48Khz", a_debugName);
 
 	return result;
 }
 
-CR::Engine::Core::StorageBuffer<int16_t> cecomp::Wave::Decompress(const fs::path& a_inputPath) {
-	cep::MemoryMappedFile inputData(a_inputPath);
+std::unique_ptr<std::byte[]> cecomp::Wave::Decompress(const fs::path& a_inputPath) {
+	ceplat::MemoryMappedFile inputData(a_inputPath);
 	return Decompress(inputData.GetData(), a_inputPath.string());
 }

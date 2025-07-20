@@ -55,8 +55,8 @@ export namespace CR::Engine::Core {
 	bool Read(BinaryReader& a_stream, T& a_out) {
 		if(a_stream.Offset == a_stream.Size) { return false; }
 		if constexpr(std::is_trivially_copyable_v<T>) {
-			CR_ASSERT_AUDIT(a_stream.Offset + sizeof(T) <= a_stream.Size,
-			                "Tried to read past the end of the buffer");
+			CR_ASSERT(a_stream.Offset + sizeof(T) <= a_stream.Size,
+			          "Tried to read past the end of the buffer");
 			memcpy(&a_out, a_stream.Data + a_stream.Offset, sizeof(T));
 			a_stream.Offset += sizeof(T);
 			return true;
@@ -64,8 +64,8 @@ export namespace CR::Engine::Core {
 			uint32_t outSize = 0;
 			Read(a_stream, outSize);
 
-			CR_ASSERT_AUDIT(a_stream.Offset + outSize * sizeof(typename T::value_type) <= a_stream.Size,
-			                "Tried to read past the end of the buffer");
+			CR_ASSERT(a_stream.Offset + outSize * sizeof(typename T::value_type) <= a_stream.Size,
+			          "Tried to read past the end of the buffer");
 
 			a_out.resize(outSize);
 			memcpy(a_out.data(), a_stream.Data + a_stream.Offset, outSize * sizeof(T::value_type));

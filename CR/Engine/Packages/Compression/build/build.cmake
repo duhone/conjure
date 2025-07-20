@@ -1,43 +1,47 @@
+block()
+
 set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 
-###############################################
-#library
-###############################################
-set(INTERFACE_FILES
+
+set(CR_INTERFACE_HEADERS
+)
+
+set(CR_INTERFACE_MODULES
     ${root}/interface/Compression.ixx
     ${root}/interface/General.ixx
     ${root}/interface/Wave.ixx
 )
 
-set(SOURCE_FILES
+set(CR_IMPLEMENTATION
     ${root}/source/General.cpp
 )
 
-set(BUILD_FILES
+set(CR_BUILD_FILES
     ${root}/build/build.cmake
 )
 
-add_library(compression 
-  ${INTERFACE_FILES} 
-  ${SOURCE_FILES} 
-  ${BUILD_FILES}
-)
-
+add_library(compression)
 settingsCR(compression)
 
 target_link_libraries(compression PUBLIC
-	headerUnits
 	core
 	platform
 	zstd
 )
 
-set_property(TARGET compression APPEND PROPERTY FOLDER Engine)
+set_property(TARGET compression APPEND PROPERTY FOLDER Engine/Packages)
 	
 ###############################################
 #unit tests
 ###############################################
-set(SOURCE_FILES
+
+set(CR_INTERFACE_HEADERS
+)
+
+set(CR_INTERFACE_MODULES
+)
+
+set(CR_IMPLEMENTATION
 	${root}/tests/main.cpp
 	${root}/tests/General.cpp
 )
@@ -49,7 +53,6 @@ add_executable(compression_tests
 settingsCR(compression_tests)
 	
 target_link_libraries(compression_tests 
-	headerUnits
 	doctest
 	compression
 	core
@@ -74,3 +77,5 @@ add_custom_command(TARGET compression_tests POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy_if_different  
 	${TEST_DATA}
 	$<TARGET_FILE_DIR:compression_tests>)
+
+endblock()

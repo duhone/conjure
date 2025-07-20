@@ -63,7 +63,7 @@ export namespace CR::Engine::Core {
 				}
 				iterator++;
 			}
-			CR_ASSERT_AUDIT(
+			CR_ASSERT(
 			    count == 32,
 			    "guids must have 32 chars that are 0-9, a-f, or A-F, other chars are allowed but ignored");
 		}

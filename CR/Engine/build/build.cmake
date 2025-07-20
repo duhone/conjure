@@ -4,6 +4,7 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 
 include (${root}/Packages/Core/build/build.cmake)
 include (${root}/Packages/Platform/build/build.cmake)
+include (${root}/Packages/Compression/build/build.cmake)
 
 set(CR_INTERFACE_HEADERS
     ${root}/interface/engine/Engine.h
@@ -26,6 +27,7 @@ settingsCR(engine)
 target_link_libraries(engine PUBLIC
     core
     platform
+    compression
 )
 
 target_include_directories(engine SYSTEM PUBLIC "${root}/interface")

@@ -29,18 +29,18 @@ import CR.Engine.Core.Log;
 
 #if CR_DEBUG || CR_RELEASE
 
-#define CR_ASSERT_AUDIT(condition, fmtString, ...)                                                           \
+#define CR_ASSERT(condition, fmtString, ...)                                                                 \
 	do {                                                                                                     \
 		if(!(condition)) { CR_ERROR(fmtString __VA_OPT__(, ) __VA_ARGS__); }                                 \
 	} while(false);
 
 #else
 
-#define CR_ASSERT_AUDIT(condition, fmtString, ...) __assume(!(condition));
+#define CR_ASSERT(condition, fmtString, ...) __assume(!(condition));
 
 #endif
 
-#define CR_ASSERT(condition, fmtString, ...)                                                                 \
+#define CR_ASSERT_ALWAYS(condition, fmtString, ...)                                                          \
 	do {                                                                                                     \
 		if(!(condition)) { CR_ERROR(fmtString __VA_OPT__(, ) __VA_ARGS__); }                                 \
 	} while(false);

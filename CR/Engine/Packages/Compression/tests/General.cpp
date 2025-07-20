@@ -1,15 +1,14 @@
 ﻿import CR.Engine.Compression;
 import CR.Engine.Platform;
-import CR.Engine.Core.StorageBuffer;
-import CR.Engine.Core.Timer;
+import CR.Engine.Core;
 
-import <span>;
+import std;
 
 #include <doctest/doctest.h>
 
-namespace cec    = CR::Engine::Core;
+namespace cecore = CR::Engine::Core;
 namespace cecomp = CR::Engine::Compression;
-namespace cep    = CR::Engine::Platform;
+namespace ceplat = CR::Engine::Platform;
 
 TEST_CASE("basic compression") {
 	auto test = [](const char* testFile) {
@@ -17,8 +16,8 @@ TEST_CASE("basic compression") {
 		auto testFilePath = cep::GetCurrentProcessPath() / testFile;
 		cep::MemoryMappedFile testFileMMap(testFilePath.c_str());
 
-		cec::StorageBuffer<std::byte> compressedData;
-		cec::StorageBuffer<std::byte> decompressedData;
+		std::unique_ptr<std::byte[]> compressedData;
+		std::unique_ptr<std::byte[]> decompressedData;
 
 		auto test1 = [&](const char* label, int32_t level) {
 			printf("%s mode\n", label);
