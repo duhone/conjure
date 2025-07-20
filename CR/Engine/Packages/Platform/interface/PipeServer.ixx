@@ -4,8 +4,8 @@ export module CR.Engine.Platform.PipeServer;
 
 import std;
 
-namespace CR::Engine::Platform {
-	export class PipeServer final {
+export namespace CR::Engine::Platform {
+	class PipeServer final {
 	  public:
 		using WriteFinished_t = std::move_only_function<void(void*, size_t)>;
 		using ReadFinished_t  = std::move_only_function<void(void*, size_t)>;

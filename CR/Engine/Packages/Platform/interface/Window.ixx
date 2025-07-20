@@ -6,10 +6,10 @@ export module CR.Engine.Platform.Window;
 
 import std;
 
-namespace CR::Engine::Platform {
+export namespace CR::Engine::Platform {
 	// For now their is an assumption that an application only ever creates one of these.
 	// Some work needs to be done if that assumption isn't valid.
-	export class Window final {
+	class Window final {
 	  public:
 		using OnDestroy_t = std::move_only_function<void()>;
 

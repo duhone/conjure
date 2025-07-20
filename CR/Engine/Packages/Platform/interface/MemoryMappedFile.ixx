@@ -2,8 +2,8 @@
 
 import std;
 
-namespace CR::Engine::Platform {
-	export class MemoryMappedFile final {
+export namespace CR::Engine::Platform {
+	class MemoryMappedFile final {
 	  public:
 		MemoryMappedFile();
 		MemoryMappedFile(const std::filesystem::path& a_filePath);

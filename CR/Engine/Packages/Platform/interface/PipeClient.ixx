@@ -4,8 +4,8 @@ export module CR.Engine.Platform.PipeClient;
 
 import std;
 
-namespace CR::Engine::Platform {
-	export class PipeClient final {
+export namespace CR::Engine::Platform {
+	class PipeClient final {
 	  public:
 		using MsgHandlerT = std::move_only_function<void(void*, size_t)>;
 
