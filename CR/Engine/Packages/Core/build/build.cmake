@@ -27,10 +27,6 @@ set(CR_INTERFACE_MODULES
     ${root}/interface/Random.ixx
     ${root}/interface/Rect.ixx
     ${root}/interface/Defer.ixx
-    ${root}/interface/ServiceLocator.ixx
-    ${root}/interface/Services.ixx
-    ${root}/interface/Table.ixx
-    ${root}/interface/Timer.ixx
     ${root}/interface/TypeTraits.ixx
 )
 
@@ -72,7 +68,6 @@ set(CR_IMPLEMENTATION
 	${root}/tests/Locked.cpp
     ${root}/tests/Log.cpp
 	${root}/tests/main.cpp
-	${root}/tests/Table.cpp
 	${root}/tests/TypeTraits.cpp
 )
 

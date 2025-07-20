@@ -9,27 +9,18 @@ set(CR_INTERFACE_MODULES
     ${root}/interface/Guid.ixx
     ${root}/interface/MemoryMappedFile.ixx
     ${root}/interface/PathUtils.ixx
-    ${root}/interface/PipeClient.ixx
-    ${root}/interface/PipeServer.ixx
     ${root}/interface/Platform.ixx
     ${root}/interface/Process.ixx
     ${root}/interface/SharedLibrary.ixx
-    ${root}/interface/SharedMemory.ixx
-    ${root}/interface/Window.ixx
 )
 
 set(CR_IMPLEMENTATION
     ${root}/source/windows/CRWindows.h
-    ${root}/source/windows/IOCP.ixx
     ${root}/source/windows/Guid.cpp
     ${root}/source/windows/MemoryMappedFile.cpp
     ${root}/source/windows/PathUtils.cpp
-    ${root}/source/windows/PipeClient.cpp
-    ${root}/source/windows/PipeServer.cpp
     ${root}/source/windows/Process.cpp
     ${root}/source/windows/SharedLibrary.cpp
-    ${root}/source/windows/SharedMemory.cpp
-    ${root}/source/windows/Window.cpp
 )
 
 set(CR_BUILD_FILES
