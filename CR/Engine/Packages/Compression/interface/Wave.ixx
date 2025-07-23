@@ -8,9 +8,9 @@ import std.compat;
 
 namespace CR::Engine::Compression::Wave {
 	// Only 48Khz 16 bit mono uncompressed audio is supported.
-	export std::unique_ptr<std::byte[]> Decompress(const std::span<const std::byte> a_inputData,
-	                                               std::string_view a_debugName);
-	export std::unique_ptr<std::byte[]> Decompress(const std::filesystem::path& a_inputPath);
+	export CR::Engine::Core::Buffer Decompress(const std::span<const std::byte> a_inputData,
+	                                           std::string_view a_debugName);
+	export CR::Engine::Core::Buffer Decompress(const std::filesystem::path& a_inputPath);
 }    // namespace CR::Engine::Compression::Wave
 
 module :private;
@@ -49,9 +49,9 @@ struct FmtChunk {
 
 static_assert(sizeof(FmtChunk) == 16);
 
-std::unique_ptr<std::byte[]> cecomp::Wave::Decompress(const std::span<const std::byte> a_inputData,
-                                                      std::string_view a_debugName) {
-	std::unique_ptr<std::byte[]> result;
+CR::Engine::Core::Buffer cecomp::Wave::Decompress(const std::span<const std::byte> a_inputData,
+                                                  std::string_view a_debugName) {
+	CR::Engine::Core::Buffer result;
 
 	cecore::BinaryReader reader;
 	reader.Data = a_inputData.data();
@@ -69,8 +69,8 @@ std::unique_ptr<std::byte[]> cecomp::Wave::Decompress(const std::span<const std:
 			reader.Offset += header.ChunkSize - sizeof(FmtChunk);    // skip extended fmts
 		} else if(header.ChunkID == 'atad') {
 			// handle data chunk specially
-			result = std::make_unique_for_overwrite<std::byte[]>(header.ChunkSize);
-			memcpy(result.get(), reader.Data + reader.Offset, header.ChunkSize);
+			result.resize(header.ChunkSize);
+			memcpy(result.data(), reader.Data + reader.Offset, header.ChunkSize);
 			reader.Offset += header.ChunkSize;
 		} else {
 			reader.Offset += header.ChunkSize;
@@ -87,7 +87,7 @@ std::unique_ptr<std::byte[]> cecomp::Wave::Decompress(const std::span<const std:
 	return result;
 }
 
-std::unique_ptr<std::byte[]> cecomp::Wave::Decompress(const fs::path& a_inputPath) {
+CR::Engine::Core::Buffer cecomp::Wave::Decompress(const fs::path& a_inputPath) {
 	ceplat::MemoryMappedFile inputData(a_inputPath);
 	return Decompress(inputData.GetData(), a_inputPath.string());
 }

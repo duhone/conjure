@@ -4,6 +4,7 @@ export module CR.Engine.Core;
 export import CR.Engine.Core.Algorithm;
 export import CR.Engine.Core.BinaryStream;
 export import CR.Engine.Core.BitSet;
+export import CR.Engine.Core.Buffer;
 export import CR.Engine.Core.EightCC;
 export import CR.Engine.Core.Embedded;
 export import CR.Engine.Core.FileHandle;

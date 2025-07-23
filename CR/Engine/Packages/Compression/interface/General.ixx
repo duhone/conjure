@@ -9,6 +9,8 @@ namespace CR::Engine::Compression::General {
 	// a_level is -5 to 22. 3 is a good default if you need fairly fast compression and decompression.
 	// 18 is best if you need fast decompression, but dont care about compression speed. -5 if you need
 	// fastest possible.
-	export std::unique_ptr<std::byte[]> Compress(const std::span<const std::byte> a_src, int32_t a_level);
-	export std::unique_ptr<std::byte[]> Decompress(const std::span<const std::byte> a_src);
+	// Note that for perf reasons the returned buffers may use a lot more memory than their reported size.
+	// Just shrinkToFit the returned value if needed.
+	export CR::Engine::Core::Buffer Compress(const std::span<const std::byte> a_src, int32_t a_level);
+	export CR::Engine::Core::Buffer Decompress(const std::span<const std::byte> a_src);
 }    // namespace CR::Engine::Compression::General

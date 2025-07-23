@@ -1,10 +1,10 @@
-﻿import CR.Engine.Compression;
+﻿#include <doctest/doctest.h>
+
+import CR.Engine.Compression;
 import CR.Engine.Platform;
 import CR.Engine.Core;
 
 import std;
-
-#include <doctest/doctest.h>
 
 namespace cecore = CR::Engine::Core;
 namespace cecomp = CR::Engine::Compression;
@@ -13,26 +13,24 @@ namespace ceplat = CR::Engine::Platform;
 TEST_CASE("basic compression") {
 	auto test = [](const char* testFile) {
 		printf("%s test\n", testFile);
-		auto testFilePath = cep::GetCurrentProcessPath() / testFile;
-		cep::MemoryMappedFile testFileMMap(testFilePath.c_str());
+		auto testFilePath = ceplat::GetCurrentProcessPath() / testFile;
+		ceplat::MemoryMappedFile testFileMMap(testFilePath.c_str());
 
-		std::unique_ptr<std::byte[]> compressedData;
-		std::unique_ptr<std::byte[]> decompressedData;
+		cecore::Buffer compressedData;
+		cecore::Buffer decompressedData;
 
 		auto test1 = [&](const char* label, int32_t level) {
 			printf("%s mode\n", label);
 			{
-				cec::ScopedTimer time("compress time");
 				compressedData = cecomp::General::Compress(
 				    std::span<const std::byte>(testFileMMap.data(), (uint32_t)testFileMMap.size()), level);
 			}
 			{
-				cec::ScopedTimer time("decompress time");
 				decompressedData = cecomp::General::Decompress(
 				    std::span<const std::byte>(compressedData.data(), (uint32_t)compressedData.size()));
 			}
 			REQUIRE(decompressedData.size() == testFileMMap.size());
-			REQUIRE(memcmp(data(decompressedData), testFileMMap.data(), size(compressedData)) == 0);
+			REQUIRE(memcmp(std::data(decompressedData), testFileMMap.data(), std::size(compressedData)) == 0);
 			printf("compression ration %0.2f\n\n", ((float)decompressedData.size() / compressedData.size()));
 		};
 

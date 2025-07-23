@@ -13,6 +13,7 @@ set(CR_INTERFACE_MODULES
     ${root}/interface/Algorithm.ixx
     ${root}/interface/BinaryStream.ixx
     ${root}/interface/BitSet.ixx
+    ${root}/interface/Buffer.ixx
     ${root}/interface/Core.ixx
     ${root}/interface/EightCC.ixx
     ${root}/interface/Embedded.ixx
