@@ -20,8 +20,4 @@ export namespace CR::Engine::Core {
 			return true;
 		}
 	};
-
-	using Rect2Di32 = Rect2D<std::int32_t>;
-	using Rect2Df32 = Rect2D<float>;
-
 }    // namespace CR::Engine::Core

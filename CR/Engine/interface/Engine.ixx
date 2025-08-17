@@ -1,11 +1,16 @@
+module;
+
+#include <GLFW/glfw3.h>
+
 export module CR.Engine;
 
 export import CR.Engine.Core;
 export import CR.Engine.Platform;
 export import CR.Engine.Compression;
+export import CR.Engine.Input;
 
 export namespace CR::Engine {
-	void Initialize();
+	void Initialize(GLFWwindow* a_window);
 	void Update();
 	void Render();
 	void Shutdown();
@@ -13,30 +18,21 @@ export namespace CR::Engine {
 
 module :private;
 
-namespace cecore = CR::Engine::Core;
-namespace ceplat = CR::Engine::Platform;
-namespace cecomp = CR::Engine::Compression;
+namespace cecore  = CR::Engine::Core;
+namespace ceplat  = CR::Engine::Platform;
+namespace cecomp  = CR::Engine::Compression;
+namespace ceinput = CR::Engine::Input;
 
-void CR::Engine::Initialize() {
-	cecore::Initialize();
-	ceplat::Initialize();
-	cecomp::Initialize();
+void CR::Engine::Initialize(GLFWwindow* a_window) {
+	ceinput::Initialize(a_window);
 }
 
 void CR::Engine::Update() {
-	cecore::Update();
-	ceplat::Update();
-	cecomp::Update();
+	ceinput::Update();
 }
 
-void CR::Engine::Render() {
-	cecore::Render();
-	ceplat::Render();
-	cecomp::Render();
-}
+void CR::Engine::Render() {}
 
 void CR::Engine::Shutdown() {
-	cecore::Shutdown();
-	ceplat::Shutdown();
-	cecomp::Shutdown();
+	ceinput::Shutdown();
 }

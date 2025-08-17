@@ -51,3 +51,12 @@ export namespace CR::Engine::Core {
 		uint16_t m_generation{};
 	};
 }    // namespace CR::Engine::Core
+
+template<typename TAG>
+struct std::formatter<CR::Engine::Core::Handle<TAG>> : std::formatter<uint16_t> {
+	using std::formatter<uint16_t>::parse;
+
+	auto format(const CR::Engine::Core::Handle<TAG>& a_handle, auto& a_ctx) const {
+		return std::formatter<uint16_t>::format((uint16_t)a_handle, a_ctx);
+	}
+};
