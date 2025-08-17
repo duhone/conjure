@@ -12,11 +12,16 @@ set(CR_INTERFACE_MODULES
 )
 
 set(CR_IMPLEMENTATION
+    ${root}/glfw/src/win32_init.c
     ${root}/glfw/src/win32_time.h
     ${root}/glfw/src/win32_thread.h
+    ${root}/glfw/src/win32_joystick.c
     ${root}/glfw/src/win32_module.c
+    ${root}/glfw/src/win32_monitor.c
     ${root}/glfw/src/win32_time.c
     ${root}/glfw/src/win32_thread.c
+    ${root}/glfw/src/win32_window.c
+    ${root}/glfw/src/wgl_context.c
     ${root}/glfw/src/internal.h
     ${root}/glfw/src/platform.h
     ${root}/glfw/src/mappings.h

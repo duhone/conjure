@@ -51,6 +51,8 @@ void ceinput::Initialize(GLFWwindow* a_window) {
 	glfwSetCursorEnterCallback(a_window, cursorEnterCallback);
 	glfwSetCursorPosCallback(a_window, cursorPositionCallback);
 	glfwSetMouseButtonCallback(a_window, mouseButtonCallback);
+
+	Regions::initialize();
 }
 
 void ceinput::Update() {

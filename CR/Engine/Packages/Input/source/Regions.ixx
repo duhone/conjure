@@ -17,6 +17,7 @@ import std;
 import std.compat;
 
 export namespace CR::Engine::Input::Regions {
+	void initialize();
 	void update();
 }    // namespace CR::Engine::Input::Regions
 
@@ -37,8 +38,14 @@ namespace {
 	uint32_t m_activeRegion{c_maxRegions};
 }    // namespace
 
+void ceinput::Regions::initialize() {
+	for(uint32_t region = 0; region < m_regionHandles.size(); ++region) {
+		m_regionHandles[region] = ceinput::Handles::Region(region);
+	}
+}
+
 ceinput::Handles::Region ceinput::Regions::create(const cecore::Rect2D<int32_t>& a_initial) {
-	CR_ASSERT(!m_regionsUsed.empty(), "ran out of regions");
+	CR_ASSERT(m_regionsUsed.size() < c_maxRegions, "ran out of regions");
 	auto avail = m_regionsUsed.FindNotInSet();
 	m_regionsUsed.insert(avail);
 	m_regionHandles[avail].incGeneration();
