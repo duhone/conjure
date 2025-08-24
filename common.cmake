@@ -17,11 +17,6 @@ set(generated_root "${CMAKE_BINARY_DIR}/generated/generated")
 # set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=cppcoreguidelines-*)
 
 function(addCommon target)
-	source_group("Interface" FILES ${CR_INTERFACE_HEADERS})
-	source_group("Interface" FILES ${CR_INTERFACE_MODULES})
-	source_group("Implementation" FILES ${CR_IMPLEMENTATION})
-	source_group("Build" FILES ${CR_BUILD_FILES})
-
 	# using rtti for service locator, not using service locator though, so disable.
 	target_compile_options(${target} PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/GR->)
 	# should also disable exceptions. cmake doesn't support that directly
@@ -73,11 +68,13 @@ function(settings3rdParty target)
 	target_sources(${target} PUBLIC FILE_SET HEADERS FILES ${CR_INTERFACE_HEADERS})
 	target_sources(${target} PUBLIC FILE_SET CXX_MODULES FILES ${CR_INTERFACE_MODULES})
 	target_sources(${target} PRIVATE ${CR_BUILD_FILES})
+	target_sources(${target} PRIVATE ${CR_TEST_FILES})
 
 	source_group(TREE ${root} FILES ${CR_INTERFACE_HEADERS})
 	source_group(TREE ${root} FILES ${CR_INTERFACE_MODULES})
 	source_group(TREE ${root} FILES ${CR_IMPLEMENTATION})
 	source_group(TREE ${root} FILES ${CR_BUILD_FILES})
+	source_group(TREE ${root} FILES ${CR_TEST_FILES})
 	
 	target_compile_options(${target} PRIVATE /W0)
 	target_compile_options(${target} PRIVATE /WX-)

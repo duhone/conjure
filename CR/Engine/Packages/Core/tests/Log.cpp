@@ -2,6 +2,8 @@
 
 #include <core/Log.h>
 
+import CR.Engine.Core.Log;
+
 import std;
 
 using namespace CR::Engine::Core;

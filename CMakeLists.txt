@@ -14,6 +14,6 @@ project (Conjure LANGUAGES CXX C)
 include (${root}/common.cmake)
 include (${root}/3rdParty/build/build.cmake)
 include (${root}/CR/Engine/build/build.cmake)
-#include (${root}/CR/Tools/build/build.cmake)
+include (${root}/CR/Tools/build/build.cmake)
 include (${root}/CR/Game/build/build.cmake)
 	

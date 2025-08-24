@@ -1,5 +1,4 @@
 #pragma once
-import CR.Engine.Core.Log;
 
 #define CR_ERROR(fmtString, ...)                                                                             \
 	do {                                                                                                     \

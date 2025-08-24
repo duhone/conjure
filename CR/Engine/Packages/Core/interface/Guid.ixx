@@ -5,6 +5,7 @@
 export module CR.Engine.Core.Guid;
 
 import CR.Engine.Core.Algorithm;
+import CR.Engine.Core.Log;
 
 import std;
 import std.compat;

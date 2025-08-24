@@ -4,6 +4,8 @@ module;
 
 export module CR.Engine.Core.BitSet;
 
+import CR.Engine.Core.Log;
+
 import std;
 
 export namespace CR::Engine::Core {

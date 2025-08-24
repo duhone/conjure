@@ -4,6 +4,8 @@
 
 export module CR.Engine.Core.Embedded;
 
+import CR.Engine.Core.Log;
+
 import std;
 
 export namespace CR::Engine::Core {

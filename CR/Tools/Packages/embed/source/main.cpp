@@ -1,14 +1,11 @@
-﻿import CR.Engine.Core;
-import CR.Engine.Platform;
-
-import <charconv>;
-import <chrono>;
-import <cstdio>;
-
-#include "core/Log.h"
+﻿#include <engine/Engine.h>
 
 #include <cli11/cli11.hpp>
-#include <fmt/format.h>
+
+import CR.Engine;
+
+import std;
+import std.compat;
 
 using namespace std::chrono_literals;
 namespace fs  = std::filesystem;
@@ -98,12 +95,12 @@ int main(int argc, char** argv) {
 	}
 
 	{
-		std::string header = fmt::format(c_interfaceProto, varName);
+		std::string header = std::format(c_interfaceProto, varName);
 		std::ofstream interfaceFile(outputInterface);
 		interfaceFile << header;
 	}
 	{
-		std::string protoBegin = fmt::format(c_srcProtoBegin, varName);
+		std::string protoBegin = std::format(c_srcProtoBegin, varName);
 		std::ofstream srcFile(outputSrc);
 		srcFile << protoBegin;
 

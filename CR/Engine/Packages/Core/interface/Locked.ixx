@@ -4,6 +4,8 @@
 
 export module CR.Engine.Core.Locked;
 
+import CR.Engine.Core.Defer;
+
 import std;
 
 export namespace CR::Engine::Core {

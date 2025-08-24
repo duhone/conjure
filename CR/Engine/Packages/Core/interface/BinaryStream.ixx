@@ -5,6 +5,7 @@
 export module CR.Engine.Core.BinaryStream;
 
 import CR.Engine.Core.FileHandle;
+import CR.Engine.Core.Log;
 
 import std;
 import std.compat;

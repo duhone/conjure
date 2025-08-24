@@ -6,6 +6,8 @@
 
 module CR.Engine.Platform.Process;
 
+import CR.Engine.Core;
+
 import std;
 
 namespace CR::Engine::Platform {

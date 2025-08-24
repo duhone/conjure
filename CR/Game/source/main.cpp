@@ -30,7 +30,7 @@ int main(int, char*) {
 
 	cecore::LogSystem logSystem;
 
-	fs::path assetsPath = fs::canonical(ASSETS_FOLDER);
+	// fs::path assetsPath = fs::canonical(ASSETS_FOLDER);
 
 	glfwSetErrorCallback(glfwErrorCallback);
 

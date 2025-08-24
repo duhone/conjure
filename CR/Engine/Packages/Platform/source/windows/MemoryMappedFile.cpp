@@ -6,6 +6,8 @@
 
 module CR.Engine.Platform.MemoryMappedFile;
 
+import CR.Engine.Core;
+
 namespace CR::Engine::Platform {
 	struct MemoryMappedFileData {
 		HANDLE m_fileHandle{INVALID_HANDLE_VALUE};

@@ -4,6 +4,8 @@ module;
 
 export module CR.Engine.Core.Handle;
 
+import CR.Engine.Core.Log;
+
 import std;
 import std.compat;
 
