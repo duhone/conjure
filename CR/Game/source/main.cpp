@@ -30,7 +30,7 @@ int main(int, char*) {
 
 	cecore::LogSystem logSystem;
 
-	// fs::path assetsPath = fs::canonical(ASSETS_FOLDER);
+	fs::path assetsPath = fs::canonical(ASSETS_FOLDER);
 
 	glfwSetErrorCallback(glfwErrorCallback);
 
@@ -46,7 +46,7 @@ int main(int, char*) {
 		return 0;
 	}
 
-	CR::Engine::Initialize(window);
+	CR::Engine::Initialize(window, assetsPath);
 
 	// auto handleFxs = ceaud::GetHandleFXs();
 	// auto music     = ceaud::GetHandleMusic();

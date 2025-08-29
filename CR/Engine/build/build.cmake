@@ -5,6 +5,7 @@ set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 include (${root}/Packages/Core/build/build.cmake)
 include (${root}/Packages/Platform/build/build.cmake)
 include (${root}/Packages/Compression/build/build.cmake)
+include (${root}/Packages/Assets/build/build.cmake)
 include (${root}/Packages/Input/build/build.cmake)
 
 set(CR_INTERFACE_HEADERS
@@ -30,6 +31,7 @@ target_link_libraries(engine PUBLIC
     core
     platform
     compression
+    assets
     input
 )
 
