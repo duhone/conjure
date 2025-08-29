@@ -1,43 +1,39 @@
+block()
+
 set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 
-set(INTERFACE_FILES
+set(CR_INTERFACE_HEADERS
 )
 
-set(SOURCE_FILES
+set(CR_INTERFACE_MODULES
+)
+
+set(CR_IMPLEMENTATION
     ${root}/source/main.cpp
 )
 
-set(BUILD_FILES
+set(CR_BUILD_FILES
     ${root}/build/build.cmake
 )
 
-set(TEST_FILES
+set(CR_TEST_FILES
     ${root}/test_assets/BGM_Menu.wav
 )
 
-add_executable(AudioProcessor   
-	${INTERFACE_FILES} 
-	${SOURCE_FILES} 
-	${BUILD_FILES}
-	${TEST_FILES}
-)
-
+add_executable(AudioProcessor)
 settingsCR(AudioProcessor)
 			
 target_link_libraries(AudioProcessor 
 	cli11
-	fmt
 	opus
-	core
-	platform
+	engine
 )
 
-source_group("Test Files" FILES ${TEST_FILES})
-	
 set_property(TARGET AudioProcessor APPEND PROPERTY FOLDER Tools)
 
 add_custom_command(TARGET AudioProcessor POST_BUILD       
   COMMAND ${CMAKE_COMMAND} -E copy_if_different  
-      ${TEST_FILES}
+      ${CR_TEST_FILES}
       $<TARGET_FILE_DIR:AudioProcessor>) 
 		
+endblock()

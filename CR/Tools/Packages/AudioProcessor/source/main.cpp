@@ -1,14 +1,12 @@
-﻿import CR.Engine.Core;
-import CR.Engine.Platform;
-
-import <chrono>;
-import <cstdio>;
-
-#include "core/Log.h"
+﻿#include "core/Log.h"
 
 #include <cli11/cli11.hpp>
-#include <fmt/format.h>
 #include <opus.h>
+
+import CR.Engine;
+
+import std;
+import std.compat;
 
 using namespace std::chrono_literals;
 namespace fs  = std::filesystem;
