@@ -11,8 +11,7 @@ endif()
 
 set(conjure_root "${CMAKE_CURRENT_LIST_DIR}")
 set(assets_root "${CMAKE_CURRENT_LIST_DIR}/CR/Assets")
-set(generated_include "${CMAKE_BINARY_DIR}/generated")
-set(generated_root "${CMAKE_BINARY_DIR}/generated/generated")
+set(generated_root "${CMAKE_BINARY_DIR}/generated")
 
 # set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=cppcoreguidelines-*)
 
@@ -55,7 +54,7 @@ function(addCommon target)
 	set_target_properties(${target} PROPERTIES INTERPROCEDURAL_OPTIMIZATION_PROFILE TRUE)
 	set_target_properties(${target} PROPERTIES INTERPROCEDURAL_OPTIMIZATION_FINAL TRUE)	
 	
-	target_include_directories(${target} SYSTEM PUBLIC "${generated_include}")
+	target_include_directories(${target} SYSTEM PUBLIC "${generated_root}")
 
 	target_link_options(${target} PRIVATE $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>>:/Debug:fastlink>)		
 endfunction()
@@ -88,12 +87,16 @@ function(settingsCR target)
 	target_sources(${target} PRIVATE ${CR_IMPLEMENTATION})
 	target_sources(${target} PUBLIC FILE_SET HEADERS FILES ${CR_INTERFACE_HEADERS})
 	target_sources(${target} PUBLIC FILE_SET CXX_MODULES FILES ${CR_INTERFACE_MODULES})
+	target_sources(${target} PRIVATE ${CR_SCHEMA_FILES})
+	target_sources(${target} PRIVATE ${CR_GENERATED_FILES})
 	target_sources(${target} PRIVATE ${CR_BUILD_FILES})
 
 	source_group(TREE ${root} FILES ${CR_INTERFACE_HEADERS})
 	source_group(TREE ${root} FILES ${CR_INTERFACE_MODULES})
 	source_group(TREE ${root} FILES ${CR_IMPLEMENTATION})
 	source_group(TREE ${root} FILES ${CR_BUILD_FILES})
+	source_group(TREE ${root}/source FILES ${CR_SCHEMA_FILES})
+	source_group(TREE ${generated_root} FILES ${CR_GENERATED_FILES})
 		
 	target_compile_options(${target} PRIVATE /W4)
 	target_compile_options(${target} PRIVATE /WX)
@@ -137,10 +140,10 @@ endfunction()
 
 function(compileFlatbuffersSchema target file)
 	add_custom_command(
-		OUTPUT ${generated_root}/${target}/${file}_generated.h
+		OUTPUT ${generated_root}/generated/${target}/${file}_generated.h
 		COMMAND ${FLATC}
 		ARGS --cpp --cpp-std C++17
-		ARGS -o ${generated_root}/${target}/ ${root}/source/schemas/${file}.fbs
+		ARGS -o ${generated_root}/generated/${target}/ ${root}/source/schemas/${file}.fbs
 		DEPENDS ${root}/source/schemas/${file}.fbs
 		VERBATIM
 	)

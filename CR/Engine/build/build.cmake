@@ -7,6 +7,7 @@ include (${root}/Packages/Platform/build/build.cmake)
 include (${root}/Packages/Compression/build/build.cmake)
 include (${root}/Packages/Assets/build/build.cmake)
 include (${root}/Packages/Input/build/build.cmake)
+include (${root}/Packages/Audio/build/build.cmake)
 
 set(CR_INTERFACE_HEADERS
     ${root}/interface/engine/Engine.h
@@ -33,6 +34,7 @@ target_link_libraries(engine PUBLIC
     compression
     assets
     input
+    audio
 )
 
 target_include_directories(engine SYSTEM PUBLIC "${root}/interface")

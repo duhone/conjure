@@ -9,6 +9,7 @@ export import CR.Engine.Platform;
 export import CR.Engine.Compression;
 export import CR.Engine.Assets;
 export import CR.Engine.Input;
+export import CR.Engine.Audio;
 
 export namespace CR::Engine {
 	void Initialize(GLFWwindow* a_window, const std::filesystem::path& a_assetsFolder);

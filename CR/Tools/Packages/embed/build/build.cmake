@@ -16,6 +16,12 @@ set(CR_BUILD_FILES
     ${root}/build/build.cmake
 )
 
+set(CR_SCHEMA_FILES
+)
+
+set(CR_GENERATED_FILES
+)
+
 set(CR_TEST_FILES
     ${root}/test_assets/shader.crsm
 )

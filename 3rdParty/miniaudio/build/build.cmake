@@ -24,6 +24,7 @@ settings3rdParty(miniaudio)
 
 target_compile_definitions(miniaudio PUBLIC MA_ENABLE_ONLY_SPECIFIC_BACKENDS)
 target_compile_definitions(miniaudio PUBLIC MA_ENABLE_WASAPI)
+target_compile_definitions(miniaudio PUBLIC MA_NO_DECODING)
 target_compile_definitions(miniaudio PUBLIC MA_NO_ENCODING)
 target_compile_definitions(miniaudio PUBLIC MA_NO_MP3)
 target_compile_definitions(miniaudio PUBLIC MA_NO_RESOURCE_MANAGER)
