@@ -2,7 +2,7 @@ block()
 
 set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 
-set(FLATC "${root}/flatbuffers/bin/flatc.exe")
+set(FLATC "${root}/flatbuffers/bin/flatc.exe" CACHE INTERNAL "flatc path")
 
 set(CR_INTERFACE_HEADERS
     ${root}/flatbuffers/include/flatbuffers/flatbuffers.h

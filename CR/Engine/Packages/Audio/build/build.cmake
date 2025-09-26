@@ -13,6 +13,7 @@ set(CR_INTERFACE_MODULES
 )
 
 set(CR_IMPLEMENTATION
+    ${root}/source/Constants.ixx
     ${root}/source/FXLibrary.ixx
     ${root}/source/MusicLibrary.ixx
     ${root}/source/Utilities.ixx

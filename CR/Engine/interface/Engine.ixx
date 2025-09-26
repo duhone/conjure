@@ -25,19 +25,23 @@ namespace ceplat   = CR::Engine::Platform;
 namespace cecomp   = CR::Engine::Compression;
 namespace ceassets = CR::Engine::Assets;
 namespace ceinput  = CR::Engine::Input;
+namespace ceaudio  = CR::Engine::Audio;
 
 void CR::Engine::Initialize(GLFWwindow* a_window, const std::filesystem::path& a_assetsFolder) {
 	ceassets::Initialize(a_assetsFolder);
 	ceinput::Initialize(a_window);
+	ceaudio::Initialize();
 }
 
 void CR::Engine::Update() {
 	ceinput::Update();
+	ceaudio::Update();
 }
 
 void CR::Engine::Render() {}
 
 void CR::Engine::Shutdown() {
+	ceaudio::Shutdown();
 	ceinput::Shutdown();
 	ceassets::Shutdown();
 }

@@ -33,9 +33,33 @@ export namespace CR::Engine::Core {
 		std::byte* data() noexcept { return m_data; }
 		uint32_t size() const noexcept { return m_size; }
 
+		template<typename T>
+		    requires std::is_standard_layout_v<T>
+		const T* data() const noexcept {
+			return (const T*)m_data;
+		}
+
+		template<typename T>
+		    requires std::is_standard_layout_v<T>
+		T* data() noexcept {
+			return (T*)m_data;
+		}
+
+		template<typename T>
+		    requires std::is_standard_layout_v<T>
+		uint32_t size() const noexcept {
+			return m_size / sizeof(T);
+		}
+
 		// If shrinking, actual buffer won't be shrunk, and resize is "free". use shrinkToFit if you want
 		// to actually shrink in that case.
 		void resize(uint32_t a_newSize);
+		template<typename T>
+		    requires std::is_standard_layout_v<T>
+		void resize(uint32_t a_newSize) {
+			return resize(m_size * sizeof(T));
+		}
+
 		void shrinkToFit();
 
 	  private:
