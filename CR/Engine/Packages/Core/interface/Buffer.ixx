@@ -19,12 +19,19 @@ export namespace CR::Engine::Core {
 		Buffer(const Buffer&)            = delete;
 		Buffer& operator=(const Buffer&) = delete;
 		Buffer(Buffer&& a_other) noexcept { *this = std::move(a_other); }
+		Buffer(std::span<std::byte> a_other) { *this = a_other; }
 		Buffer& operator=(Buffer&& a_other) noexcept {
 			m_data = a_other.m_data;
 			m_size = a_other.m_size;
 
 			a_other.m_data = nullptr;
 			a_other.m_size = 0;
+
+			return *this;
+		}
+		Buffer& operator=(std::span<std::byte> a_other) noexcept {
+			resize((uint32_t)a_other.size());
+			std::memcpy(m_data, a_other.data(), a_other.size());
 
 			return *this;
 		}
@@ -57,7 +64,7 @@ export namespace CR::Engine::Core {
 		template<typename T>
 		    requires std::is_standard_layout_v<T>
 		void resize(uint32_t a_newSize) {
-			return resize(m_size * sizeof(T));
+			return resize(a_newSize * sizeof(T));
 		}
 
 		void shrinkToFit();
