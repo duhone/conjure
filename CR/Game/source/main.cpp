@@ -153,6 +153,8 @@ int main(int, char*) {
 	// cegraph::Sprites::Delete(sprites);
 	// graphicsService.ReleaseTextureSet(textureSet);
 
+	CR::Engine::Shutdown();
+
 	glfwDestroyWindow(window);
 	glfwTerminate();
 

@@ -23,6 +23,7 @@ set(CR_INTERFACE_MODULES
     ${root}/interface/Handle.ixx
     ${root}/interface/Hash.ixx
     ${root}/interface/Literals.ixx
+    ${root}/interface/LoadingThread.ixx
     ${root}/interface/Locked.ixx
     ${root}/interface/Log.ixx
     ${root}/interface/Random.ixx
