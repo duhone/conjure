@@ -29,12 +29,14 @@ namespace ceaudio  = CR::Engine::Audio;
 
 void CR::Engine::Initialize(GLFWwindow* a_window, const std::filesystem::path& a_assetsFolder) {
 	cecore::Internal::Initialize();
+	ceplat::Internal::Initialize();
 	ceassets::Initialize(a_assetsFolder);
 	ceinput::Initialize(a_window);
 	ceaudio::Initialize();
 }
 
 void CR::Engine::Update() {
+	ceplat::Internal::Update();
 	ceinput::Update();
 	ceaudio::Update();
 }
@@ -45,5 +47,6 @@ void CR::Engine::Shutdown() {
 	ceaudio::Shutdown();
 	ceinput::Shutdown();
 	ceassets::Shutdown();
+	ceplat::Internal::Shutdown();
 	cecore::Internal::Shutdown();
 }

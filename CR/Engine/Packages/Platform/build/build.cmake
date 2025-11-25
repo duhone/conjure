@@ -6,7 +6,9 @@ set(CR_INTERFACE_HEADERS
 )
 
 set(CR_INTERFACE_MODULES
+    ${root}/interface/FileRequest.ixx
     ${root}/interface/Guid.ixx
+    ${root}/interface/Handles.ixx
     ${root}/interface/MemoryMappedFile.ixx
     ${root}/interface/PathUtils.ixx
     ${root}/interface/Platform.ixx
@@ -16,6 +18,7 @@ set(CR_INTERFACE_MODULES
 
 set(CR_IMPLEMENTATION
     ${root}/source/windows/CRWindows.h
+    ${root}/source/windows/FileRequest.cpp
     ${root}/source/windows/Guid.cpp
     ${root}/source/windows/MemoryMappedFile.cpp
     ${root}/source/windows/PathUtils.cpp

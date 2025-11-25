@@ -70,6 +70,9 @@ namespace {
 	CR::Engine::Core::Buffer m_looseData;
 
 	std::vector<CR::Engine::Platform::MemoryMappedFile> m_bulkData;
+	// Could get more parallelism by having one mutex per bulk data. But I worry thats too many mutexes.
+	// Hopefully it doesn't take long to open/close. I don't think we need to lock for other use cases.
+	std::mutex m_bulkMutex;
 
 	bool isBulkFile(std::string_view ext) {
 		for(const auto& bulkExt : c_bulkExtensions) {
@@ -172,6 +175,10 @@ void ceassets::Open(Handles::Asset a_handle) {
 	CR_ASSERT(a_handle.isValid(), "can't open an invalid asset");
 	CR_ASSERT(m_isBulk[a_handle], "can only open bulk assets");
 
+	// I don't think there is any reason to get fancy here. I don't expect multiple open requests for a
+	// particular asset.
+	std::scoped_lock lock(m_bulkMutex);
+
 	if(m_openCount[a_handle] == 0) {
 		m_bulkData[a_handle] = ceplat::MemoryMappedFile(m_fullPaths[a_handle]);
 		m_spans[a_handle]    = m_bulkData[a_handle].GetData();
@@ -182,6 +189,9 @@ void ceassets::Open(Handles::Asset a_handle) {
 void ceassets::Close(Handles::Asset a_handle) {
 	CR_ASSERT(a_handle.isValid(), "can't close an invalid asset");
 	CR_ASSERT(m_isBulk[a_handle], "can only close bulk assets");
+
+	std::scoped_lock lock(m_bulkMutex);
+
 	CR_ASSERT(m_openCount[a_handle] != 0, "can only close files that are open");
 
 	if(m_openCount[a_handle] == 1) {
