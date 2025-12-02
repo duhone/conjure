@@ -73,6 +73,7 @@ set(CR_IMPLEMENTATION
 	${root}/tests/BitSet.cpp
 	${root}/tests/Function.cpp
 	${root}/tests/Guid.cpp
+	${root}/tests/Handle.cpp
 	${root}/tests/Locked.cpp
     ${root}/tests/Log.cpp
 	${root}/tests/main.cpp
