@@ -31,41 +31,31 @@ using namespace cecore::Literals;
 namespace {
 	constexpr uint32_t c_maxRegions = 512;
 
-	cecore::BitSet<c_maxRegions> m_regionsUsed;
-	std::array<ceinput::Handles::Region, c_maxRegions> m_regionHandles;
+	cecore::HandlePool<ceinput::Handles::Region, c_maxRegions> m_handlePool;
 	std::array<cecore::Rect2D<int32_t>, c_maxRegions> m_regions;
 	std::array<uint32_t, c_maxRegions> m_states;
-	uint32_t m_activeRegion{c_maxRegions};
+	ceinput::Handles::Region m_activeRegion{};
 }    // namespace
 
-void ceinput::Regions::initialize() {
-	for(uint32_t region = 0; region < m_regionHandles.size(); ++region) {
-		m_regionHandles[region] = ceinput::Handles::Region(region);
-	}
-}
+void ceinput::Regions::initialize() {}
 
 ceinput::Handles::Region ceinput::Regions::create(const cecore::Rect2D<int32_t>& a_initial) {
-	CR_ASSERT(m_regionsUsed.size() < c_maxRegions, "ran out of regions");
-	auto avail = m_regionsUsed.FindNotInSet();
-	m_regionsUsed.insert(avail);
-	m_regionHandles[avail].incGeneration();
+	CR_ASSERT(!m_handlePool.exhausted(), "ran out of regions");
+	auto avail       = m_handlePool.aquire();
 	m_regions[avail] = a_initial;
-	return m_regionHandles[avail];
+	return avail;
 }
 
 void ceinput::Regions::update(Handles::Region a_region, const CR::Engine::Core::Rect2D<int32_t>& a_value) {
 	CR_ASSERT(a_region < c_maxRegions, "invalid input region id");
-	CR_ASSERT(m_regionHandles[a_region].getGeneration() == a_region.getGeneration(),
-	          "trying to update an old handle");
+	CR_ASSERT(m_handlePool.isValid(a_region), "trying to update an old or invalid handle");
 	m_regions[a_region] = a_value;
 }
 
 void ceinput::Regions::release(Handles::Region a_region) {
 	CR_ASSERT(a_region < c_maxRegions, "invalid input region id");
-	CR_ASSERT(m_regionsUsed.contains(a_region), "id {} to delete doesn't exist", a_region);
-	CR_ASSERT(m_regionHandles[a_region].getGeneration() == a_region.getGeneration(),
-	          "trying to update an old handle");
-	m_regionsUsed.erase(a_region);
+	CR_ASSERT(m_handlePool.isValid(a_region), "trying to update an old or invalid handle");
+	m_handlePool.release(a_region);
 }
 
 void ceinput::Regions::update() {
@@ -73,21 +63,23 @@ void ceinput::Regions::update() {
 
 	if((context.CursorState & CursorStates::Available) == 0) { return; }
 
-	uint32_t oldActiveRegion = m_activeRegion;
-	uint32_t newActiveRegion = c_maxRegions;
-	for(uint32_t region : m_regionsUsed) {
-		if(m_regions[region].Contains(context.CursorPos)) {
-			m_activeRegion   = region;
-			m_states[region] = RegionStates::Hover;
-			if(context.CursorState & CursorStates::Down) { m_states[region] |= RegionStates::Down; }
-			if(context.CursorState & CursorStates::Pressed) { m_states[region] |= RegionStates::Pressed; }
-			if(context.CursorState & CursorStates::Released) { m_states[region] |= RegionStates::Released; }
-			newActiveRegion = region;
-			break;
+	Handles::Region oldActiveRegion = m_activeRegion;
+	Handles::Region newActiveRegion{};
+	m_handlePool.iterate([&](const auto& handle) {
+		if(m_regions[handle].Contains(context.CursorPos)) {
+			m_activeRegion   = handle;
+			m_states[handle] = RegionStates::Hover;
+			if(context.CursorState & CursorStates::Down) { m_states[handle] |= RegionStates::Down; }
+			if(context.CursorState & CursorStates::Pressed) { m_states[handle] |= RegionStates::Pressed; }
+			if(context.CursorState & CursorStates::Released) { m_states[handle] |= RegionStates::Released; }
+			newActiveRegion = handle;
+			return false;
 		}
-	}
 
-	if(newActiveRegion != oldActiveRegion && oldActiveRegion != c_maxRegions) {
+		return true;
+	});
+
+	if(newActiveRegion != oldActiveRegion && m_handlePool.isValid(oldActiveRegion)) {
 		m_states[oldActiveRegion] = 0;
 	}
 }
@@ -96,7 +88,7 @@ void ceinput::Regions::getStates(std::span<Handles::Region> a_regions, std::span
 	CR_ASSERT(a_regions.size() == a_states.size(), "regions and states not the same size");
 
 	for(uint32_t i = 0; i < a_regions.size(); ++i) {
-		CR_ASSERT(m_regionsUsed.contains(a_regions[i]), "requested state for region that doesn't exist");
+		CR_ASSERT(m_handlePool.isValid(a_regions[i]), "requested state for region that doesn't exist");
 		a_states[i] = m_states[a_regions[i]];
 	}
 }
