@@ -28,12 +28,16 @@
 
 #if CR_DEBUG || CR_RELEASE
 
+#define CR_USE_ASSERTS 1
+
 #define CR_ASSERT(condition, fmtString, ...)                                                                 \
 	do {                                                                                                     \
 		if(!(condition)) { CR_ERROR(fmtString __VA_OPT__(, ) __VA_ARGS__); }                                 \
 	} while(false);
 
 #else
+
+#define CR_USE_ASSERTS 0
 
 #define CR_ASSERT(condition, fmtString, ...) __assume(!(condition));
 

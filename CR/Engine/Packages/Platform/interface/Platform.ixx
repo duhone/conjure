@@ -19,13 +19,13 @@ module :private;
 namespace ceplat = CR::Engine::Platform;
 
 void ceplat::Internal::Initialize() {
-	FileRequest::Internal::Initialize();
+	FileRequest::Internal::initialize();
 }
 
 void ceplat::Internal::Update() {
-	FileRequest::Internal::Update();
+	FileRequest::Internal::update();
 }
 
 void ceplat::Internal::Shutdown() {
-	FileRequest::Internal::Shutdown();
+	FileRequest::Internal::shutdown();
 }

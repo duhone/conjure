@@ -7,8 +7,12 @@ import std.compat;
 
 export namespace CR::Engine::Platform::FileRequest {
 
-	Handles::File RegisterFile(const std::filesystem::path& a_filePath);
-	void UnregisterFile(Handles::File a_file);
+	// ideally in packed mode, only 1, or at most a handful of files. just register them once at app start.
+	// In loose mode, just register while reading, will run out otherwise.
+	Handles::File registerFile(const std::filesystem::path& a_filePath);
+	void unregisterFile(Handles::File a_file);
+	Handles::Buffer registerBuffer(std::span<std::byte> a_buffer);
+	void unregisterBuffer(Handles::Buffer a_buffer);
 
 	// completed and buffer must outlive the load
 	struct LoadArgs {
@@ -20,8 +24,8 @@ export namespace CR::Engine::Platform::FileRequest {
 	void Load(const LoadArgs& a_args);
 
 	export namespace Internal {
-		void Initialize();
-		void Update();
-		void Shutdown();
+		void initialize();
+		void update();
+		void shutdown();
 	}    // namespace Internal
 }    // namespace CR::Engine::Platform::FileRequest

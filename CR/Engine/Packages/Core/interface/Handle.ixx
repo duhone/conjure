@@ -40,6 +40,7 @@ export namespace CR::Engine::Core {
 
 		constexpr bool operator==(const Handle&) const noexcept = default;
 
+		constexpr uint16_t id() const noexcept { return m_id; }
 		// allow implicit cast to int, for indexing into containers tersely.
 		constexpr operator uint16_t() const noexcept { return m_id; }
 		constexpr bool isValid() const noexcept { return m_id != c_unused; }
@@ -81,6 +82,9 @@ export namespace CR::Engine::Core {
 
 			a_handle = HandleType{};
 		}
+
+		// mark many handles as invalid at once, by id, so can't verify generation
+		constexpr void release(const BitSet<c_poolSize>& a_handles) { m_used = m_used & (~a_handles); }
 
 		constexpr HandleType tryGetHandle(uint16_t index) {
 			if(!m_used.contains(index)) { return {}; }
