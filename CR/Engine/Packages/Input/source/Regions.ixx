@@ -41,7 +41,7 @@ void ceinput::Regions::initialize() {}
 
 ceinput::Handles::Region ceinput::Regions::create(const cecore::Rect2D<int32_t>& a_initial) {
 	CR_ASSERT(!m_handlePool.exhausted(), "ran out of regions");
-	auto avail       = m_handlePool.aquire();
+	auto avail       = m_handlePool.acquire();
 	m_regions[avail] = a_initial;
 	return avail;
 }

@@ -63,7 +63,7 @@ export namespace CR::Engine::Core {
 		}
 		~HandlePool() = default;
 
-		constexpr HandleType aquire() {
+		constexpr HandleType acquire() {
 			CR_ASSERT(m_used.size() != c_poolSize, "ran out of handles");
 			auto avail = m_used.FindNotInSet();
 			m_used.insert(avail);
