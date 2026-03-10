@@ -1,13 +1,15 @@
 ﻿import CR.Engine.Platform.FileRequest;
 import CR.Engine.Platform.PathUtils;
 
-// import std;
-
 #include <doctest/doctest.h>
+
+import std;
 
 namespace cep = CR::Engine::Platform;
 
 namespace fs = std::filesystem;
+
+using namespace std::chrono_literals;
 
 TEST_CASE("FileRequest") {
 	cep::FileRequest::Internal::initialize();
@@ -15,23 +17,27 @@ TEST_CASE("FileRequest") {
 	auto testFilePath = cep::GetCurrentProcessPath();
 	testFilePath.append("test.txt");
 	auto bufsize = fs::file_size(testFilePath);
+	REQUIRE(bufsize == 2);
 
-	auto buffer = std::make_unique_for_overwrite<std::byte[]>(bufsize);
+	auto buffer = std::make_unique_for_overwrite<std::byte[]>(4096);
 
 	auto fileHandle   = cep::FileRequest::registerFile(testFilePath);
-	auto bufferHandle = cep::FileRequest::registerBuffer({buffer.get(), bufsize});
+	auto bufferHandle = cep::FileRequest::registerBuffer({buffer.get(), 4096});
 
-	std::this_thread::sleep_for(std::chrono::milliseconds(250));
+	cep::FileRequest::ReadArgs readArgs;
+	readArgs.fileHandle   = fileHandle;
+	readArgs.fileOffset   = 0;
+	readArgs.bufferHandle = bufferHandle;
+	readArgs.bufferOffset = 0;
+	readArgs.readSize     = (uint32_t)4096;
 
-	/*cep::MemoryMappedFile mmapFile{testFilePath.c_str()};
-	REQUIRE(mmapFile.size() == 2);
-	auto data = mmapFile.data();
+	auto readHandle = cep::FileRequest::read(readArgs);
+
+	while(!cep::FileRequest::hasReadCompleted(readHandle)) { std::this_thread::sleep_for(16ms); }
+
+	auto data = buffer.get();
 	REQUIRE((char)data[0] == '5');
 	REQUIRE((char)data[1] == '8');
-
-	cep::MemoryMappedFile mmapFile2 = std::move(mmapFile);
-	REQUIRE(mmapFile.size() == 0);
-	REQUIRE(mmapFile2.size() == 2);*/
 
 	cep::FileRequest::unregisterBuffer(bufferHandle);
 	cep::FileRequest::unregisterFile(fileHandle);

@@ -55,8 +55,6 @@ function(addCommon target)
 	set_target_properties(${target} PROPERTIES INTERPROCEDURAL_OPTIMIZATION_FINAL TRUE)	
 	
 	target_include_directories(${target} SYSTEM PUBLIC "${generated_root}")
-
-	target_link_options(${target} PRIVATE $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>>:/Debug:fastlink>)		
 endfunction()
 
 

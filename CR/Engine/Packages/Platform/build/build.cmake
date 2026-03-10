@@ -53,6 +53,7 @@ set(CR_INTERFACE_MODULES
 )
 
 set(CR_IMPLEMENTATION
+	${root}/tests/FileRequest.cpp
 	${root}/tests/main.cpp
 	${root}/tests/MemoryMappedFile.cpp
 	${root}/tests/SharedLibrary.cpp
