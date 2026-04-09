@@ -13,8 +13,8 @@ namespace cecore = CR::Engine::Core;
 namespace cep    = CR::Engine::Platform;
 
 namespace {
-	constexpr uint32_t c_maxFiles   = 1024;
-	constexpr uint32_t c_maxBuffers = 4096;
+	constexpr uint32_t c_maxFiles   = 512;
+	constexpr uint32_t c_maxBuffers = 1024;
 	constexpr uint32_t c_maxReads   = 4096;
 
 	HIORING m_ioring{};
@@ -36,7 +36,8 @@ namespace {
 	std::array<cep::FileRequest::ReadArgs, c_maxReads> m_readArgs;
 	std::array<std::atomic_bool, c_maxReads> m_readCompletions;
 
-	std::jthread m_thread;
+	std::jthread m_submitThread;
+	std::jthread m_completionThread;
 	std::mutex m_requestMutex;
 	std::condition_variable m_notify;
 
@@ -45,14 +46,6 @@ namespace {
 	bool anyWork() {
 		return !m_filesToRegister.empty() || !m_filesToUnregister.empty() || !m_buffersToRegister.empty() ||
 		       !m_buffersToUnregister.empty() || !m_readRequests.empty();
-	}
-
-	void drainCompletions() {
-		IORING_CQE result;
-		while(PopIoRingCompletion(m_ioring, &result) == S_OK) {
-			// we don't use the user data or result code for anything right now, but we might want to in the
-			// future. if we do, we'll need to store the user data with the request and look it up here.
-		}
 	}
 
 	void processFiles() {
@@ -84,10 +77,9 @@ namespace {
 		CR_ASSERT(winResult != IORING_E_SUBMISSION_QUEUE_FULL,
 		          "queue should be empty, should be impossible to fail");
 
-		winResult = SubmitIoRing(m_ioring, 1, INFINITE, nullptr);
+		winResult = SubmitIoRing(m_ioring, 0, 0, nullptr);
 		CR_ASSERT(winResult == S_OK, "failed to submit io ring");
-		WaitForSingleObject(m_ioEvent, INFINITE);
-		drainCompletions();
+
 		{
 			std::scoped_lock lock(m_dataMutex);
 			m_fileHandles.release(filesToUnregister);
@@ -116,11 +108,9 @@ namespace {
 		CR_ASSERT(winResult != IORING_E_SUBMISSION_QUEUE_FULL,
 		          "queue should be empty, should be impossible to fail");
 
-		winResult = SubmitIoRing(m_ioring, 1, INFINITE, nullptr);
+		winResult = SubmitIoRing(m_ioring, 0, 0, nullptr);
 		CR_ASSERT(winResult == S_OK, "failed to submit io ring");
-		WaitForSingleObject(m_ioEvent, INFINITE);
 
-		drainCompletions();
 		{
 			std::scoped_lock lock(m_dataMutex);
 			m_bufferHandles.release(buffersToUnregister);
@@ -128,7 +118,7 @@ namespace {
 	}
 
 	void processReads() {
-		cecore::BitSet<c_maxBuffers> readRequests;
+		cecore::BitSet<c_maxReads> readRequests;
 		{
 			std::scoped_lock lock(m_dataMutex);
 			if(m_readRequests.empty()) { return; }
@@ -152,20 +142,16 @@ namespace {
 		}
 
 		uint32_t submitted{};
-		HRESULT winResult = SubmitIoRing(m_ioring, readRequests.size(), INFINITE, &submitted);
+		HRESULT winResult = SubmitIoRing(m_ioring, 0, 0, &submitted);
 		CR_ASSERT(winResult == S_OK, "failed to submit io ring");
 		CR_ASSERT(submitted == readRequests.size(), "not all were submitted");
-
-		WaitForSingleObject(m_ioEvent, INFINITE);
-
-		drainCompletions();
 
 		for(auto request : readRequests) {
 			m_readCompletions[request].store(true, std::memory_order_release);
 		}
 	}
 
-	void threadMain(std::stop_token a_stoken) {
+	void submitThreadMain(std::stop_token a_stoken) {
 		while(!a_stoken.stop_requested()) {
 			std::unique_lock<std::mutex> lock(m_requestMutex);
 			if(!anyWork()) { m_notify.wait(lock); }
@@ -189,6 +175,21 @@ namespace {
 		processFiles();
 	}
 
+	void completionThreadMain(std::stop_token a_stoken) {
+		while(!a_stoken.stop_requested()) {
+			WaitForSingleObject(m_ioEvent, INFINITE);
+			if(a_stoken.stop_requested()) { break; }
+
+			IORING_CQE result;
+			while(PopIoRingCompletion(m_ioring, &result) == S_OK) {
+				// we don't use the user data or result code for anything right now, but we might want to in
+				// the future. if we do, we'll need to store the user data with the request and look it up
+				// here.
+
+				if(a_stoken.stop_requested()) { break; }
+			}
+		}
+	}
 }    // namespace
 
 void cep::FileRequest::Internal::initialize() {
@@ -217,13 +218,19 @@ void cep::FileRequest::Internal::initialize() {
 	result = SetIoRingCompletionEvent(m_ioring, m_ioEvent);
 	CR_ASSERT(result == S_OK, "failed to set completion event");
 
-	m_thread = std::jthread([](std::stop_token a_token) { threadMain(std::move(a_token)); });
+	m_submitThread = std::jthread([](std::stop_token a_token) { submitThreadMain(std::move(a_token)); });
+
+	m_completionThread =
+	    std::jthread([](std::stop_token a_token) { completionThreadMain(std::move(a_token)); });
 }
 
 void cep::FileRequest::Internal::shutdown() {
-	m_thread.request_stop();
+	m_submitThread.request_stop();
+	m_completionThread.request_stop();
 	m_notify.notify_one();
-	m_thread.join();
+	SetEvent(m_ioEvent);
+	m_submitThread.join();
+	m_completionThread.join();
 	CloseIoRing(m_ioring);
 	CloseHandle(m_ioEvent);
 }
