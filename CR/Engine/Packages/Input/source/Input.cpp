@@ -65,9 +65,9 @@ void ceinput::Update() {
 	bool mouseWasDown      = (context.CursorState & CursorStates::Down) != 0;
 	context.CursorState    = 0;
 	if(m_mouseAvailable) {
+		context.CursorState |= CursorStates::Available;
 		if(!mouseWasAvailable) {
-			context.CursorState = CursorStates::Available;
-			mouseWasDown        = false;
+			mouseWasDown = false;
 		}
 		if(m_mouseDown) {
 			context.CursorState |= CursorStates::Down;
@@ -77,6 +77,8 @@ void ceinput::Update() {
 		}
 		context.CursorPos = m_mousePos;
 	}
+
+	ceinput::Regions::update();
 }
 
 void ceinput::Shutdown() {}

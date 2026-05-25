@@ -74,6 +74,8 @@ void ceinput::Regions::update() {
 			if(context.CursorState & CursorStates::Released) { m_states[handle] |= RegionStates::Released; }
 			newActiveRegion = handle;
 			return false;
+		} else {
+			m_states[handle] = 0;
 		}
 
 		return true;
