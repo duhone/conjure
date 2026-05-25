@@ -45,6 +45,8 @@ export namespace CR::Engine::Core {
 
 		[[nodiscard]] constexpr bool empty() const noexcept { return size() == 0; }
 
+		[[nodiscard]] constexpr bool full() const noexcept { return size() == Size; }
+
 		[[nodiscard]] constexpr std::uint16_t capacity() const noexcept { return Size; }
 
 		[[nodiscard]] constexpr bool contains(std::uint16_t a_value) noexcept {
