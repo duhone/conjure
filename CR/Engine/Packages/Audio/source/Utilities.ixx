@@ -1,4 +1,4 @@
-export module CR.Engine.Audio.Utilities;
+export module CR.Engine.Audio:Utilities;
 
 import std;
 

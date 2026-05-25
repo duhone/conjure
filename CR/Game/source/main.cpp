@@ -9,7 +9,7 @@ import std;
 import std.compat;
 
 // namespace ceassets = CR::Engine::Assets;
-//  namespace ceaud    = CR::Engine::Audio;
+namespace ceaud   = CR::Engine::Audio;
 namespace cecore  = CR::Engine::Core;
 namespace ceinput = CR::Engine::Input;
 // namespace cegraph  = CR::Engine::Graphics;
@@ -48,13 +48,10 @@ int main(int, char*) {
 
 	CR::Engine::Initialize(window, assetsPath);
 
-	// auto handleFxs = ceaud::GetHandleFXs();
-	// auto music     = ceaud::GetHandleMusic();
+	ceaud::setFXVolume(1.0f);
+	ceaud::setMusicVolume(0.75f);
 
-	// handleFxs.SetVolume(1.0f);
-	// music.SetVolume(0.75f);
-
-	// auto fanfareFX = ceaud::GetHandleFX(cecore::C_Hash64("levelupfanfare"));
+	auto fanfareFX = ceaud::SoundFX::GetHandle(cecore::C_Hash64("levelupfanfare"));
 
 	// music.Play(cecore::C_Hash64("bgmMenu"));
 
@@ -125,9 +122,7 @@ int main(int, char*) {
 		uint32_t regionState;
 		ceinput::Regions::getStates({&region, 1}, {&regionState, 1});
 
-		if((regionState & ceinput::Regions::RegionStates::Pressed) != 0) {
-			// fanfareFX.Play();
-		}
+		if((regionState & ceinput::Regions::RegionStates::Pressed) != 0) { ceaud::SoundFX::Play(fanfareFX); }
 
 		CR::Engine::Render();
 

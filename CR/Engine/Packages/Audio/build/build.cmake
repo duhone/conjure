@@ -8,15 +8,15 @@ set(CR_INTERFACE_HEADERS
 set(CR_INTERFACE_MODULES
     ${root}/interface/Audio.ixx
     ${root}/interface/Handles.ixx
-    ${root}/interface/FX.ixx
     ${root}/interface/Music.ixx
 )
 
 set(CR_IMPLEMENTATION
     ${root}/source/Constants.ixx
-    ${root}/source/FXLibrary.ixx
+    ${root}/source/SoundFX.ixx
     ${root}/source/MusicLibrary.ixx
     ${root}/source/Utilities.ixx
+    ${root}/source/Audio.cpp
 )
 
 set(CR_BUILD_FILES
