@@ -78,7 +78,10 @@ namespace {
 		frameCount = std::min<ma_uint64>(frameCount, dataSource.pcmData.size() - dataSource.frameOffset);
 		if(frameCount == 0) { return MA_AT_END; }
 
-		if(pFramesOut) { memcpy(pFramesOut, dataSource.pcmData.data(), frameCount * sizeof(int16_t)); }
+		if(pFramesOut) {
+			memcpy(pFramesOut, dataSource.pcmData.data() + dataSource.frameOffset,
+			       frameCount * sizeof(int16_t));
+		}
 		if(pFramesRead) { *pFramesRead = frameCount; }
 
 		dataSource.frameOffset += (uint32_t)frameCount;
@@ -264,6 +267,6 @@ void ceaud::SoundFX::PlayImpl(Handles::SoundFX a_handle) {
 	result = ma_sound_init_ex(m_minAudio, &soundConfig, &sound);
 	CR_ASSERT(result == MA_SUCCESS, "failed to play sounds");
 
-	// ma_sound_start(&sound);
+	ma_sound_start(&sound);
 	CR_ASSERT(result == MA_SUCCESS, "failed to play sounds");
 }
