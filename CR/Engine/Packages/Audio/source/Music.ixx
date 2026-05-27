@@ -9,24 +9,28 @@ module;
 #include <dr_flac.h>
 #include <miniaudio.h>
 
-export module CR.Engine.Audio.MusicLibrary;
+export module CR.Engine.Audio.Music;
 
 import CR.Engine.Assets;
 import CR.Engine.Core;
 import CR.Engine.Platform;
 
 import CR.Engine.Audio.Constants;
+import CR.Engine.Audio.Handles;
 
 import std;
 import std.compat;
 
-namespace CR::Engine::Audio::MusicLibrary {
+export namespace CR::Engine::Audio::Music {
 
-	void Initialize();
+	void Initialize(ma_engine& minAudio, ma_sound_group& a_soundGroup);
 	void Shutdown();
+	void Update();
 
-	uint16_t GetIndex(uint64_t a_nameHash);
-}    // namespace CR::Engine::Audio::MusicLibrary
+	[[nodiscard]] Handles::Music GetHandleImpl(uint64_t a_nameHash);
+	void PlayImpl(Handles::Music a_handle);
+	void StopImpl();
+}    // namespace CR::Engine::Audio::Music
 
 module :private;
 
@@ -38,7 +42,12 @@ namespace cea     = CR::Engine::Audio;
 namespace fs = std::filesystem;
 
 namespace {
-	std::unordered_map<uint64_t, uint16_t> m_lookup;
+	ma_engine* m_minAudio;
+	ma_sound_group* m_soundGroup{};
+	ma_data_source_config m_baseConfig{};
+
+	cecore::HandlePool<cea::Handles::Music, cea::Constants::c_maxMusic> m_handlePool;
+	std::unordered_map<uint64_t, cea::Handles::Music> m_lookup;
 	std::vector<std::string> m_names;
 	std::vector<std::string> m_paths;
 
@@ -135,11 +144,15 @@ namespace {
 	}
 }    // namespace
 
-void cea::MusicLibrary::Initialize() {
+void cea::Music::Initialize(ma_engine& minAudio, ma_sound_group& a_soundGroup) {
+	m_soundGroup = &a_soundGroup;
+	m_minAudio   = &minAudio;
+
 	flatbuffers::Parser parser = ceasset::GetData(cecore::C_Hash64("Audio/music.json"), SCHEMAS_MUSIC);
 	auto music                 = Flatbuffers::GetMusic(parser.builder_.GetBufferPointer());
 	for(const auto& song : *music->music()) {
-		m_lookup[cecore::Hash64(song->name()->c_str())] = (uint16_t)m_handles.size();
+		auto handle                                     = m_handlePool.acquire();
+		m_lookup[cecore::Hash64(song->name()->c_str())] = handle;
 		m_names.push_back(song->name()->c_str());
 		m_paths.push_back(song->path()->c_str());
 
@@ -156,12 +169,18 @@ void cea::MusicLibrary::Initialize() {
 	DataSourceInit(m_dataSource);
 }
 
-void cea::MusicLibrary::Shutdown() {
+void cea::Music::Shutdown() {
 	ma_data_source_uninit(&m_dataSource.base);
 }
 
-uint16_t cea::MusicLibrary::GetIndex(uint64_t a_nameHash) {
+void cea::Music::Update() {}
+
+cea::Handles::Music cea::Music::GetHandleImpl(uint64_t a_nameHash) {
 	auto iter = m_lookup.find(a_nameHash);
-	CR_ASSERT(iter != m_lookup.end(), "Could not find audio music asset {}", a_nameHash);
+	CR_ASSERT(iter != m_lookup.end(), "Could not find audio fx asset {}", a_nameHash);
 	return iter->second;
 }
+
+void cea::Music::PlayImpl(Handles::Music a_handle) {}
+
+void cea::Music::StopImpl() {}

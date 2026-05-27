@@ -8,13 +8,12 @@ set(CR_INTERFACE_HEADERS
 set(CR_INTERFACE_MODULES
     ${root}/interface/Audio.ixx
     ${root}/interface/Handles.ixx
-    ${root}/interface/Music.ixx
 )
 
 set(CR_IMPLEMENTATION
     ${root}/source/Constants.ixx
     ${root}/source/SoundFX.ixx
-    ${root}/source/MusicLibrary.ixx
+    ${root}/source/Music.ixx
     ${root}/source/Utilities.ixx
     ${root}/source/Audio.cpp
 )

@@ -9,6 +9,7 @@ module CR.Engine.Audio;
 import CR.Engine.Core;
 import CR.Engine.Assets;
 
+import CR.Engine.Audio.Music;
 import CR.Engine.Audio.SoundFX;
 
 namespace cecore   = CR::Engine::Core;
@@ -48,17 +49,20 @@ void ceaudio::Initialize() {
 	ma_node_attach_output_bus(&m_fx, 0, ma_engine_get_endpoint(&m_minAudio), 0);
 
 	ceaudio::SoundFX::Initialize(m_minAudio, m_fx);
+	ceaudio::Music::Initialize(m_minAudio, m_music);
 }
 
 void ceaudio::Update() {
 	if(!m_enabled) { return; }
 	ceaudio::SoundFX::Update();
+	ceaudio::Music::Update();
 }
 
 void ceaudio::Shutdown() {
 	if(!m_enabled) { return; }
 
 	ceaudio::SoundFX::Shutdown();
+	ceaudio::Music::Shutdown();
 
 	ma_sound_group_uninit(&m_music);
 	ma_sound_group_uninit(&m_fx);
@@ -79,4 +83,16 @@ void ceaudio::setMusicVolume(float a_volume) {
 
 void ceaudio::SoundFX::Play(Handles::SoundFX a_handle) {
 	SoundFX::PlayImpl(a_handle);
+}
+
+[[nodiscard]] ceaudio::Handles::Music ceaudio::Music::GetHandle([[maybe_unused]] uint64_t a_nameHash) {
+	return Music::GetHandleImpl(a_nameHash);
+}
+
+void ceaudio::Music::Play([[maybe_unused]] Handles::Music a_handle) {
+	Music::PlayImpl(a_handle);
+}
+
+void ceaudio::Music::Stop() {
+	Music::Stop();
 }
