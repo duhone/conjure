@@ -26,8 +26,8 @@ export namespace CR::Engine::Audio::SoundFX {
 	void Shutdown();
 	void Update();
 
-	[[nodiscard]] Handles::SoundFX GetHandleImpl(uint64_t a_nameHash);
-	void PlayImpl(Handles::SoundFX a_handle);
+	extern "C++" [[nodiscard]] Handles::SoundFX GetHandle(uint64_t a_nameHash);
+	extern "C++" void Play(Handles::SoundFX a_handle);
 
 }    // namespace CR::Engine::Audio::SoundFX
 
@@ -230,13 +230,13 @@ void ceaud::SoundFX::Update() {
 	m_activeDataSources = m_activeDataSources & ~finished;
 }
 
-ceaud::Handles::SoundFX ceaud::SoundFX::GetHandleImpl(uint64_t a_nameHash) {
+extern "C++" ceaud::Handles::SoundFX ceaud::SoundFX::GetHandle(uint64_t a_nameHash) {
 	auto iter = m_lookup.find(a_nameHash);
 	CR_ASSERT(iter != m_lookup.end(), "Could not find audio fx asset {}", a_nameHash);
 	return iter->second;
 }
 
-void ceaud::SoundFX::PlayImpl(Handles::SoundFX a_handle) {
+extern "C++" void ceaud::SoundFX::Play(Handles::SoundFX a_handle) {
 	CR_ASSERT(m_handlePool.isValid(a_handle), "tried to play in an invalid soundfx");
 	if(m_activeDataSources.full()) {
 		CR_WARN("already playing max soundfx");

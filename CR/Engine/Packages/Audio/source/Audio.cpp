@@ -76,23 +76,3 @@ void ceaudio::setFXVolume(float a_volume) {
 void ceaudio::setMusicVolume(float a_volume) {
 	ma_sound_group_set_volume(&m_music, a_volume);
 }
-
-[[nodiscard]] ceaudio::Handles::SoundFX ceaudio::SoundFX::GetHandle(uint64_t a_nameHash) {
-	return SoundFX::GetHandleImpl(a_nameHash);
-}
-
-void ceaudio::SoundFX::Play(Handles::SoundFX a_handle) {
-	SoundFX::PlayImpl(a_handle);
-}
-
-[[nodiscard]] ceaudio::Handles::Music ceaudio::Music::GetHandle([[maybe_unused]] uint64_t a_nameHash) {
-	return Music::GetHandleImpl(a_nameHash);
-}
-
-void ceaudio::Music::Play([[maybe_unused]] Handles::Music a_handle) {
-	Music::PlayImpl(a_handle);
-}
-
-void ceaudio::Music::Stop() {
-	Music::Stop();
-}

@@ -27,9 +27,9 @@ export namespace CR::Engine::Audio::Music {
 	void Shutdown();
 	void Update();
 
-	[[nodiscard]] Handles::Music GetHandleImpl(uint64_t a_nameHash);
-	void PlayImpl(Handles::Music a_handle);
-	void StopImpl();
+	extern "C++" [[nodiscard]] Handles::Music GetHandle(uint64_t a_nameHash);
+	extern "C++" void Play(Handles::Music a_handle);
+	extern "C++" void Stop();
 }    // namespace CR::Engine::Audio::Music
 
 module :private;
@@ -175,12 +175,12 @@ void cea::Music::Shutdown() {
 
 void cea::Music::Update() {}
 
-cea::Handles::Music cea::Music::GetHandleImpl(uint64_t a_nameHash) {
+extern "C++" cea::Handles::Music cea::Music::GetHandle(uint64_t a_nameHash) {
 	auto iter = m_lookup.find(a_nameHash);
 	CR_ASSERT(iter != m_lookup.end(), "Could not find audio fx asset {}", a_nameHash);
 	return iter->second;
 }
 
-void cea::Music::PlayImpl(Handles::Music a_handle) {}
+extern "C++" void cea::Music::Play(Handles::Music a_handle) {}
 
-void cea::Music::StopImpl() {}
+extern "C++" void cea::Music::Stop() {}
