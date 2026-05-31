@@ -31,5 +31,5 @@
 *.out
 *.app
 
-!/CR/Engine/Platform/tests/content/testDLL.dll
+!/CR/Engine/Packages/Platform/tests/content/testDLL.dll
 !/3rdParty/flatbuffers/flatbuffers/bin/flatc.exe
