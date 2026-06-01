@@ -27,6 +27,8 @@ settingsCR(assets)
 
 target_link_libraries(assets PUBLIC
 	flatbuffers
+	reflect
+	simdjson
 	unordered_dense
 	core
 	platform
