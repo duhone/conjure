@@ -51,9 +51,9 @@ int main(int, char*) {
 	ceaud::setFXVolume(1.0f);
 	ceaud::setMusicVolume(0.75f);
 
-	auto fanfareFX = ceaud::SoundFX::GetHandle(cecore::C_Hash64("levelupfanfare"));
-
-	// music.Play(cecore::C_Hash64("bgmMenu"));
+	auto fanfareFX   = ceaud::SoundFX::GetHandle(cecore::C_Hash64("levelupfanfare"));
+	auto musicHandle = ceaud::Music::GetHandle(cecore::C_Hash64("bgmMenu"));
+	ceaud::Music::Play(musicHandle);
 
 	ceinput::Handles::Region region = ceinput::Regions::create({{0, 0}, {400, 300}});
 
@@ -144,6 +144,8 @@ int main(int, char*) {
 			CR_LOG("FPS {:.2f}", (1024.0f / times));
 		}
 	}
+
+	ceaud::Music::Stop();
 
 	// cegraph::Sprites::Delete(sprites);
 	// graphicsService.ReleaseTextureSet(textureSet);

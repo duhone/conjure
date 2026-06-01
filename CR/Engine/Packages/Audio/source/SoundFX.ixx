@@ -267,6 +267,6 @@ extern "C++" void ceaud::SoundFX::Play(Handles::SoundFX a_handle) {
 	result = ma_sound_init_ex(m_minAudio, &soundConfig, &sound);
 	CR_ASSERT(result == MA_SUCCESS, "failed to play sounds");
 
-	ma_sound_start(&sound);
+	result = ma_sound_start(&sound);
 	CR_ASSERT(result == MA_SUCCESS, "failed to play sounds");
 }

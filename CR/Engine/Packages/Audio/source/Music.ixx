@@ -4,7 +4,7 @@ module;
 
 #include "flatbuffers/idl.h"
 
-#include "core/Log.h"
+#include "core/core.h"
 
 #include <dr_flac.h>
 #include <miniaudio.h>
@@ -41,6 +41,8 @@ namespace cea     = CR::Engine::Audio;
 
 namespace fs = std::filesystem;
 
+using namespace std::chrono_literals;
+
 namespace {
 	ma_engine* m_minAudio;
 	ma_sound_group* m_soundGroup{};
@@ -62,8 +64,14 @@ namespace {
 	MusicDataSource m_dataSource{};
 	std::vector<ceasset::Handles::Asset> m_handles;
 
-	int32_t m_current{-1};
-	int32_t m_requested{-1};
+	cea::Handles::Music m_current;
+	cea::Handles::Music m_requested;
+
+	ma_sound m_currentSound{};
+
+	// if a stop request, state will just be PlayNext with an invalid handle for m_requested
+	enum class State { Idle, Playing, PlayNext };
+	State m_state{State::Idle};
 
 	ma_result DataSourceRead(ma_data_source* maDataSource, void* pFramesOut, ma_uint64 frameCount,
 	                         ma_uint64* pFramesRead) {
@@ -99,13 +107,15 @@ namespace {
 	ma_result DataSourceGetDataFormat(ma_data_source* maDataSource, ma_format* pFormat, ma_uint32* pChannels,
 	                                  ma_uint32* pSampleRate, ma_channel* pChannelMap,
 	                                  [[maybe_unused]] size_t channelMapCap) {
+		static ma_channel c_channelMap[] = {MA_CHANNEL_LEFT, MA_CHANNEL_RIGHT};
+
 		CR_ASSERT(maDataSource != nullptr, "miniaudio null data source");
 		CR_ASSERT(maDataSource == &m_dataSource, "Unexpected music data source");
 
 		if(pFormat) { *pFormat = ma_format_s16; }
-		if(pChannels) { *pChannels = 1; }
+		if(pChannels) { *pChannels = 2; }
 		if(pSampleRate) { *pSampleRate = CR::Engine::Audio::Constants::c_sampleRate; }
-		if(pChannelMap) { *pChannelMap = MA_CHANNEL_MONO; }
+		if(pChannelMap) { pChannelMap = c_channelMap; }
 
 		return MA_SUCCESS;
 	}
@@ -141,6 +151,7 @@ namespace {
 
 		result = ma_data_source_init(&baseConfig, &a_dataSource.base);
 		CR_ASSERT(result == MA_SUCCESS, "failed to initialize data source");
+		a_dataSource.index = 0;
 	}
 }    // namespace
 
@@ -158,22 +169,73 @@ void cea::Music::Initialize(ma_engine& minAudio, ma_sound_group& a_soundGroup) {
 
 		auto songHandle = ceasset::GetHandle(cecore::Hash64(m_paths.back()));
 		m_handles.push_back(songHandle);
-
-		// ceasset::Open(songHandle);
-		// auto songData    = ceasset::GetData(songHandle);
-		// auto& dataSource = m_flacDatas.emplace_back();
-		// dataSource       = songData;
-		// ceasset::Close(songHandle);
 	}
 
 	DataSourceInit(m_dataSource);
 }
 
 void cea::Music::Shutdown() {
+	if(m_state != State::Idle) {
+		ma_sound_stop_with_fade_in_milliseconds(&m_currentSound, 8);
+		while(!ma_sound_is_playing(&m_currentSound)) { std::this_thread::sleep_for(1ms); }
+		ma_sound_uninit(&m_currentSound);
+		drflac_close(m_dataSource.flacHandle);
+
+		ceasset::Close(m_handles[m_current]);
+	}
+
 	ma_data_source_uninit(&m_dataSource.base);
 }
 
-void cea::Music::Update() {}
+void cea::Music::Update() {
+	if(m_state == State::PlayNext) {
+		if(!m_current.isValid() || ma_sound_at_end(&m_currentSound)) {
+			if(m_requested.isValid()) {
+				if(m_current.isValid()) {
+					ma_sound_uninit(&m_currentSound);
+					drflac_close(m_dataSource.flacHandle);
+
+					ceasset::Close(m_handles[m_current]);
+				}
+				ceasset::Open(m_handles[m_requested]);
+
+				m_dataSource.flacData = ceasset::GetData(m_handles[m_requested]);
+				m_dataSource.cursor   = 0;
+				uint32_t uncompressedSize{};
+				auto metaData = [](void* pUserData, drflac_metadata* pMetadata) {
+					if(pMetadata->type == DRFLAC_METADATA_BLOCK_TYPE_STREAMINFO) {
+						uint32_t* size = (uint32_t*)pUserData;
+						*size          = (uint32_t)pMetadata->data.streaminfo.totalPCMFrameCount;
+					}
+				};
+				m_dataSource.flacHandle = drflac_open_memory_with_metadata(
+				    m_dataSource.flacData.data(), m_dataSource.flacData.size(), metaData, &uncompressedSize,
+				    nullptr);
+				m_dataSource.sizeFrames = uncompressedSize;
+
+				ma_sound_config soundConfig;
+				soundConfig                                = ma_sound_config_init();
+				soundConfig.pFilePath                      = nullptr;
+				soundConfig.pDataSource                    = &m_dataSource;
+				soundConfig.pInitialAttachment             = m_soundGroup;
+				soundConfig.initialAttachmentInputBusIndex = 0;
+				soundConfig.channelsIn                     = 2;
+				soundConfig.channelsOut                    = 2;
+				soundConfig.isLooping                      = MA_TRUE;
+
+				ma_result result = ma_sound_init_ex(m_minAudio, &soundConfig, &m_currentSound);
+				CR_ASSERT(result == MA_SUCCESS, "failed to play music");
+
+				result = ma_sound_start(&m_currentSound);
+				CR_ASSERT(result == MA_SUCCESS, "failed to play music");
+				m_current   = m_requested;
+				m_requested = cea::Handles::Music{};
+			} else {
+				m_state = State::Idle;
+			}
+		}
+	}
+}
 
 extern "C++" cea::Handles::Music cea::Music::GetHandle(uint64_t a_nameHash) {
 	auto iter = m_lookup.find(a_nameHash);
@@ -181,6 +243,30 @@ extern "C++" cea::Handles::Music cea::Music::GetHandle(uint64_t a_nameHash) {
 	return iter->second;
 }
 
-extern "C++" void cea::Music::Play(Handles::Music a_handle) {}
+extern "C++" void cea::Music::Play(Handles::Music a_handle) {
+	switch(m_state) {
+		case State::Idle:
+			m_requested = a_handle;
+			m_state     = State::PlayNext;
+			break;
+		case State::Playing:
+			ma_sound_stop_with_fade_in_milliseconds(&m_currentSound, Constants::c_musicFadeOutTime);
+			m_requested = a_handle;
+			m_state     = State::PlayNext;
+			break;
+		case State::PlayNext:
+			// not much to do, already preparing to swtch to a new song, just change whats next
+			m_requested = a_handle;
+			break;
+		default:
+			break;
+	}
+}
 
-extern "C++" void cea::Music::Stop() {}
+extern "C++" void cea::Music::Stop() {
+	if(m_state == State::Playing) {
+		ma_sound_stop_with_fade_in_milliseconds(&m_currentSound, Constants::c_musicFadeOutTime);
+		m_state = State::PlayNext;
+	}
+	m_requested = cea::Handles::Music{};
+}

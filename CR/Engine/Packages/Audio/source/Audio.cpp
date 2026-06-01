@@ -50,6 +50,8 @@ void ceaudio::Initialize() {
 
 	ceaudio::SoundFX::Initialize(m_minAudio, m_fx);
 	ceaudio::Music::Initialize(m_minAudio, m_music);
+
+	m_enabled = true;
 }
 
 void ceaudio::Update() {
