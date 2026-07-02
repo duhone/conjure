@@ -1,9 +1,13 @@
 ﻿module;
 
+#include "core/Log.h"
+
 // needed for windows only
 #include <malloc.h>
 
 export module CR.Engine.Core.Buffer;
+
+import CR.Engine.Core.Log;
 
 import std;
 import std.compat;
@@ -67,6 +71,13 @@ export namespace CR::Engine::Core {
 			return resize(a_newSize * sizeof(T));
 		}
 
+		void reserve(uint32_t a_newCapacity);
+		void reserve(uint64_t a_newCapacity) {
+			CR_ASSERT(a_newCapacity <= std::numeric_limits<uint32_t>::max(),
+			          "Buffer can't be larger than 4gb");
+			reserve((uint32_t)a_newCapacity);
+		}
+
 		void shrinkToFit();
 
 	  private:
@@ -115,5 +126,18 @@ void crcore::Buffer::shrinkToFit() {
 
 		m_data     = newData;
 		m_capacity = newCapacity;
+	}
+}
+void crcore::Buffer::reserve(uint32_t a_newCapacity) {
+	if(a_newCapacity > m_capacity) {
+		m_capacity = (a_newCapacity + 63) & 0xffffffc0;
+
+		// windows doesn't support std::aligned_alloc(and std::free with an aligned pointer)
+		// m_data == std::aligned_alloc(64, roundedSize);
+		std::byte* newData = (std::byte*)_aligned_malloc(m_capacity, 64);
+		memcpy(newData, m_data, m_size);
+		_aligned_free(m_data);
+
+		m_data = newData;
 	}
 }
