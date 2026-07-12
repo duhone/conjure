@@ -10,95 +10,98 @@ import CR.Engine.Core;
 import CR.Engine.Graphics.Context;
 import CR.Engine.Graphics.Utils;
 
-import <vector>;
+import std;
+import std.compat;
 
-namespace CR::Engine::Graphics {
+export namespace CR::Engine::Graphics {
+	namespace Handles {
+		using CommandPool = CR::Engine::Core::Handle<class CommandPoolTag>;
+	}
+
 	// Secondary buffers aren't supported. they perform poorly on some mobile platforms.
 	// Only resetting the entire pool is supported.
-	export class CommandPool {
-	  public:
-		CommandPool() = default;
-		CommandPool(uint32_t a_queueFamily);
-		~CommandPool();
-		CommandPool(const CommandPool&) = delete;
-		CommandPool(CommandPool&& a_other);
-		CommandPool& operator=(const CommandPool&) = delete;
-		CommandPool& operator=(CommandPool&& a_other);
+	namespace CommandPools {
+		Handles::CommandPool Create(uint32_t a_queueFamily);
+		void Delete(Handles::CommandPool a_pool);
 
-		[[nodiscard]] VkCommandBuffer Begin();
+		VkCommandBuffer Begin(Handles::CommandPool a_pool);
 		void End(VkCommandBuffer a_buffer);
-
-		void ResetAll();
-
-	  private:
-		void AllocateBuffers();
-
-		VkCommandPool m_commandPool{};
-		std::vector<VkCommandBuffer> m_availableBuffers;
-		std::vector<VkCommandBuffer> m_inUseBuffers;
-	};
-
-	inline CommandPool::CommandPool(CommandPool&& a_other) {
-		*this = std::move(a_other);
-	}
-
-	CommandPool& CommandPool::operator=(CommandPool&& a_other) {
-		this->~CommandPool();
-		m_commandPool      = a_other.m_commandPool;
-		m_availableBuffers = std::move(a_other.m_availableBuffers);
-		m_inUseBuffers     = std::move(a_other.m_inUseBuffers);
-
-		a_other.m_commandPool = nullptr;
-		return *this;
-	}
+		void ResetAll(Handles::CommandPool a_pool);
+	}    // namespace CommandPools
 
 }    // namespace CR::Engine::Graphics
 
 module :private;
 
+namespace cecore  = CR::Engine::Core;
 namespace cegraph = CR::Engine::Graphics;
 
-cegraph::CommandPool::CommandPool(uint32_t a_queueFamily) {
+namespace {
+	inline constexpr uint32_t c_maxPools = 16;
+
+	struct PoolData {
+		VkCommandPool commandPool{};
+		std::vector<VkCommandBuffer> availableBuffers;
+		std::vector<VkCommandBuffer> inUseBuffers;
+	};
+
+	cecore::HandlePool<cegraph::Handles::CommandPool, c_maxPools> m_handlePool;
+	std::array<PoolData, c_maxPools> m_pools;
+
+	void AllocateBuffers(cegraph::Handles::CommandPool a_pool) {
+		constexpr uint32_t c_bufferGrowth = 2;
+
+		VkCommandBufferAllocateInfo bufferInfo;
+		cegraph::ClearStruct(bufferInfo);
+		bufferInfo.commandBufferCount = c_bufferGrowth;
+		bufferInfo.commandPool        = m_pools[a_pool].commandPool;
+		bufferInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+		auto& availBuffers       = m_pools[a_pool].availableBuffers;
+		uint32_t newBufferOffset = (uint32_t)availBuffers.size();
+		availBuffers.resize(availBuffers.size() + c_bufferGrowth);
+		auto result = vkAllocateCommandBuffers(cegraph::GetContext().Device, &bufferInfo,
+		                                       availBuffers.data() + newBufferOffset);
+		CR_ASSERT(result == VK_SUCCESS, "Failed to allocate some vulkan command buffers");
+	}
+
+}    // namespace
+
+cegraph::Handles::CommandPool cegraph::CommandPools::Create(uint32_t a_queueFamily) {
+	CR_ASSERT(!m_handlePool.exhausted(), "Ran out of command pools");
+	auto handle = m_handlePool.acquire();
+
 	VkCommandPoolCreateInfo poolInfo;
 	ClearStruct(poolInfo);
 	poolInfo.flags            = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 	poolInfo.queueFamilyIndex = a_queueFamily;
-	auto result               = vkCreateCommandPool(GetContext().Device, &poolInfo, nullptr, &m_commandPool);
+	auto result = vkCreateCommandPool(GetContext().Device, &poolInfo, nullptr, &m_pools[handle].commandPool);
 	CR_ASSERT(result == VK_SUCCESS, "Failed to create a vulkan command pool");
 
-	AllocateBuffers();
+	AllocateBuffers(handle);
+
+	return handle;
 }
 
-cegraph::CommandPool::~CommandPool() {
-	if(m_commandPool) {
-		CR_ASSERT(m_inUseBuffers.empty(), "vulkan command buffers are still in use")
-		// will free all command buffers as well
-		vkDestroyCommandPool(GetContext().Device, m_commandPool, nullptr);
-	}
+void cegraph::CommandPools::Delete(Handles::CommandPool a_pool) {
+	CR_ASSERT(m_handlePool.isValid(a_pool), "Tried to delete an invalid pool");
+	auto poolData = m_pools[a_pool];
+	CR_ASSERT(poolData.inUseBuffers.empty(), "vulkan command buffers are still in use")
+	// will free all command buffers as well
+	vkDestroyCommandPool(GetContext().Device, poolData.commandPool, nullptr);
+
+	m_handlePool.release(a_pool);
 }
 
-void cegraph::CommandPool::AllocateBuffers() {
-	constexpr uint32_t c_bufferGrowth = 2;
+VkCommandBuffer cegraph::CommandPools::Begin(Handles::CommandPool a_pool) {
+	CR_ASSERT(m_handlePool.isValid(a_pool), "Tried to delete an invalid pool");
+	auto poolData = m_pools[a_pool];
 
-	VkCommandBufferAllocateInfo bufferInfo;
-	ClearStruct(bufferInfo);
-	bufferInfo.commandBufferCount = c_bufferGrowth;
-	bufferInfo.commandPool        = m_commandPool;
-	bufferInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	if(poolData.availableBuffers.empty()) { AllocateBuffers(a_pool); }
 
-	uint32_t newBufferOffset = (uint32_t)m_availableBuffers.size();
-	m_availableBuffers.resize(m_availableBuffers.size() + c_bufferGrowth);
-	auto result = vkAllocateCommandBuffers(GetContext().Device, &bufferInfo,
-	                                       m_availableBuffers.data() + newBufferOffset);
-	CR_ASSERT(result == VK_SUCCESS, "Failed to allocate some vulkan command buffers");
-}
-
-VkCommandBuffer cegraph::CommandPool::Begin() {
-	if(m_availableBuffers.empty()) { AllocateBuffers(); }
-
-	auto buffer = m_availableBuffers.back();
-	m_availableBuffers.pop_back();
-	m_inUseBuffers.push_back(buffer);
+	auto buffer = poolData.availableBuffers.back();
+	poolData.availableBuffers.pop_back();
+	poolData.inUseBuffers.push_back(buffer);
 
 	VkCommandBufferBeginInfo beginInfo;
 	ClearStruct(beginInfo);
@@ -108,15 +111,19 @@ VkCommandBuffer cegraph::CommandPool::Begin() {
 	return buffer;
 }
 
-void cegraph::CommandPool::End(VkCommandBuffer a_buffer) {
+void cegraph::CommandPools::End(VkCommandBuffer a_buffer) {
 	auto result = vkEndCommandBuffer(a_buffer);
 	CR_ASSERT(result == VK_SUCCESS, "Failed to end a vulkan command buffer");
 }
 
-void cegraph::CommandPool::ResetAll() {
-	auto result = vkResetCommandPool(GetContext().Device, m_commandPool, 0);
+void cegraph::CommandPools::ResetAll(Handles::CommandPool a_pool) {
+	CR_ASSERT(m_handlePool.isValid(a_pool), "Tried to delete an invalid pool");
+	auto poolData = m_pools[a_pool];
+
+	auto result = vkResetCommandPool(GetContext().Device, poolData.commandPool, 0);
 	CR_ASSERT(result == VK_SUCCESS, "Failed to reset a command pool");
 
-	m_availableBuffers.insert(m_availableBuffers.end(), m_inUseBuffers.begin(), m_inUseBuffers.end());
-	m_inUseBuffers.clear();
+	poolData.availableBuffers.insert(poolData.availableBuffers.end(), poolData.inUseBuffers.begin(),
+	                                 poolData.inUseBuffers.end());
+	poolData.inUseBuffers.clear();
 }

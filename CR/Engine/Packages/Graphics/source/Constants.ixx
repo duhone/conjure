@@ -1,6 +1,7 @@
 ﻿export module CR.Engine.Graphics.Constants;
 
-import <cstdint>;
+import std;
+import std.compat;
 
 export namespace CR::Engine::Graphics::Constants {
 	inline constexpr uint32_t c_maxTextureSets = 4;

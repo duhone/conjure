@@ -12,8 +12,6 @@
 
 #include "Core.h"
 
-#include <function2/function2.hpp>
-
 export module CR.Engine.Graphics.Textures;
 
 import CR.Engine.Graphics.Constants;
@@ -27,12 +25,8 @@ import CR.Engine.Assets;
 import CR.Engine.Core;
 import CR.Engine.Platform;
 
-import <atomic>;
-import <cstring>;
-import <filesystem>;
-import <span>;
-import <thread>;
-import <vector>;
+import std;
+import std.compat;
 
 using namespace CR::Engine::Core::Literals;
 

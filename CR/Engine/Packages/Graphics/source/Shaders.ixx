@@ -4,13 +4,9 @@ module;
 
 #include "flatbuffers/idl.h"
 
-#include <function2/function2.hpp>
-
 #include "core/Log.h"
 
 #include "Core.h"
-
-#include <fmt/format.h>
 
 export module CR.Engine.Graphics.Shaders;
 
@@ -22,11 +18,8 @@ import CR.Engine.Assets;
 import CR.Engine.Core;
 import CR.Engine.Platform;
 
-import <chrono>;
-import <filesystem>;
-import <span>;
-import <string_view>;
-import <unordered_map>;
+import std;
+import std.compat;
 
 export namespace CR::Engine::Graphics::Shaders {
 	void Initialize();
@@ -53,7 +46,7 @@ namespace {
 	std::unordered_map<uint64_t, VkShaderModule> m_shaderModules;
 
 	ceplat::MemoryMappedFile CompileShader(const fs::path a_srcPath, const fs::path& a_workingFile) {
-		std::string cliArgs = fmt::format("{} -o {}", a_srcPath.string(), a_workingFile.string());
+		std::string cliArgs = std::format("{} -o {}", a_srcPath.string(), a_workingFile.string());
 
 		ceplat::Process glslc("glslc.exe", cliArgs.c_str());
 		if(!glslc.WaitForClose(60s)) {
@@ -76,18 +69,16 @@ void cegraph::Shaders::Initialize() {
 	// don't block on first wait call, as no previous task first time;
 	shaderModuleCreated.test_and_set();
 
-	auto& assetService   = cecore::GetService<ceasset::Service>();
-	const auto& rootPath = assetService.GetRootPath();
+	const auto& rootPath = ceasset::GetRootPath();
 
 	std::vector<fs::path> workingFiles;
 	auto getNextWorkingFile = [&] {
-		std::string fileName = fmt::format("conjure_compiled_shader_{}.spirv", workingFiles.size());
+		std::string fileName = std::format("conjure_compiled_shader_{}.spirv", workingFiles.size());
 		workingFiles.emplace_back(fs::temp_directory_path() / fileName);
 		return workingFiles.back();
 	};
 
-	flatbuffers::Parser parser =
-	    assetService.GetData(cecore::C_Hash64("Graphics/shaders.json"), SCHEMAS_SHADERS);
+	flatbuffers::Parser parser = ceasset::GetData(cecore::C_Hash64("Graphics/shaders.json"), SCHEMAS_SHADERS);
 
 	auto shaders = Flatbuffers::GetShaders(parser.builder_.GetBufferPointer());
 

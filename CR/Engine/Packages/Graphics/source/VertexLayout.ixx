@@ -8,8 +8,8 @@ export module CR.Engine.Graphics.VertexLayout;
 
 import CR.Engine.Graphics.Formats;
 
-import <span>;
-import <vector>;
+import std;
+import std.compat;
 
 export namespace CR::Engine::Graphics {
 	// Source vertex struct must be tightly packed.

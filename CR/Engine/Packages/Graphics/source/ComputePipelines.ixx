@@ -5,7 +5,6 @@ module;
 #include "flatbuffers/idl.h"
 
 #include "ankerl/unordered_dense.h"
-#include <function2/function2.hpp>
 
 #include "core/Log.h"
 
@@ -23,7 +22,8 @@ import CR.Engine.Assets;
 import CR.Engine.Core;
 import CR.Engine.Platform;
 
-import <vector>;
+import std;
+import std.compat;
 
 export namespace CR::Engine::Graphics::ComputePipelines {
 	void Initialize();

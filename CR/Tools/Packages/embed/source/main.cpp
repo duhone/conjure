@@ -15,7 +15,7 @@ namespace cep = CR::Engine::Platform;
 static constexpr const char* c_interfaceProto = R"(
 export module CR.Tools.Embed.{0};
 
-import <span.h>;
+import std;
 
 namespace CR::Tools::Embed{{
 	export const std::span<const std::byte> Get{0}();

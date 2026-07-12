@@ -1,3 +1,7 @@
+module;
+
+#include "core/Core.h"
+
 export module CR.Engine.Compression.Wav;
 
 import CR.Engine.Core;
@@ -14,8 +18,6 @@ namespace CR::Engine::Compression::Wave {
 }    // namespace CR::Engine::Compression::Wave
 
 module :private;
-
-#include "core/Core.h"
 
 namespace cecore = CR::Engine::Core;
 namespace ceplat = CR::Engine::Platform;

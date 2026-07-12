@@ -26,9 +26,8 @@ import CR.Engine.Graphics.VertexBuffers;
 import CR.Engine.Assets;
 import CR.Engine.Core;
 
-import <array>;
-import <span>;
-import <vector>;
+import std;
+import std.compat;
 
 export namespace CR::Engine::Graphics::Sprites {
 	// public API

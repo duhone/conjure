@@ -23,12 +23,8 @@ import CR.Engine.Graphics.UniformBuffer;
 import CR.Engine.Graphics.Utils;
 import CR.Engine.Graphics.VertexBuffers;
 
-import <algorithm>;
-import <optional>;
-import <ranges>;
-import <string>;
-import <typeindex>;
-import <vector>;
+import std;
+import std.compat;
 
 namespace cecore = CR::Engine::Core;
 namespace ceplat = CR::Engine::Platform;

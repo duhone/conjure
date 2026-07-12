@@ -1,16 +1,16 @@
+block()
+
 set(root "${CMAKE_CURRENT_LIST_DIR}/..")
 
-###############################################
-#library
-###############################################
-set(INTERFACE_FILES
-    ${root}/interface/Graphics.ixx
-    ${root}/interface/HandleTypes.ixx
-    ${root}/interface/Service.ixx
-    ${root}/interface/Sprites.ixx
+set(CR_INTERFACE_HEADERS
 )
 
-set(SOURCE_FILES
+set(CR_INTERFACE_MODULES
+    ${root}/interface/Graphics.ixx
+    ${root}/interface/Handles.ixx
+)
+
+set(CR_IMPLEMENTATION
     ${root}/source/Core.h
     ${root}/source/Constants.ixx
     ${root}/source/Context.ixx
@@ -34,7 +34,7 @@ set(SOURCE_FILES
     ${root}/source/VkMemAllocator.cpp
 )
 
-set(BUILD_FILES
+set(CR_BUILD_FILES
     ${root}/build/build.cmake
 )
 
@@ -44,7 +44,7 @@ set(SHADER_FILES
     ${assets_root}/Graphics/Shaders/sprite.frag
 )
 
-set(SCHEMA_FILES
+set(CR_SCHEMA_FILES
     ${root}/source/schemas/computePipelines.fbs
     ${root}/source/schemas/materials.fbs
     ${root}/source/schemas/shaders.fbs
@@ -52,26 +52,19 @@ set(SCHEMA_FILES
     ${root}/source/schemas/textures.fbs
 )
 
-set(GENERATED_FILES
-  ${generated_root}/graphics/computePipelines_generated.h
-  ${generated_root}/graphics/materials_generated.h
-  ${generated_root}/graphics/shaders_generated.h
-  ${generated_root}/graphics/sprites_generated.h
-  ${generated_root}/graphics/textures_generated.h
+set(CR_GENERATED_FILES
+  ${generated_root}/generated/graphics/computePipelines_generated.h
+  ${generated_root}/generated/graphics/materials_generated.h
+  ${generated_root}/generated/graphics/shaders_generated.h
+  ${generated_root}/generated/graphics/sprites_generated.h
+  ${generated_root}/generated/graphics/textures_generated.h
 )
 
-add_library(graphics 
-  ${INTERFACE_FILES} 
-  ${SOURCE_FILES} 
-  ${BUILD_FILES}
-  ${SHADER_FILES}
-  ${SCHEMA_FILES}
-  ${GENERATED_FILES}
-)
-
+add_library(graphics)
 settingsCR(graphics)
+target_sources(graphics PRIVATE ${SHADER_FILES})
+
 source_group(TREE ${assets_root}/Graphics FILES ${SHADER_FILES})
-source_group(TREE ${root}/source FILES ${SCHEMA_FILES})
 
 #microsoft bug see https://developercommunity.visualstudio.com/t/warning-C4005:-Outptr:-macro-redefinit/1546919
 target_compile_options(graphics PRIVATE /WX-)
@@ -85,10 +78,9 @@ compileFlatbuffersSchema(graphics sprites)
 compileFlatbuffersSchema(graphics textures)
 
 target_link_libraries(graphics PUBLIC
-	headerUnits
     flatbuffers
     assets
-	fmt
+    glfw
 	glm
 	core
 	platform
@@ -100,4 +92,6 @@ target_link_libraries(graphics PUBLIC
     brotli
 )
 
-set_property(TARGET graphics APPEND PROPERTY FOLDER Engine)
+set_property(TARGET graphics APPEND PROPERTY FOLDER Engine/Packages)
+
+endblock()

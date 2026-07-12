@@ -12,8 +12,8 @@ import CR.Engine.Graphics.Utils;
 
 import CR.Engine.Core;
 
-import <cstddef>;
-import <vector>;
+import std;
+import std.compat;
 
 export namespace CR::Engine::Graphics::UniformBuffer {
 	void Initialize();

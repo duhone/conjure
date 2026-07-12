@@ -14,8 +14,8 @@ import CR.Engine.Graphics.Utils;
 
 import CR.Engine.Core;
 
-import <cstddef>;
-import <vector>;
+import std;
+import std.compat;
 
 export namespace CR::Engine::Graphics::VertexBuffers {
 	void Initialize();
@@ -91,11 +91,11 @@ cegraph::Handles::VertexBuffer cegraph::VertexBuffers::Create(const VertexLayout
 	bufferAllocCreateInfo.flags =
 	    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-	Mapping& mapping = g_data->Buffers[handle.asInt()];
+	Mapping& mapping = g_data->Buffers[handle];
 
 	VmaAllocationInfo bufferAllocInfo{};
 	vmaCreateBuffer(GetContext().Allocator, &bufferCreateInfo, &bufferAllocCreateInfo, &mapping.Buffer,
-	                &(g_data->Allocations[handle.asInt()]), &bufferAllocInfo);
+	                &(g_data->Allocations[handle]), &bufferAllocInfo);
 	mapping.Data = (std::byte*)bufferAllocInfo.pMappedData;
 	mapping.Size = (uint32_t)bufferCreateInfo.size;
 

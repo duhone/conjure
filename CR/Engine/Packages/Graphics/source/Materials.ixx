@@ -5,7 +5,6 @@ module;
 #include "flatbuffers/idl.h"
 
 #include "ankerl/unordered_dense.h"
-#include <function2/function2.hpp>
 
 #include "core/Log.h"
 
@@ -25,7 +24,8 @@ import CR.Engine.Assets;
 import CR.Engine.Core;
 import CR.Engine.Platform;
 
-import <vector>;
+import std;
+import std.compat;
 
 export namespace CR::Engine::Graphics::Materials {
 	void Initialize(VkRenderPass a_renderPass);
@@ -136,8 +136,6 @@ namespace {
 void cegraph::Materials::Initialize(VkRenderPass a_renderPass) {
 	GraphicsThread::EnqueueTask(
 	    [a_renderPass]() {
-		    auto& assetService = cecore::GetService<ceasset::Service>();
-
 		    VkSpecializationMapEntry fragSpecInfoEntrys;
 		    fragSpecInfoEntrys.constantID = 0;
 		    fragSpecInfoEntrys.offset     = 0;
@@ -212,7 +210,7 @@ void cegraph::Materials::Initialize(VkRenderPass a_renderPass) {
 		    vertAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
 		    flatbuffers::Parser parser =
-		        assetService.GetData(cecore::C_Hash64("Graphics/materials.json"), SCHEMAS_MATERIALS);
+		        ceasset::GetData(cecore::C_Hash64("Graphics/materials.json"), SCHEMAS_MATERIALS);
 		    auto materials = Flatbuffers::GetMaterials(parser.builder_.GetBufferPointer());
 
 		    for(const auto& mat : *materials->mats()) {

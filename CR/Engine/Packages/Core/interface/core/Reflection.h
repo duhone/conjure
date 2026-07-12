@@ -1,5 +1,5 @@
 #pragma once
-import std;
+#include <type_traits>
 
 namespace {
 #define ReflectMember(varName)                                                                               \

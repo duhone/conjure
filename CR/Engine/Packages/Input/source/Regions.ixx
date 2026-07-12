@@ -2,8 +2,6 @@ module;
 
 #include "core/Core.h"
 
-// #include <glm/glm.hpp>
-
 export module CR.Engine.Input.Regions;
 
 export import :Public;

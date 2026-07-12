@@ -12,8 +12,8 @@ import CR.Engine.Graphics.Utils;
 
 import CR.Engine.Core;
 
-import <cstddef>;
-import <vector>;
+import std;
+import std.compat;
 
 // Currently setup for CPU based multidraw
 export namespace CR::Engine::Graphics::MultiDrawBuffer {
@@ -47,21 +47,17 @@ namespace {
 	// if need more, not a big deal to increase this. 64K draw commands is a lot though.
 	constexpr uint64_t c_multiDrawBufferSize = sizeof(VkDrawIndirectCommand) * 64_KB;
 
-	struct Data {
-		// one buffer , only one frame in flight.
-		VkBuffer Buffer;
-		VmaAllocation Allocation;
-		VkDrawIndirectCommand* DataPtr;
+	// one buffer , only one frame in flight.
+	VkBuffer m_buffer;
+	VmaAllocation m_allocation;
+	VkDrawIndirectCommand* m_dataPtr{};
 
-		VkDrawIndirectCommand* CurrentCommand{};
-	};
+	VkDrawIndirectCommand* m_currentCommand{};
 
-	Data* g_data = nullptr;
 }    // namespace
 
 void cegraph::MultiDrawBuffer::Initialize() {
-	CR_ASSERT(g_data == nullptr, "MultiDrawBuffer are already initialized");
-	g_data = new Data{};
+	CR_ASSERT(m_dataPtr == nullptr, "MultiDrawBuffer are already initialized");
 
 	VkBufferCreateInfo bufferCreateInfo{};
 	ClearStruct(bufferCreateInfo);
@@ -74,35 +70,35 @@ void cegraph::MultiDrawBuffer::Initialize() {
 	    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
 	VmaAllocationInfo bufferAllocInfo{};
-	vmaCreateBuffer(GetContext().Allocator, &bufferCreateInfo, &bufferAllocCreateInfo, &g_data->Buffer,
-	                &g_data->Allocation, &bufferAllocInfo);
-	g_data->DataPtr = (VkDrawIndirectCommand*)bufferAllocInfo.pMappedData;
+	vmaCreateBuffer(GetContext().Allocator, &bufferCreateInfo, &bufferAllocCreateInfo, &m_buffer,
+	                &m_allocation, &bufferAllocInfo);
+	m_dataPtr = (VkDrawIndirectCommand*)bufferAllocInfo.pMappedData;
 }
 
 void cegraph::MultiDrawBuffer::Shutdown() {
-	CR_ASSERT(g_data != nullptr, "MultiDrawBuffer is already shutdown");
+	CR_ASSERT(m_dataPtr != nullptr, "MultiDrawBuffer is already shutdown");
 
-	vmaDestroyBuffer(GetContext().Allocator, g_data->Buffer, g_data->Allocation);
+	vmaDestroyBuffer(GetContext().Allocator, m_buffer, m_allocation);
 
-	delete g_data;
+	m_dataPtr = nullptr;
 }
 
 void cegraph::MultiDrawBuffer::Update() {
-	CR_ASSERT(g_data != nullptr, "MultiDrawBuffer is not initialized");
+	CR_ASSERT(m_dataPtr != nullptr, "MultiDrawBuffer is not initialized");
 
-	g_data->CurrentCommand = g_data->DataPtr;
+	m_currentCommand = m_dataPtr;
 }
 
 cegraph::MultiDrawBuffer::Mapping cegraph::MultiDrawBuffer::Map(uint32_t a_numCommands) {
-	CR_ASSERT(g_data != nullptr, "MultiDrawBuffer is not initialized");
+	CR_ASSERT(m_dataPtr != nullptr, "MultiDrawBuffer is not initialized");
 
 	Mapping result{};
-	result.Buffer = g_data->Buffer;
-	result.Offset = uint32_t((std::byte*)g_data->CurrentCommand - (std::byte*)g_data->DataPtr);
-	result.Data   = g_data->CurrentCommand;
+	result.Buffer = m_buffer;
+	result.Offset = uint32_t((std::byte*)m_currentCommand - (std::byte*)m_dataPtr);
+	result.Data   = m_currentCommand;
 	result.Size   = a_numCommands * sizeof(VkDrawIndirectCommand);
 
-	g_data->CurrentCommand += a_numCommands;
+	m_currentCommand += a_numCommands;
 
 	return result;
 }
