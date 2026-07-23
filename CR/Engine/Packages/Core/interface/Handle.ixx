@@ -44,6 +44,7 @@ export namespace CR::Engine::Core {
 		// allow implicit cast to int, for indexing into containers tersely.
 		constexpr operator uint16_t() const noexcept { return m_id; }
 		constexpr bool isValid() const noexcept { return m_id != c_unused; }
+		constexpr void invalidate() noexcept { m_id = c_unused; }
 
 		constexpr uint16_t getGeneration() const noexcept { return m_generation; }
 		constexpr void incGeneration() noexcept { ++m_generation; }

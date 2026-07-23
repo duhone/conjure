@@ -50,36 +50,23 @@ namespace {
 	// way more than we need for a 2D engine.
 	constexpr uint16_t c_maxVertexBuffers = 64;
 
-	struct Data {
-		cecore::BitSet<c_maxVertexBuffers> Used;
-		cegraph::VertexBuffers::Mapping Buffers[c_maxVertexBuffers];
-		VmaAllocation Allocations[c_maxVertexBuffers];
+	cecore::BitSet<c_maxVertexBuffers> m_used;
+	cegraph::VertexBuffers::Mapping m_buffers[c_maxVertexBuffers];
+	VmaAllocation m_allocations[c_maxVertexBuffers];
 
-		VkVertexInputBindingDescription m_bindingDescriptions[c_maxVertexBuffers];
-		std::vector<VkVertexInputAttributeDescription> m_attrDescriptions[c_maxVertexBuffers];
-	};
-
-	Data* g_data = nullptr;
+	VkVertexInputBindingDescription m_bindingDescriptions[c_maxVertexBuffers];
+	std::vector<VkVertexInputAttributeDescription> m_attrDescriptions[c_maxVertexBuffers];
 }    // namespace
 
-void cegraph::VertexBuffers::Initialize() {
-	CR_ASSERT(g_data == nullptr, "VertexBuffers are already initialized");
-
-	g_data = new Data{};
-}
+void cegraph::VertexBuffers::Initialize() {}
 
 void cegraph::VertexBuffers::Shutdown() {
-	CR_ASSERT(g_data != nullptr, "VertexBuffers are already shutdown");
-	CR_ASSERT(g_data->Used.empty(), "not all VertexBuffers were released prior to shutdown");
-
-	delete g_data;
+	CR_ASSERT(m_used.empty(), "not all VertexBuffers were released prior to shutdown");
 }
 
 cegraph::Handles::VertexBuffer cegraph::VertexBuffers::Create(const VertexLayout& a_layout,
                                                               uint32_t a_numVerts) {
-	CR_ASSERT(g_data != nullptr, "VertexBuffers are not initialized");
-
-	Handles::VertexBuffer handle{g_data->Used.FindNotInSet()};
+	Handles::VertexBuffer handle{m_used.FindNotInSet()};
 
 	VkBufferCreateInfo bufferCreateInfo{};
 	ClearStruct(bufferCreateInfo);
@@ -91,23 +78,23 @@ cegraph::Handles::VertexBuffer cegraph::VertexBuffers::Create(const VertexLayout
 	bufferAllocCreateInfo.flags =
 	    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-	Mapping& mapping = g_data->Buffers[handle];
+	Mapping& mapping = m_buffers[handle];
 
 	VmaAllocationInfo bufferAllocInfo{};
 	vmaCreateBuffer(GetContext().Allocator, &bufferCreateInfo, &bufferAllocCreateInfo, &mapping.Buffer,
-	                &(g_data->Allocations[handle]), &bufferAllocInfo);
+	                &(m_allocations[handle]), &bufferAllocInfo);
 	mapping.Data = (std::byte*)bufferAllocInfo.pMappedData;
 	mapping.Size = (uint32_t)bufferCreateInfo.size;
 
 	// Only support instance vertex buffers at the moment. And binding would need to be changed in the
 	// pipeline as appropriate, although only ever 1 binding at the moment.
-	g_data->m_bindingDescriptions[handle.asInt()].binding   = 0;
-	g_data->m_bindingDescriptions[handle.asInt()].stride    = a_layout.GetSizeBytes();
-	g_data->m_bindingDescriptions[handle.asInt()].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+	m_bindingDescriptions[handle].binding   = 0;
+	m_bindingDescriptions[handle].stride    = a_layout.GetSizeBytes();
+	m_bindingDescriptions[handle].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
 
-	g_data->m_attrDescriptions[handle.asInt()].clear();
+	m_attrDescriptions[handle].clear();
 	for(const auto& entry : a_layout.GetLayout()) {
-		VkVertexInputAttributeDescription desc = g_data->m_attrDescriptions[handle.asInt()].emplace_back();
+		VkVertexInputAttributeDescription desc = m_attrDescriptions[handle].emplace_back();
 
 		desc.binding  = 0;
 		desc.location = entry.Location;
@@ -115,31 +102,28 @@ cegraph::Handles::VertexBuffer cegraph::VertexBuffers::Create(const VertexLayout
 		desc.format   = entry.format;
 	}
 
-	g_data->Used.insert(handle.asInt());
+	m_used.insert(handle);
 
 	return handle;
 }
 
 void cegraph::VertexBuffers::Release(Handles::VertexBuffer a_handle) {
-	CR_ASSERT(g_data != nullptr, "VertexBuffers are not initialized");
-	CR_ASSERT(g_data->Used.contains(a_handle.asInt()), "Releasing VertexBuffers that doesn't exist");
+	CR_ASSERT(m_used.contains(a_handle), "Releasing VertexBuffers that doesn't exist");
 
-	Mapping& mapping = g_data->Buffers[a_handle.asInt()];
-	vmaDestroyBuffer(GetContext().Allocator, mapping.Buffer, g_data->Allocations[a_handle.asInt()]);
-	g_data->Used.erase(a_handle.asInt());
+	Mapping& mapping = m_buffers[a_handle];
+	vmaDestroyBuffer(GetContext().Allocator, mapping.Buffer, m_allocations[a_handle]);
+	m_used.erase(a_handle);
 }
 
 cegraph::VertexBuffers::Mapping cegraph::VertexBuffers::Map(Handles::VertexBuffer a_handle) {
-	CR_ASSERT(g_data != nullptr, "VertexBuffers are not initialized");
-	CR_ASSERT(g_data->Used.contains(a_handle.asInt()), "Mapping VertexBuffers that doesn't exist");
+	CR_ASSERT(m_used.contains(a_handle), "Mapping VertexBuffers that doesn't exist");
 
-	return g_data->Buffers[a_handle.asInt()];
+	return m_buffers[a_handle];
 }
 
 void cegraph::VertexBuffers::Bind(Handles::VertexBuffer a_buffer, VkCommandBuffer& a_cmdBuffer) {
-	CR_ASSERT(g_data != nullptr, "VertexBuffers are not initialized");
-	CR_ASSERT(g_data->Used.contains(a_buffer.asInt()), "Mapping VertexBuffers that doesn't exist");
+	CR_ASSERT(m_used.contains(a_buffer), "Binding VertexBuffers that doesn't exist");
 
 	VkDeviceSize vertOffset{};
-	vkCmdBindVertexBuffers(a_cmdBuffer, 0, 1, &g_data->Buffers[a_buffer.asInt()].Buffer, &vertOffset);
+	vkCmdBindVertexBuffers(a_cmdBuffer, 0, 1, &m_buffers[a_buffer].Buffer, &vertOffset);
 }

@@ -15,7 +15,7 @@ export import CR.Engine.Graphics;
 export namespace CR::Engine {
 	void Initialize(GLFWwindow* a_window, const std::filesystem::path& a_assetsFolder);
 	void Update();
-	void Render();
+	bool Render();
 	void Shutdown();
 }    // namespace CR::Engine
 
@@ -45,8 +45,8 @@ void CR::Engine::Update() {
 	cegraph::Update();
 }
 
-void CR::Engine::Render() {
-	cegraph::Render();
+bool CR::Engine::Render() {
+	return cegraph::Render();
 }
 
 void CR::Engine::Shutdown() {

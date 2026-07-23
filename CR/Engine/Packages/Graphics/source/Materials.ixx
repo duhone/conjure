@@ -302,10 +302,9 @@ cegraph::Handles::Material cegraph::Materials::GetMaterial(std::string_view a_na
 }
 
 void cegraph::Materials::Bind(Handles::Material a_material, VkCommandBuffer& a_cmdBuffer) {
-	CR_ASSERT(a_material.isValid() && a_material.asInt() < m_pipelines.size(),
-	          "Tried to bind an invalid material");
+	CR_ASSERT(a_material.isValid() && a_material < m_pipelines.size(), "Tried to bind an invalid material");
 
-	vkCmdBindPipeline(a_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines[a_material.asInt()]);
+	vkCmdBindPipeline(a_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines[a_material]);
 
 	vkCmdBindDescriptorSets(a_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeLineLayout, 0, 1,
 	                        &GetContext().GlobalDescriptorSet, 0, nullptr);

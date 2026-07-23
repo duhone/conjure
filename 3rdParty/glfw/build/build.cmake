@@ -53,6 +53,7 @@ settings3rdParty(glfw)
 target_compile_definitions(glfw PRIVATE _GLFW_WIN32)
 target_compile_definitions(glfw PRIVATE UNICODE _UNICODE)
 target_compile_definitions(glfw PRIVATE _CRT_SECURE_NO_WARNINGS)
+target_compile_definitions(glfw PUBLIC GLFW_EXPOSE_NATIVE_WIN32)
 
 target_include_directories(glfw SYSTEM PUBLIC "${root}/glfw/include")
 

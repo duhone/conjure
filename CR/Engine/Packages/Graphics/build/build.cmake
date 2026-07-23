@@ -14,7 +14,7 @@ set(CR_IMPLEMENTATION
     ${root}/source/Core.h
     ${root}/source/Constants.ixx
     ${root}/source/Context.ixx
-    ${root}/source/DeviceService.ixx
+    ${root}/source/Graphics.cpp
     ${root}/source/CommandPool.ixx
     ${root}/source/Commands.ixx
     ${root}/source/ComputePipelines.ixx
@@ -24,8 +24,7 @@ set(CR_IMPLEMENTATION
     ${root}/source/Materials.ixx
     ${root}/source/MultiDrawBuffer.ixx
     ${root}/source/Shaders.ixx
-    ${root}/source/Sprites.cpp
-    ${root}/source/SpritesInternal.ixx
+    ${root}/source/Sprites.ixx
     ${root}/source/Textures.ixx
     ${root}/source/UniformBuffer.ixx
     ${root}/source/Utils.ixx

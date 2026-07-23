@@ -54,8 +54,6 @@ namespace {
 void cegraph::ComputePipelines::Initialize() {
 	GraphicsThread::EnqueueTask(
 	    []() {
-		    auto& assetService = cecore::GetService<ceasset::Service>();
-
 		    // TODO: may want to just set the viewport and scissor here for platforms that are
 		    // fixed window size, instead of using dynamic states.
 
@@ -101,8 +99,8 @@ void cegraph::ComputePipelines::Initialize() {
 		    result = vkCreatePipelineLayout(GetContext().Device, &layoutInfo, nullptr, &m_pipeLineLayout);
 		    CR_ASSERT(result == VK_SUCCESS, "failed to create a pipeline layout");
 
-		    flatbuffers::Parser parser = assetService.GetData(
-		        cecore::C_Hash64("Graphics/computePipelines.json"), SCHEMAS_COMPUTEPIPELINES);
+		    flatbuffers::Parser parser = ceasset::GetData(cecore::C_Hash64("Graphics/computePipelines.json"),
+		                                                  SCHEMAS_COMPUTEPIPELINES);
 
 		    auto computePipelines = Flatbuffers::GetComputePipelines(parser.builder_.GetBufferPointer());
 

@@ -4,7 +4,7 @@
 
 #include "flatbuffers/idl.h"
 
-#include "core/Log.h"
+#include "core/Core.h"
 
 #include "ankerl/unordered_dense.h"
 #include "jxl/decode.h"
@@ -64,51 +64,49 @@ namespace {
 	//  128       128         1024
 	// TODO: when we support packed assets, make this 1/4 size when using packed.
 	constexpr uint64_t c_stagingBufferSize = 64_MB;
-	constexpr uint32_t c_numJpegXlThreads  = 4;
+	// TODO: should probably give it more cores, half maybe? only used with loose
+	// assets, which would only be used on a beefy machine not a phone.
+	constexpr uint32_t c_numJpegXlThreads = 4;
 
 	using TextureSet = cecore::BitSet<cegraph::Constants::c_maxTextures>;
 
-	struct Data {
-		// Variables for texture sets
-		cecore::BitSet<cegraph::Constants::c_maxTextureSets> TextureSetsUsed;
-		std::array<TextureSet, cegraph::Constants::c_maxTextureSets> TextureSets;
+	// Variables for texture sets
+	cecore::BitSet<cegraph::Constants::c_maxTextureSets> m_textureSetsUsed;
+	std::array<TextureSet, cegraph::Constants::c_maxTextureSets> m_textureSets;
 
-		// variables for all textures
-		cecore::BitSet<cegraph::Constants::c_maxTextures> Used;
-		std::array<uint64_t, cegraph::Constants::c_maxTextures> Hashes;
-		std::array<uint64_t, cegraph::Constants::c_maxTextures> AssetHashes;
-		std::array<std::string, cegraph::Constants::c_maxTextures> DebugNames;
-		std::array<fs::path, cegraph::Constants::c_maxTextures> Paths;
-		std::array<VkImage, cegraph::Constants::c_maxTextures> Images;
-		std::array<VmaAllocation, cegraph::Constants::c_maxTextures> Allocations;
-		std::array<VkImageView, cegraph::Constants::c_maxTextures> Views;
-		std::array<uint16_t, cegraph::Constants::c_maxTextures> NumFrames;
-		std::array<glm::uvec2, cegraph::Constants::c_maxTextures> Dimensions;
-		cecore::BitSet<cegraph::Constants::c_maxTextures> NeedsTransferBarrier;
+	// variables for all textures
+	cecore::BitSet<cegraph::Constants::c_maxTextures> m_used;
+	std::array<uint64_t, cegraph::Constants::c_maxTextures> m_hashes;
+	std::array<uint64_t, cegraph::Constants::c_maxTextures> m_assetHashes;
+	std::array<std::string, cegraph::Constants::c_maxTextures> m_debugNames;
+	std::array<fs::path, cegraph::Constants::c_maxTextures> m_paths;
+	std::array<VkImage, cegraph::Constants::c_maxTextures> m_images;
+	std::array<VmaAllocation, cegraph::Constants::c_maxTextures> m_allocations;
+	std::array<VkImageView, cegraph::Constants::c_maxTextures> m_views;
+	std::array<uint16_t, cegraph::Constants::c_maxTextures> m_numFrames;
+	std::array<glm::uvec2, cegraph::Constants::c_maxTextures> m_dimensions;
+	cecore::BitSet<cegraph::Constants::c_maxTextures> m_needsTransferBarrier;
 
-		// Should be the union of all used TextureSets
-		TextureSet TexturesLoaded;
+	// Should be the union of all used TextureSets
+	TextureSet m_texturesLoaded;
 
-		// double buffered. one is being written to by cpu, other is transferring cpu to gpu.
-		VkBuffer StagingBuffer[2];
-		VmaAllocation StagingMemory[2];
-		void* StagingData[2];
+	// double buffered. one is being written to by cpu, other is transferring cpu to gpu.
+	VkBuffer m_stagingBuffer[2];
+	VmaAllocation m_stagingMemory[2];
+	void* m_stagingData[] = {nullptr, nullptr};
 
-		// lookups
-		ankerl::unordered_dense::map<uint64_t, cegraph::Handles::Texture> HandleLookup;
+	// lookups
+	ankerl::unordered_dense::map<uint64_t, cegraph::Handles::Texture> m_handleLookup;
 
-		JxlDecoder* Decoder{nullptr};
-		void* parRunner{nullptr};
+	JxlDecoder* m_decoder{nullptr};
+	void* m_parRunner{nullptr};
 
-		VkSampler m_sampler{};
-	};
-
-	Data* g_data = nullptr;
+	VkSampler m_sampler{};
 
 	TextureSet GenerateCombined() {
 		TextureSet result;
 
-		for(auto set : g_data->TextureSetsUsed) { result = result | g_data->TextureSets[set]; }
+		for(auto set : m_textureSetsUsed) { result = result | m_textureSets[set]; }
 
 		return result;
 	}
@@ -116,30 +114,28 @@ namespace {
 }    // namespace
 
 void cegraph::Textures::Initialize() {
-	CR_ASSERT(g_data == nullptr, "Textures are already initialized");
-	g_data = new Data{};
+	CR_ASSERT(m_stagingData[0] == nullptr, "Textures are already initialized");
 
-	auto& assetService   = cecore::GetService<ceasset::Service>();
-	const auto& rootPath = assetService.GetRootPath();
+	const auto& rootPath = ceasset::GetRootPath();
 
 	flatbuffers::Parser parser =
-	    assetService.GetData(cecore::C_Hash64("Graphics/textures.json"), SCHEMAS_TEXTURES);
+	    ceasset::GetData(cecore::C_Hash64("Graphics/textures.json"), SCHEMAS_TEXTURES);
 
 	auto texturesfb = Flatbuffers::GetTextures(parser.builder_.GetBufferPointer());
 
 	const auto& textures = *texturesfb->textures();
-	g_data->Used.insertRange(0, (uint16_t)textures.size());
+	m_used.insertRange(0, (uint16_t)textures.size());
 	for(uint32_t i = 0; i < textures.size(); ++i) {
 		uint64_t hash = cecore::Hash64(textures[i]->name()->c_str());
 		Handles::Texture handle{i};
-		g_data->DebugNames[i] = textures[i]->name()->c_str();
-		g_data->Paths[i]      = (rootPath / textures[i]->path()->c_str());
-		g_data->Hashes[i]     = hash;
-		std::string hashPath  = textures[i]->path()->c_str();
+		m_debugNames[i]      = textures[i]->name()->c_str();
+		m_paths[i]           = (rootPath / textures[i]->path()->c_str());
+		m_hashes[i]          = hash;
+		std::string hashPath = textures[i]->path()->c_str();
 		std::ranges::replace(hashPath, '\\', '/');
-		g_data->AssetHashes[i] = cecore::Hash64(hashPath);
+		m_assetHashes[i] = cecore::Hash64(hashPath);
 
-		g_data->HandleLookup[hash] = handle;
+		m_handleLookup[hash] = handle;
 	}
 
 	for(int32_t i = 0; i < 2; ++i) {
@@ -155,17 +151,16 @@ void cegraph::Textures::Initialize() {
 
 		VmaAllocationInfo stagingAllocInfo{};
 		vmaCreateBuffer(GetContext().Allocator, &stagingCreateInfo, &stagingAllocCreateInfo,
-		                &g_data->StagingBuffer[i], &g_data->StagingMemory[i], &stagingAllocInfo);
-		g_data->StagingData[i] = stagingAllocInfo.pMappedData;
+		                &m_stagingBuffer[i], &m_stagingMemory[i], &stagingAllocInfo);
+		m_stagingData[i] = stagingAllocInfo.pMappedData;
 	}
 
-	g_data->Decoder = JxlDecoderCreate(nullptr);
-	CR_ASSERT(g_data->Decoder != nullptr, "Failed to initialize jpeg xl decoder");
-	g_data->parRunner = JxlResizableParallelRunnerCreate(nullptr);
-	CR_ASSERT(g_data->parRunner != nullptr, "Failed to initialize jpeg parallel runner");
-	JxlResizableParallelRunnerSetThreads(g_data->parRunner, c_numJpegXlThreads);
-	JxlDecoderStatus status =
-	    JxlDecoderSetParallelRunner(g_data->Decoder, JxlResizableParallelRunner, g_data->parRunner);
+	m_decoder = JxlDecoderCreate(nullptr);
+	CR_ASSERT(m_decoder != nullptr, "Failed to initialize jpeg xl decoder");
+	m_parRunner = JxlResizableParallelRunnerCreate(nullptr);
+	CR_ASSERT(m_parRunner != nullptr, "Failed to initialize jpeg parallel runner");
+	JxlResizableParallelRunnerSetThreads(m_parRunner, c_numJpegXlThreads);
+	JxlDecoderStatus status = JxlDecoderSetParallelRunner(m_decoder, JxlResizableParallelRunner, m_parRunner);
 	CR_ASSERT(status == JXL_DEC_SUCCESS, "failed to set jpeg xl parallel runner");
 
 	// we only have 1 sampler for now. basic trilinear
@@ -179,47 +174,45 @@ void cegraph::Textures::Initialize() {
 	samplerInfo.mipmapMode       = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	samplerInfo.anisotropyEnable = false;
 
-	auto result = vkCreateSampler(GetContext().Device, &samplerInfo, nullptr, &g_data->m_sampler);
+	auto result = vkCreateSampler(GetContext().Device, &samplerInfo, nullptr, &m_sampler);
 	CR_ASSERT(result == VK_SUCCESS, "failed to create a sampler");
 }
 
 void cegraph::Textures::Shutdown() {
-	CR_ASSERT(g_data != nullptr, "Textures are already shutdown");
+	CR_ASSERT(m_stagingData[0] != nullptr, "Textures are already shutdown");
 
-	vkDestroySampler(GetContext().Device, g_data->m_sampler, nullptr);
+	vkDestroySampler(GetContext().Device, m_sampler, nullptr);
 
-	JxlResizableParallelRunnerDestroy(g_data->parRunner);
-	JxlDecoderDestroy(g_data->Decoder);
+	JxlResizableParallelRunnerDestroy(m_parRunner);
+	JxlDecoderDestroy(m_decoder);
 
-	vmaDestroyBuffer(GetContext().Allocator, g_data->StagingBuffer[0], g_data->StagingMemory[0]);
-	vmaDestroyBuffer(GetContext().Allocator, g_data->StagingBuffer[1], g_data->StagingMemory[1]);
-	delete g_data;
+	vmaDestroyBuffer(GetContext().Allocator, m_stagingBuffer[0], m_stagingMemory[0]);
+	vmaDestroyBuffer(GetContext().Allocator, m_stagingBuffer[1], m_stagingMemory[1]);
 }
 
 cegraph::Handles::Texture cegraph::Textures::GetHandle(uint64_t hash) {
-	CR_ASSERT(g_data != nullptr, "Textures not initialized");
-	auto handleIter = g_data->HandleLookup.find(hash);
-	CR_ASSERT(handleIter != g_data->HandleLookup.end(), "Texture could not be found");
+	CR_ASSERT(m_stagingData[0] != nullptr, "Textures not initialized");
+	auto handleIter = m_handleLookup.find(hash);
+	CR_ASSERT(handleIter != m_handleLookup.end(), "Texture could not be found");
 	return handleIter->second;
 }
 
 cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_t> hashes) {
-	CR_ASSERT(g_data != nullptr, "Textures not initialized");
+	CR_ASSERT(m_stagingData[0] != nullptr, "Textures not initialized");
 
 	uint32_t result;
-	result = g_data->TextureSetsUsed.FindNotInSet();
-	CR_ASSERT(g_data->TextureSets[result].empty(), "New textures set should start empty");
-	g_data->TextureSetsUsed.insert((uint16_t)result);
+	result = m_textureSetsUsed.FindNotInSet();
+	CR_ASSERT(m_textureSets[result].empty(), "New textures set should start empty");
+	m_textureSetsUsed.insert((uint16_t)result);
 
-	auto& assetService = cecore::GetService<ceasset::Service>();
 	for(uint64_t hash : hashes) {
-		auto handleIter = g_data->HandleLookup.find(hash);
-		CR_ASSERT(handleIter != g_data->HandleLookup.end(), "Texture could not be found");
-		g_data->TextureSets[result].insert(handleIter->second.asInt());
+		auto handleIter = m_handleLookup.find(hash);
+		CR_ASSERT(handleIter != m_handleLookup.end(), "Texture could not be found");
+		m_textureSets[result].insert(handleIter->second);
 	}
 
 	TextureSet newCombined = GenerateCombined();
-	TextureSet toLoad      = newCombined ^ g_data->TexturesLoaded;
+	TextureSet toLoad      = newCombined ^ m_texturesLoaded;
 
 	uint32_t stagingBuffer{};
 	std::atomic_flag loadComplete[2];
@@ -230,29 +223,29 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 	bool dedicatedTransfer = GetContext().TransferQueueIndex != GetContext().GraphicsQueueIndex;
 
 	for(uint16_t texture : toLoad) {
-		CR_ASSERT(g_data->Used.contains(texture), "Tried to load a texture that doesn't exist");
+		CR_ASSERT(m_used.contains(texture), "Tried to load a texture that doesn't exist");
 
-		uint64_t hash = g_data->AssetHashes[texture];
-		auto handle   = assetService.GetHandle(hash);
+		uint64_t hash = m_assetHashes[texture];
+		auto handle   = ceasset::GetHandle(hash);
 
-		assetService.Open(handle);
-		auto closeFile = cecore::defer([&] { assetService.Close(handle); });
+		ceasset::Open(handle);
+		defer({ ceasset::Close(handle); });
 
-		auto jxlData = assetService.GetData(handle);
+		auto jxlData = ceasset::GetData(handle);
 		CR_ASSERT(JxlSignatureCheck((uint8_t*)jxlData.data(), jxlData.size()) == JXL_SIG_CODESTREAM,
-		          "jpeg xl file {} invalid", g_data->DebugNames[texture]);
+		          "jpeg xl file {} invalid", m_debugNames[texture]);
 
 		stagingBuffer = (stagingBuffer + 1) % 2;
 
-		JxlDecoderReset(g_data->Decoder);
-		JxlDecoderStatus status = JxlDecoderSetCoalescing(g_data->Decoder, JXL_FALSE);
+		JxlDecoderReset(m_decoder);
+		JxlDecoderStatus status = JxlDecoderSetCoalescing(m_decoder, JXL_FALSE);
 		CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to set coalescing on jpeg xl decoder");
-		status = JxlDecoderSubscribeEvents(g_data->Decoder,
-		                                   JXL_DEC_BASIC_INFO | JXL_DEC_FRAME | JXL_DEC_FULL_IMAGE);
+		status =
+		    JxlDecoderSubscribeEvents(m_decoder, JXL_DEC_BASIC_INFO | JXL_DEC_FRAME | JXL_DEC_FULL_IMAGE);
 		CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to subscribe to events on jpeg xl decoder");
-		status = JxlDecoderSetInput(g_data->Decoder, (const uint8_t*)jxlData.data(), jxlData.size());
+		status = JxlDecoderSetInput(m_decoder, (const uint8_t*)jxlData.data(), jxlData.size());
 		CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to set input on jpeg xl decoder");
-		JxlDecoderCloseInput(g_data->Decoder);
+		JxlDecoderCloseInput(m_decoder);
 
 		JxlBasicInfo basicInfo{};
 		uint32_t width{};
@@ -272,12 +265,12 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 
 		JxlDecoderStatus loopStatus{};
 		size_t bufferSize{};
-		uint8_t* outputBuffer = (uint8_t*)g_data->StagingData[stagingBuffer];
+		uint8_t* outputBuffer = (uint8_t*)m_stagingData[stagingBuffer];
 		do {
-			loopStatus = JxlDecoderProcessInput(g_data->Decoder);
+			loopStatus = JxlDecoderProcessInput(m_decoder);
 			switch(loopStatus) {
 				case JXL_DEC_BASIC_INFO: {
-					status = JxlDecoderGetBasicInfo(g_data->Decoder, &basicInfo);
+					status = JxlDecoderGetBasicInfo(m_decoder, &basicInfo);
 					CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to get basic info on jpeg xl decoder");
 					width  = basicInfo.xsize;
 					height = basicInfo.ysize;
@@ -287,7 +280,7 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 				} break;
 				case JXL_DEC_FRAME: {
 					JxlFrameHeader frameHeader;
-					status = JxlDecoderGetFrameHeader(g_data->Decoder, &frameHeader);
+					status = JxlDecoderGetFrameHeader(m_decoder, &frameHeader);
 					CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to get frame header on jpeg xl decoder");
 
 					VkBufferImageCopy& copyInfo              = frameCopies.emplace_back();
@@ -301,12 +294,11 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 					copyInfo.imageOffset                     = {0, 0, 0};
 					copyInfo.imageExtent                     = {basicInfo.xsize, basicInfo.ysize, 1};
 
-					status = JxlDecoderImageOutBufferSize(g_data->Decoder, &pixelFormat, &bufferSize);
+					status = JxlDecoderImageOutBufferSize(m_decoder, &pixelFormat, &bufferSize);
 					CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to get frame byte size on jpeg xl decoder");
 					CR_ASSERT((bufferOffset + bufferSize) < c_stagingBufferSize,
 					          "Staging buffer too small to hold jpeg xl texture");
-					status =
-					    JxlDecoderSetImageOutBuffer(g_data->Decoder, &pixelFormat, outputBuffer, bufferSize);
+					status = JxlDecoderSetImageOutBuffer(m_decoder, &pixelFormat, outputBuffer, bufferSize);
 					CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to set output buffer on jpeg xl decoder");
 				} break;
 				case JXL_DEC_FULL_IMAGE:
@@ -339,17 +331,17 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 			}
 		} while(loopStatus != JXL_DEC_SUCCESS);
 
-		JxlDecoderReleaseInput(g_data->Decoder);
+		JxlDecoderReleaseInput(m_decoder);
 
-		g_data->NumFrames[texture]  = (uint16_t)frameCopies.size();
-		g_data->Dimensions[texture] = glm::uvec2{width, height};
+		m_numFrames[texture]  = (uint16_t)frameCopies.size();
+		m_dimensions[texture] = glm::uvec2{width, height};
 
 		VkImageCreateInfo createInfo;
 		ClearStruct(createInfo);
 		createInfo.extent.width  = width;
 		createInfo.extent.height = height;
 		createInfo.extent.depth  = 1;
-		createInfo.arrayLayers   = g_data->NumFrames[texture];
+		createInfo.arrayLayers   = m_numFrames[texture];
 		createInfo.mipLevels     = 1;
 		createInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
 		createInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
@@ -379,32 +371,32 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 		viewInfo.subresourceRange.baseMipLevel   = 0;
 		viewInfo.subresourceRange.levelCount     = 1;
 		viewInfo.subresourceRange.baseArrayLayer = 0;
-		viewInfo.subresourceRange.layerCount     = g_data->NumFrames[texture];
+		viewInfo.subresourceRange.layerCount     = m_numFrames[texture];
 
 		vkResult = vkCreateImageView(GetContext().Device, &viewInfo, nullptr, &imageView);
 		CR_ASSERT(vkResult == VK_SUCCESS, "Failed to create vulkan image view");
 
-		g_data->Images[texture]      = image;
-		g_data->Allocations[texture] = imageAlloc;
-		g_data->Views[texture]       = imageView;
+		m_images[texture]      = image;
+		m_allocations[texture] = imageAlloc;
+		m_views[texture]       = imageView;
 
 		// clearing again, mostly just want the memory barrier. be sure task see latest on all our variables.
 		loadComplete[stagingBuffer].clear();
 		GraphicsThread::EnqueueTask(
 		    [dedicatedTransfer = dedicatedTransfer, texture = texture, image = image,
-		     buffer      = g_data->StagingBuffer[stagingBuffer],
+		     buffer      = m_stagingBuffer[stagingBuffer],
 		     frameCopies = std::move(frameCopies)](VkCommandBuffer& cmdBuffer) mutable {
-			    Commands::TransitionToDst(cmdBuffer, image, g_data->NumFrames[texture]);
+			    Commands::TransitionToDst(cmdBuffer, image, m_numFrames[texture]);
 			    Commands::CopyBufferToImg(cmdBuffer, buffer, image, frameCopies);
 			    if(dedicatedTransfer) {
-				    Commands::TransitionToGraphicsQueue(cmdBuffer, image, g_data->NumFrames[texture]);
+				    Commands::TransitionToGraphicsQueue(cmdBuffer, image, m_numFrames[texture]);
 			    } else {
-				    Commands::TransitionToReadOptimal(cmdBuffer, image, g_data->NumFrames[texture]);
+				    Commands::TransitionToReadOptimal(cmdBuffer, image, m_numFrames[texture]);
 			    }
 		    },
 		    loadComplete[stagingBuffer]);
 
-		if(dedicatedTransfer) { g_data->NeedsTransferBarrier.insert(texture); }
+		if(dedicatedTransfer) { m_needsTransferBarrier.insert(texture); }
 
 		stagingBuffer = (stagingBuffer + 1) % 2;
 	}
@@ -413,53 +405,53 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 	loadComplete[0].wait(false);
 	loadComplete[1].wait(false);
 
-	g_data->TexturesLoaded = newCombined;
+	m_texturesLoaded = newCombined;
 	return Handles::TextureSet(result);
 }
 
 void cegraph::Textures::ReleaseTextureSet(Handles::TextureSet set) {
-	CR_ASSERT(g_data != nullptr, "Textures not initialized");
+	CR_ASSERT(m_stagingData[0] != nullptr, "Textures not initialized");
 	CR_ASSERT(set.isValid(), "invalid texture set handle");
-	CR_ASSERT(set.asInt() != g_data->TextureSetsUsed.size(), "Ran out of available texture sets");
+	CR_ASSERT(set != m_textureSetsUsed.size(), "Ran out of available texture sets");
 
 	vkDeviceWaitIdle(GetContext().Device);
 
-	g_data->TextureSets[set.asInt()].clear();
-	g_data->TextureSetsUsed.erase(set.asInt());
+	m_textureSets[set].clear();
+	m_textureSetsUsed.erase(set);
 
 	TextureSet newLoaded = GenerateCombined();
-	TextureSet toUnLoad  = newLoaded ^ g_data->TexturesLoaded;
+	TextureSet toUnLoad  = newLoaded ^ m_texturesLoaded;
 
 	for(uint16_t texture : toUnLoad) {
-		g_data->NeedsTransferBarrier.erase(texture);
+		m_needsTransferBarrier.erase(texture);
 
-		vkDestroyImageView(GetContext().Device, g_data->Views[texture], nullptr);
-		vmaDestroyImage(GetContext().Allocator, g_data->Images[texture], g_data->Allocations[texture]);
-		g_data->Views[texture]  = VK_NULL_HANDLE;
-		g_data->Images[texture] = VK_NULL_HANDLE;
+		vkDestroyImageView(GetContext().Device, m_views[texture], nullptr);
+		vmaDestroyImage(GetContext().Allocator, m_images[texture], m_allocations[texture]);
+		m_views[texture]       = VK_NULL_HANDLE;
+		m_images[texture]      = VK_NULL_HANDLE;
+		m_allocations[texture] = VK_NULL_HANDLE;
 	}
 
-	g_data->TexturesLoaded = newLoaded;
+	m_texturesLoaded = newLoaded;
 }
 
 void cegraph::Textures::Update(VkCommandBuffer a_cmdBuffer) {
-	CR_ASSERT(g_data != nullptr, "Textures not initialized");
+	CR_ASSERT(m_stagingData[0] != nullptr, "Textures not initialized");
 
-	for(uint16_t texture : g_data->NeedsTransferBarrier) {
-		Commands::TransitionFromTransferQueue(a_cmdBuffer, g_data->Images[texture],
-		                                      g_data->NumFrames[texture]);
+	for(uint16_t texture : m_needsTransferBarrier) {
+		Commands::TransitionFromTransferQueue(a_cmdBuffer, m_images[texture], m_numFrames[texture]);
 	}
-	g_data->NeedsTransferBarrier.clear();
+	m_needsTransferBarrier.clear();
 
 	VkWriteDescriptorSet writeSet;
 	std::vector<VkDescriptorImageInfo> imgInfos;
-	imgInfos.reserve(g_data->Views.size());
+	imgInfos.reserve(m_views.size());
 
-	for(uint32_t i = 0; i < g_data->Views.size(); ++i) {
+	for(uint32_t i = 0; i < m_views.size(); ++i) {
 		VkDescriptorImageInfo& imgInfo = imgInfos.emplace_back();
 		imgInfo.imageLayout            = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imgInfo.imageView              = g_data->Views[i];
-		imgInfo.sampler                = g_data->m_sampler;
+		imgInfo.imageView              = m_views[i];
+		imgInfo.sampler                = m_sampler;
 	}
 
 	ClearStruct(writeSet);
@@ -473,17 +465,15 @@ void cegraph::Textures::Update(VkCommandBuffer a_cmdBuffer) {
 }
 
 uint32_t cegraph::Textures::GetNumFrames(Handles::Texture a_texture) {
-	CR_ASSERT(g_data != nullptr, "Textures not initialized");
-	CR_ASSERT(g_data->TexturesLoaded.contains(a_texture.asInt()),
-	          "Texture not loaded, cant get number of frames");
+	CR_ASSERT(m_stagingData[0] != nullptr, "Textures not initialized");
+	CR_ASSERT(m_texturesLoaded.contains(a_texture), "Texture not loaded, cant get number of frames");
 
-	return g_data->NumFrames[a_texture.asInt()];
+	return m_numFrames[a_texture];
 }
 
 glm::uvec2 cegraph::Textures::GetDimensions(Handles::Texture a_texture) {
-	CR_ASSERT(g_data != nullptr, "Textures not initialized");
-	CR_ASSERT(g_data->TexturesLoaded.contains(a_texture.asInt()),
-	          "Texture not loaded, cant get number of frames");
+	CR_ASSERT(m_stagingData[0] != nullptr, "Textures not initialized");
+	CR_ASSERT(m_texturesLoaded.contains(a_texture), "Texture not loaded, cant get number of frames");
 
-	return g_data->Dimensions[a_texture.asInt()];
+	return m_dimensions[a_texture];
 }

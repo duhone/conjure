@@ -11,9 +11,10 @@ import std;
 import std.compat;
 
 export namespace CR::Engine::Graphics {
-	void Initialize(GLFWwindow* a_window);
+	void Initialize(GLFWwindow* a_window, std::optional<glm::vec4> a_clearColor);
+	bool ReInitialize();
 	void Update();
-	void Render();
+	bool Render();
 	void Shutdown();
 
 	namespace Textures {
