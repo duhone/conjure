@@ -11,11 +11,17 @@ import std;
 import std.compat;
 
 export namespace CR::Engine::Graphics {
-	void Initialize(GLFWwindow* a_window, std::optional<glm::vec4> a_clearColor);
-	bool ReInitialize();
+	// will be called from engine.
+	void Initialize(GLFWwindow* a_window);
 	void Update();
 	bool Render();
 	void Shutdown();
+
+	bool ReInitialize();
+
+	// should rarely need this. if covering entire screen with anything you won't need. set to nullopt to
+	// disable if not already. default is disabled.
+	void SetClearColor(std::optional<glm::vec4> a_clearColor);
 
 	namespace Textures {
 		extern "C++" Handles::Texture GetHandle(uint64_t hash);

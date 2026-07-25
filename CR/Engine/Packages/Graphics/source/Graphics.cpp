@@ -67,6 +67,7 @@ namespace {
 
 	uint32_t m_currentFrameBuffer{0};
 	std::optional<glm::vec4> m_clearColor;
+	int32_t m_refreshRate{60};
 
 	cegraph::Handles::CommandPool m_commandPool;
 
@@ -645,14 +646,43 @@ namespace {
 				return false;
 			}
 		}
-		return false;
+		return true;
+	}
+
+	int32_t GetWindowRefreshRate(GLFWwindow* a_window) {
+		int wx, wy, ww, wh;
+		glfwGetWindowPos(a_window, &wx, &wy);
+		glfwGetWindowSize(a_window, &ww, &wh);
+
+		int count;
+		GLFWmonitor** monitors = glfwGetMonitors(&count);
+		GLFWmonitor* best      = glfwGetPrimaryMonitor();
+		int bestArea           = 0;
+
+		for(int i = 0; i < count; i++) {
+			int mx, my;
+			glfwGetMonitorPos(monitors[i], &mx, &my);
+			const GLFWvidmode* mode = glfwGetVideoMode(monitors[i]);
+
+			int overlapX = std::max(0, std::min(wx + ww, mx + mode->width) - std::max(wx, mx));
+			int overlapY = std::max(0, std::min(wy + wh, my + mode->height) - std::max(wy, my));
+			int area     = overlapX * overlapY;
+
+			if(area > bestArea) {
+				bestArea = area;
+				best     = monitors[i];
+			}
+		}
+
+		const GLFWvidmode* mode = glfwGetVideoMode(best);
+		return mode ? mode->refreshRate : 60;
 	}
 
 }    // namespace
 
-void cegraph::Initialize(GLFWwindow* a_window, std::optional<glm::vec4> a_clearColor) {
-	m_window     = a_window;
-	m_clearColor = a_clearColor;
+void cegraph::Initialize(GLFWwindow* a_window) {
+	m_window      = a_window;
+	m_refreshRate = GetWindowRefreshRate(a_window);
 
 	cegraph::Context context;
 
@@ -716,7 +746,7 @@ void cegraph::Initialize(GLFWwindow* a_window, std::optional<glm::vec4> a_clearC
 	ClearStruct(fenceInfo);
 	vkCreateFence(context.Device, &fenceInfo, nullptr, &m_frameFence);
 
-	context.DisplayTicksPerFrame = Constants::c_designRefreshRate / a_window.GetRefreshRate();
+	context.DisplayTicksPerFrame = Constants::c_designRefreshRate / m_refreshRate;
 
 	// set up global texture descriptor. only 1 frame in flight, so easy.
 	VkDescriptorPoolSize poolSizes[2];
@@ -780,6 +810,10 @@ void cegraph::Initialize(GLFWwindow* a_window, std::optional<glm::vec4> a_clearC
 
 	ComputePipelines::FinishInitialize();
 	Materials::FinishInitialize();
+}
+
+void cegraph::SetClearColor(std::optional<glm::vec4> a_clearColor) {
+	m_clearColor = a_clearColor;
 }
 
 void cegraph::Shutdown() {
