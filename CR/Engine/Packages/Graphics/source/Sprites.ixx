@@ -106,15 +106,13 @@ void cegraph::Sprites::Create(std::span<uint64_t> a_hashes, std::span<Handles::S
 
 		m_templateIndices[*nextAvailable] = spriteTemplate->second;
 		m_numFrames[*nextAvailable]       = ((uint16_t)cegraph::Textures::GetNumFrames(textureHandle) *
-                                       cegraph::Constants::c_designRefreshRate) /
-		                              m_templateFrameRates[spriteTemplate->second];
-		m_currentFrames[*nextAvailable] = 0;
-		m_dimensions[*nextAvailable]    = Textures::GetDimensions(textureHandle);
+		                                     cegraph::Constants::c_designRefreshRate) /
+		                                    m_templateFrameRates[spriteTemplate->second];
+		m_currentFrames[*nextAvailable]   = 0;
+		m_dimensions[*nextAvailable]      = Textures::GetDimensions(textureHandle);
 
 		++nextAvailable;
 	}
-
-	m_material = cegraph::Materials::GetMaterial("sprite");
 }
 
 void cegraph::Sprites::Delete(std::span<Handles::Sprite> a_sprites) {
@@ -125,6 +123,9 @@ void cegraph::Sprites::Delete(std::span<Handles::Sprite> a_sprites) {
 }
 
 void cegraph::Sprites::Initialize() {
+	m_material = cegraph::Materials::GetMaterial("sprite");
+	CR_ASSERT(m_material.isValid(), "Failed to get sprite material");
+
 	flatbuffers::Parser parser = ceasset::GetData(cecore::C_Hash64("Graphics/sprites.json"), SCHEMAS_SPRITES);
 	auto spritesfb             = Flatbuffers::GetSprites(parser.builder_.GetBufferPointer());
 

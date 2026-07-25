@@ -806,10 +806,11 @@ void cegraph::Initialize(GLFWwindow* a_window) {
 	UniformBuffer::Initialize();
 	MultiDrawBuffer::Initialize();
 	VertexBuffers::Initialize();
-	Sprites::Initialize();
 
 	ComputePipelines::FinishInitialize();
 	Materials::FinishInitialize();
+
+	Sprites::Initialize();
 }
 
 void cegraph::SetClearColor(std::optional<glm::vec4> a_clearColor) {

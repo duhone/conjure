@@ -1,7 +1,7 @@
 #include <engine/Engine.h>
 
 #include <GLFW/glfw3.h>
-// #include <glm/glm.hpp>
+#include <glm/glm.hpp>
 
 import CR.Engine;
 
@@ -12,8 +12,8 @@ import std.compat;
 namespace ceaud   = CR::Engine::Audio;
 namespace cecore  = CR::Engine::Core;
 namespace ceinput = CR::Engine::Input;
-// namespace cegraph  = CR::Engine::Graphics;
-namespace ceplat = CR::Engine::Platform;
+namespace cegraph = CR::Engine::Graphics;
+namespace ceplat  = CR::Engine::Platform;
 
 namespace fs = std::filesystem;
 
@@ -46,6 +46,8 @@ int main(int, char*) {
 		return 0;
 	}
 
+	cegraph::SetClearColor(glm::vec4(0.0f, 0.25f, 0.0f, 1.0f));
+
 	CR::Engine::Initialize(window, assetsPath);
 
 	ceaud::setFXVolume(1.0f);
@@ -68,22 +70,22 @@ int main(int, char*) {
 	textureSetHashes.emplace_back(cecore::C_Hash64("m"));
 	textureSetHashes.emplace_back(cecore::C_Hash64("question"));
 	textureSetHashes.emplace_back(cecore::C_Hash64("wood"));
-	// auto textureSet = graphicsService.LoadTextureSet(textureSetHashes);
+	auto textureSet = cegraph::Textures::LoadTextureSet(textureSetHashes);
 
-	// std::vector<cegraph::Handles::Sprite> sprites;
-	// std::vector<glm::vec2> spritePositions;
-	// std::vector<float> spriteRotations;
+	std::vector<cegraph::Handles::Sprite> sprites;
+	std::vector<glm::vec2> spritePositions;
+	std::vector<float> spriteRotations;
 
-	// constexpr uint32_t numSprites = 64;
+	constexpr uint32_t numSprites = 64;
 	{
-		/*std::vector<uint64_t> spriteHashes;
+		std::vector<uint64_t> spriteHashes;
 		for(uint32_t i = 0; i < numSprites; ++i) {
-		    spriteHashes.emplace_back(
-		        textureSetHashes[cecore::Random(2, (int32_t)textureSetHashes.size() - 1)]);
+			spriteHashes.emplace_back(
+			    textureSetHashes[cecore::Random(2, (int32_t)textureSetHashes.size() - 1)]);
 
-		    spritePositions.emplace_back(
-		        glm::vec2{cecore::Random(0.0f, 700.0f), cecore::Random(0.0f, 400.0f)});
-		    spriteRotations.emplace_back(cecore::Random(0.0f, 3.14f));
+			spritePositions.emplace_back(
+			    glm::vec2{cecore::Random(0.0f, 700.0f), cecore::Random(0.0f, 400.0f)});
+			spriteRotations.emplace_back(cecore::Random(0.0f, 3.14f));
 		}
 
 		spriteHashes.emplace_back(cecore::C_Hash64("CompletionScreen"));
@@ -97,13 +99,11 @@ int main(int, char*) {
 		sprites.resize(spriteHashes.size());
 		cegraph::Sprites::Create(spriteHashes, sprites);
 		cegraph::Sprites::SetPositions(sprites, spritePositions);
-		cegraph::Sprites::SetRotations(sprites, spriteRotations);*/
+		cegraph::Sprites::SetRotations(sprites, spriteRotations);
 	}
 
-	// std::vector<float> spriteRotSpeeds;
-	// for(uint32_t i = 0; i < numSprites; ++i) {
-	//	spriteRotSpeeds.emplace_back(cecore::Random(0.005f, 0.05f));
-	// }
+	std::vector<float> spriteRotSpeeds;
+	for(uint32_t i = 0; i < numSprites; ++i) { spriteRotSpeeds.emplace_back(cecore::Random(0.005f, 0.05f)); }
 
 	uint32_t frameCount = 0;
 	auto startFPSTime   = std::chrono::high_resolution_clock::now();
@@ -116,8 +116,8 @@ int main(int, char*) {
 
 		CR::Engine::Update();
 
-		// for(uint32_t i = 0; i < numSprites; ++i) { spriteRotations[i] += spriteRotSpeeds[i]; }
-		// cegraph::Sprites::SetRotations(sprites, spriteRotations);
+		for(uint32_t i = 0; i < numSprites; ++i) { spriteRotations[i] += spriteRotSpeeds[i]; }
+		cegraph::Sprites::SetRotations(sprites, spriteRotations);
 
 		uint32_t regionState;
 		ceinput::Regions::getStates({&region, 1}, {&regionState, 1});
@@ -147,8 +147,8 @@ int main(int, char*) {
 
 	ceaud::Music::Stop();
 
-	// cegraph::Sprites::Delete(sprites);
-	// graphicsService.ReleaseTextureSet(textureSet);
+	cegraph::Sprites::Delete(sprites);
+	cegraph::Textures::ReleaseTextureSet(textureSet);
 
 	CR::Engine::Shutdown();
 
