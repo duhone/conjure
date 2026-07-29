@@ -109,7 +109,8 @@ int main(int, char*) {
 	while(!glfwWindowShouldClose(window)) {
 		// Should really check for windows resize from OS as well. and minimized. the ReInitialize
 		// graphics engine. Do that once we are using GLFW at top of loop. Not a problem so far on
-		// windows, return value of graphics Update is taking care of it.
+		// windows, return value of graphics Render is taking care of it. No reason to keep trying to
+		// reinitialize when minimized. Just running app at 10fps in that case for now.
 
 		glfwPollEvents();
 
@@ -123,14 +124,12 @@ int main(int, char*) {
 
 		if((regionState & ceinput::Regions::RegionStates::Pressed) != 0) { ceaud::SoundFX::Play(fanfareFX); }
 
-		CR::Engine::Render();
+		bool gsAvailable = CR::Engine::Render();
 
-		/*bool gsAvailable = graphicsService.Update();
-		if(!gsAvailable && !done) {
-		    gsAvailable = graphicsService.ReInitialize();
-		    if(!gsAvailable && !done) { std::this_thread::sleep_for(100ms); }
+		if(!gsAvailable) {
+			gsAvailable = cegraph::ReInitialize();
+			if(!gsAvailable && !glfwWindowShouldClose(window)) { std::this_thread::sleep_for(100ms); }
 		}
-		*/
 
 		++frameCount;
 		if(frameCount == 1024) {
