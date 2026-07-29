@@ -28,7 +28,7 @@ import std;
 import std.compat;
 
 export namespace CR::Engine::Graphics::Materials {
-	void Initialize(VkRenderPass a_renderPass);
+	void Initialize();
 	void FinishInitialize();
 	void Shutdown();
 
@@ -133,9 +133,9 @@ namespace {
 	}
 }    // namespace
 
-void cegraph::Materials::Initialize(VkRenderPass a_renderPass) {
+void cegraph::Materials::Initialize() {
 	GraphicsThread::EnqueueTask(
-	    [a_renderPass]() {
+	    []() {
 		    VkSpecializationMapEntry fragSpecInfoEntrys;
 		    fragSpecInfoEntrys.constantID = 0;
 		    fragSpecInfoEntrys.offset     = 0;
@@ -187,7 +187,7 @@ void cegraph::Materials::Initialize(VkRenderPass a_renderPass) {
 		    blendAttachState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 		    blendAttachState.alphaBlendOp        = VK_BLEND_OP_ADD;
 		    blendAttachState.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-		                                      VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		                                           VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
 		    VkPipelineColorBlendStateCreateInfo blendStateInfo;
 		    ClearStruct(blendStateInfo);
@@ -263,6 +263,12 @@ void cegraph::Materials::Initialize(VkRenderPass a_renderPass) {
 			    vertInputInfo.vertexAttributeDescriptionCount = (uint32_t)vertAttribs.size();
 			    vertInputInfo.pVertexAttributeDescriptions    = vertAttribs.data();
 
+			    VkPipelineRenderingCreateInfo renderInfo;
+			    ClearStruct(renderInfo);
+			    renderInfo.colorAttachmentCount    = 1;
+			    VkFormat colorAttachmentFormats[]  = {VK_FORMAT_B8G8R8A8_SRGB};
+			    renderInfo.pColorAttachmentFormats = colorAttachmentFormats;
+
 			    VkGraphicsPipelineCreateInfo pipeInfo;
 			    ClearStruct(pipeInfo);
 			    pipeInfo.layout              = m_pipeLineLayout;
@@ -275,7 +281,7 @@ void cegraph::Materials::Initialize(VkRenderPass a_renderPass) {
 			    pipeInfo.pViewportState      = &viewPortInfo;
 			    pipeInfo.stageCount          = 2;
 			    pipeInfo.pStages             = shaderPipeInfo;
-			    pipeInfo.renderPass          = a_renderPass;
+			    pipeInfo.pNext               = &renderInfo;
 
 			    result = vkCreateGraphicsPipelines(GetContext().Device, VK_NULL_HANDLE, 1, &pipeInfo, nullptr,
 			                                       &m_pipelines.emplace_back());

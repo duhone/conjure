@@ -46,9 +46,8 @@ int main(int, char*) {
 		return 0;
 	}
 
-	cegraph::SetClearColor(glm::vec4(0.0f, 0.25f, 0.0f, 1.0f));
-
 	CR::Engine::Initialize(window, assetsPath);
+	cegraph::SetClearColor(glm::vec4(0.0f, 0.25f, 0.0f, 1.0f));
 
 	ceaud::setFXVolume(1.0f);
 	ceaud::setMusicVolume(0.75f);

@@ -49,8 +49,6 @@ namespace {
 	VkSwapchainKHR m_primarySwapChain{};
 	std::vector<VkImage> m_primarySwapChainImages{};
 	std::vector<VkImageView> m_primarySwapChainImageViews{};
-	VkRenderPass m_renderPass{};    // only 1 currently, and only 1 subpass to go with it
-	std::vector<VkFramebuffer> m_frameBuffers;
 	VkSemaphore m_renderingFinished;    // need to block presenting until all rendering has completed
 	VkFence m_frameFence;
 	VkDescriptorPool m_globalDescriptorPool{};
@@ -265,8 +263,9 @@ namespace {
 		          "Require support for descriptor indexing");
 		CR_ASSERT(features12.descriptorBindingPartiallyBound, "Require support for descriptor indexing");
 		CR_ASSERT(features12.uniformBufferStandardLayout, "Require support for standard layout");
+		CR_ASSERT(features13.dynamicRendering, "Require support for dynamic rendering");
 
-		CR_ASSERT(foundDevice != -1, "Could not find a valid vulkan 1.2 graphics device");
+		CR_ASSERT(foundDevice != -1, "Could not find a valid vulkan 1.4 graphics device");
 
 		context.PhysicalDevice = physicalDevices[foundDevice];
 	}
@@ -324,7 +323,8 @@ namespace {
 
 		VkPhysicalDeviceVulkan13Features requiredFeatures13;
 		cegraph::ClearStruct(requiredFeatures13);
-		requiredFeatures12.pNext = &requiredFeatures13;
+		requiredFeatures13.dynamicRendering = true;
+		requiredFeatures12.pNext            = &requiredFeatures13;
 
 		VkPhysicalDeviceVulkan14Features requiredFeatures14;
 		cegraph::ClearStruct(requiredFeatures14);
@@ -334,7 +334,7 @@ namespace {
 		VkPhysicalDeviceRobustness2FeaturesKHR requiredFeaturesRobust;
 		cegraph::ClearStruct(requiredFeaturesRobust);
 		requiredFeaturesRobust.nullDescriptor = VK_TRUE;
-		// requiredFeatures14.pNext              = &requiredFeaturesRobust;
+		requiredFeatures14.pNext              = &requiredFeaturesRobust;
 
 		int32_t graphicsQueueIndex     = 0;
 		int32_t presentationQueueIndex = 0;
@@ -374,12 +374,12 @@ namespace {
 		cegraph::ClearStruct(createLogDevInfo);
 		createLogDevInfo.queueCreateInfoCount    = (int)size(queueInfos);
 		createLogDevInfo.pQueueCreateInfos       = data(queueInfos);
-		createLogDevInfo.pEnabledFeatures        = &requiredFeatures.features;
+		createLogDevInfo.pEnabledFeatures        = nullptr;
 		createLogDevInfo.enabledLayerCount       = 0;
 		createLogDevInfo.ppEnabledLayerNames     = nullptr;
 		createLogDevInfo.enabledExtensionCount   = (uint32_t)size(deviceExtensions);
 		createLogDevInfo.ppEnabledExtensionNames = data(deviceExtensions);
-		createLogDevInfo.pNext                   = &requiredFeaturesRobust;
+		createLogDevInfo.pNext                   = &requiredFeatures;
 
 		if(vkCreateDevice(context.PhysicalDevice, &createLogDevInfo, nullptr, &context.Device) !=
 		   VK_SUCCESS) {
@@ -393,14 +393,6 @@ namespace {
 	}
 	void DestroySwapChain() {
 		const cegraph::Context& context = cegraph::GetContext();
-
-		for(auto& framebuffer : m_frameBuffers) {
-			vkDestroyFramebuffer(context.Device, framebuffer, nullptr);
-		}
-		m_frameBuffers.clear();
-
-		if(m_renderPass) { vkDestroyRenderPass(context.Device, m_renderPass, nullptr); }
-		m_renderPass = nullptr;
 
 		for(auto& imageView : m_primarySwapChainImageViews) {
 			vkDestroyImageView(context.Device, imageView, nullptr);
@@ -572,80 +564,6 @@ namespace {
 			}
 		}
 
-		VkAttachmentDescription attatchDescs[2];
-		cegraph::ClearStruct(attatchDescs[0]);
-		cegraph::ClearStruct(attatchDescs[1]);
-		attatchDescs[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		attatchDescs[0].finalLayout   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		attatchDescs[0].format        = VK_FORMAT_B8G8R8A8_SRGB;
-		if(m_clearColor.has_value()) {
-			attatchDescs[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		} else {
-			attatchDescs[0].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		}
-		// TODO should be dont care for mobile, would be transient and never need to be stored to memory
-		attatchDescs[0].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-		attatchDescs[0].samples        = VK_SAMPLE_COUNT_4_BIT;
-		attatchDescs[0].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		attatchDescs[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		attatchDescs[1].initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
-		attatchDescs[1].finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-		attatchDescs[1].format         = VK_FORMAT_B8G8R8A8_SRGB;
-		attatchDescs[1].loadOp         = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		// TODO should be dont care for mobile
-		attatchDescs[1].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-		attatchDescs[1].samples        = VK_SAMPLE_COUNT_1_BIT;
-		attatchDescs[1].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		attatchDescs[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-
-		VkAttachmentReference attachRefs[2];
-		cegraph::ClearStruct(attachRefs[0]);
-		cegraph::ClearStruct(attachRefs[1]);
-		attachRefs[0].attachment = 0;
-		attachRefs[0].layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		attachRefs[1].attachment = 1;
-		attachRefs[1].layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkSubpassDescription subpassDesc;
-		cegraph::ClearStruct(subpassDesc);
-		subpassDesc.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpassDesc.colorAttachmentCount = 1;
-		subpassDesc.pColorAttachments    = &attachRefs[0];
-		subpassDesc.pResolveAttachments  = &attachRefs[1];
-
-		VkRenderPassCreateInfo renderPassInfo;
-		cegraph::ClearStruct(renderPassInfo);
-		renderPassInfo.attachmentCount = 2;
-		renderPassInfo.pAttachments    = attatchDescs;
-		renderPassInfo.subpassCount    = 1;
-		renderPassInfo.pSubpasses      = &subpassDesc;
-
-		vkResult = vkCreateRenderPass(context.Device, &renderPassInfo, nullptr, &m_renderPass);
-		if(vkResult != VK_SUCCESS) {
-			CR_LOG("Failed to create render pass");
-			DestroySwapChain();
-			return false;
-		}
-
-		for(auto& imageView : m_primarySwapChainImageViews) {
-			VkFramebufferCreateInfo framebufferInfo;
-			cegraph::ClearStruct(framebufferInfo);
-			const VkImageView attachments[] = {m_msaaView, imageView};
-			framebufferInfo.attachmentCount = 2;
-			framebufferInfo.pAttachments    = attachments;
-			framebufferInfo.width           = m_windowSize.x;
-			framebufferInfo.height          = m_windowSize.y;
-			framebufferInfo.renderPass      = m_renderPass;
-			framebufferInfo.layers          = 1;
-
-			m_frameBuffers.emplace_back();
-			vkResult = vkCreateFramebuffer(context.Device, &framebufferInfo, nullptr, &m_frameBuffers.back());
-			if(vkResult != VK_SUCCESS) {
-				CR_LOG("Failed to create frame buffer");
-				DestroySwapChain();
-				return false;
-			}
-		}
 		return true;
 	}
 
@@ -801,7 +719,7 @@ void cegraph::Initialize(GLFWwindow* a_window) {
 	GraphicsThread::Initialize(m_transferQueue);
 	Shaders::Initialize();
 	Textures::Initialize();
-	Materials::Initialize(m_renderPass);
+	Materials::Initialize();
 	ComputePipelines::Initialize();
 	UniformBuffer::Initialize();
 	MultiDrawBuffer::Initialize();
@@ -913,12 +831,14 @@ bool cegraph::Render() {
 
 	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-	Commands::RenderPassBegin(commandBuffer, m_renderPass, m_frameBuffers[m_currentFrameBuffer], m_windowSize,
-	                          m_clearColor);
+	Commands::TransitionColorAttachToOptimal(commandBuffer, m_primarySwapChainImages[m_currentFrameBuffer]);
+	Commands::RenderPassBegin(commandBuffer, m_msaaView, m_primarySwapChainImageViews[m_currentFrameBuffer],
+	                          m_windowSize, m_clearColor);
 
 	Sprites::Render(commandBuffer);
 
 	Commands::RenderPassEnd(commandBuffer);
+	Commands::TransitionColorAttachToPresent(commandBuffer, m_primarySwapChainImages[m_currentFrameBuffer]);
 	CommandPools::End(commandBuffer);
 
 	VkSubmitInfo subInfo;

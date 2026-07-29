@@ -14,54 +14,65 @@ import CR.Engine.Core;
 import std;
 import std.compat;
 
-namespace CR::Engine::Graphics::Commands {
-	export void RenderPassBegin(VkCommandBuffer& a_cmdBuffer, VkRenderPass a_renderPass,
-	                            VkFramebuffer a_frameBuffer, glm::ivec2 a_windowSize,
-	                            std::optional<glm::vec4> a_clearColor);
-	export void RenderPassEnd(VkCommandBuffer& a_cmdBuffer);
-	export void TransitionToDst(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image, uint32_t a_layerCount);
-	export void CopyBufferToImg(VkCommandBuffer& a_cmdBuffer, const VkBuffer& a_buffer, VkImage& a_image,
-	                            std::span<VkBufferImageCopy> a_copies);
-	export void TransitionToGraphicsQueue(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image,
-	                                      uint32_t a_layerCount);
-	export void TransitionFromTransferQueue(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image,
-	                                        uint32_t a_layerCount);
+export namespace CR::Engine::Graphics::Commands {
+	void RenderPassBegin(VkCommandBuffer& a_cmdBuffer, VkImageView a_colorView, VkImageView a_resolveView,
+	                     glm::ivec2 a_windowSize, std::optional<glm::vec4> a_clearColor);
+	void RenderPassEnd(VkCommandBuffer& a_cmdBuffer);
+	void TransitionToDst(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image, uint32_t a_layerCount);
+	void CopyBufferToImg(VkCommandBuffer& a_cmdBuffer, const VkBuffer& a_buffer, VkImage& a_image,
+	                     std::span<VkBufferImageCopy> a_copies);
+	void TransitionToGraphicsQueue(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image,
+	                               uint32_t a_layerCount);
+	void TransitionFromTransferQueue(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image,
+	                                 uint32_t a_layerCount);
 
-	export void TransitionToReadOptimal(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image,
-	                                    uint32_t a_layerCount);
+	void TransitionToReadOptimal(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image, uint32_t a_layerCount);
+	void TransitionColorAttachToOptimal(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image);
+	void TransitionColorAttachToPresent(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image);
 }    // namespace CR::Engine::Graphics::Commands
 
 module :private;
 
 namespace cegraph = CR::Engine::Graphics;
 
-void cegraph::Commands::RenderPassBegin(VkCommandBuffer& a_cmdBuffer, VkRenderPass a_renderPass,
-                                        VkFramebuffer a_frameBuffer, glm::ivec2 a_windowSize,
+void cegraph::Commands::RenderPassBegin(VkCommandBuffer& a_cmdBuffer, VkImageView a_colorView,
+                                        VkImageView a_resolveView, glm::ivec2 a_windowSize,
                                         std::optional<glm::vec4> a_clearColor) {
-	VkRenderPassBeginInfo renderPassInfo;
-	ClearStruct(renderPassInfo);
-	renderPassInfo.renderPass               = a_renderPass;
-	renderPassInfo.renderArea.extent.width  = a_windowSize.x;
-	renderPassInfo.renderArea.extent.height = a_windowSize.y;
-	renderPassInfo.framebuffer              = a_frameBuffer;
-	VkClearValue clearValue;
+	VkRenderingInfo renderingInfo;
+	ClearStruct(renderingInfo);
+	renderingInfo.renderArea.extent.width  = a_windowSize.x;
+	renderingInfo.renderArea.extent.height = a_windowSize.y;
+
+	renderingInfo.layerCount           = 1;
+	renderingInfo.colorAttachmentCount = 1;
+
+	VkRenderingAttachmentInfo colorAttachment;
+	ClearStruct(colorAttachment);
 	if(a_clearColor.has_value()) {
-		clearValue.color.float32[0]    = a_clearColor.value().r;
-		clearValue.color.float32[1]    = a_clearColor.value().g;
-		clearValue.color.float32[2]    = a_clearColor.value().b;
-		clearValue.color.float32[3]    = a_clearColor.value().a;
-		renderPassInfo.clearValueCount = 1;
-		renderPassInfo.pClearValues    = &clearValue;
+		colorAttachment.clearValue.color.float32[0] = a_clearColor.value().r;
+		colorAttachment.clearValue.color.float32[1] = a_clearColor.value().g;
+		colorAttachment.clearValue.color.float32[2] = a_clearColor.value().b;
+		colorAttachment.clearValue.color.float32[3] = a_clearColor.value().a;
+		colorAttachment.loadOp                      = VK_ATTACHMENT_LOAD_OP_CLEAR;
 
 	} else {
-		renderPassInfo.clearValueCount = 0;
+		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	}
+	colorAttachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	colorAttachment.imageView   = a_colorView;
+	// TODO: has to be this way for non tiled, but slow for tiled. Fix
+	colorAttachment.storeOp            = VK_ATTACHMENT_STORE_OP_STORE;
+	colorAttachment.resolveMode        = VK_RESOLVE_MODE_AVERAGE_BIT;
+	colorAttachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	colorAttachment.resolveImageView   = a_resolveView;
 
-	vkCmdBeginRenderPass(a_cmdBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+	renderingInfo.pColorAttachments = &colorAttachment;
+
+	vkCmdBeginRendering(a_cmdBuffer, &renderingInfo);
 }
 
 void cegraph::Commands::RenderPassEnd(VkCommandBuffer& a_cmdBuffer) {
-	vkCmdEndRenderPass(a_cmdBuffer);
+	vkCmdEndRendering(a_cmdBuffer);
 }
 
 void cegraph::Commands::TransitionToDst(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image,
@@ -152,4 +163,46 @@ void cegraph::Commands::TransitionToReadOptimal(VkCommandBuffer& a_cmdBuffer, co
 
 	vkCmdPipelineBarrier(a_cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 	                     0, 0, nullptr, 0, nullptr, 1, &barrier);
+}
+
+void cegraph::Commands::TransitionColorAttachToOptimal(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image) {
+	VkImageMemoryBarrier barrier;
+	ClearStruct(barrier);
+	barrier.srcAccessMask                   = 0;
+	barrier.dstAccessMask                   = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	barrier.oldLayout                       = VK_IMAGE_LAYOUT_UNDEFINED;
+	barrier.newLayout                       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image                           = a_image;
+	barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount     = 1;
+	barrier.subresourceRange.baseMipLevel   = 0;
+	barrier.subresourceRange.levelCount     = 1;
+
+	vkCmdPipelineBarrier(a_cmdBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+	                     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1,
+	                     &barrier);
+}
+
+void cegraph::Commands::TransitionColorAttachToPresent(VkCommandBuffer& a_cmdBuffer, const VkImage& a_image) {
+	VkImageMemoryBarrier barrier;
+	ClearStruct(barrier);
+	barrier.srcAccessMask                   = 0;
+	barrier.dstAccessMask                   = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	barrier.oldLayout                       = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	barrier.newLayout                       = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image                           = a_image;
+	barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount     = 1;
+	barrier.subresourceRange.baseMipLevel   = 0;
+	barrier.subresourceRange.levelCount     = 1;
+
+	vkCmdPipelineBarrier(a_cmdBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+	                     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1,
+	                     &barrier);
 }
