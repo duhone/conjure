@@ -16,12 +16,15 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v4.2.2
 
     - name: Install CMake 4
       uses: lukka/get-cmake@latest
       with:
         cmakeVersion: "~4.0.0"
+
+    - name: Setup MSVC environment
+      uses: ilammy/msvc-dev-cmd@v1
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
