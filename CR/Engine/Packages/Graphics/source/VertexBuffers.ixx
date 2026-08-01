@@ -50,7 +50,7 @@ namespace {
 	// way more than we need for a 2D engine.
 	constexpr uint16_t c_maxVertexBuffers = 64;
 
-	cecore::BitSet<c_maxVertexBuffers> m_used;
+	cecore::HandlePool<cegraph::Handles::VertexBuffer, c_maxVertexBuffers> m_handlePool;
 	cegraph::VertexBuffers::Mapping m_buffers[c_maxVertexBuffers];
 	VmaAllocation m_allocations[c_maxVertexBuffers];
 
@@ -61,12 +61,12 @@ namespace {
 void cegraph::VertexBuffers::Initialize() {}
 
 void cegraph::VertexBuffers::Shutdown() {
-	CR_ASSERT(m_used.empty(), "not all VertexBuffers were released prior to shutdown");
+	CR_ASSERT(m_handlePool.full(), "not all VertexBuffers were released prior to shutdown");
 }
 
 cegraph::Handles::VertexBuffer cegraph::VertexBuffers::Create(const VertexLayout& a_layout,
                                                               uint32_t a_numVerts) {
-	Handles::VertexBuffer handle{m_used.FindNotInSet()};
+	Handles::VertexBuffer handle = m_handlePool.acquire();
 
 	VkBufferCreateInfo bufferCreateInfo{};
 	ClearStruct(bufferCreateInfo);
@@ -102,27 +102,25 @@ cegraph::Handles::VertexBuffer cegraph::VertexBuffers::Create(const VertexLayout
 		desc.format   = entry.format;
 	}
 
-	m_used.insert(handle);
-
 	return handle;
 }
 
 void cegraph::VertexBuffers::Release(Handles::VertexBuffer a_handle) {
-	CR_ASSERT(m_used.contains(a_handle), "Releasing VertexBuffers that doesn't exist");
+	CR_ASSERT(m_handlePool.isValid(a_handle), "Releasing VertexBuffers that doesn't exist");
 
 	Mapping& mapping = m_buffers[a_handle];
 	vmaDestroyBuffer(GetContext().Allocator, mapping.Buffer, m_allocations[a_handle]);
-	m_used.erase(a_handle);
+	m_handlePool.release(a_handle);
 }
 
 cegraph::VertexBuffers::Mapping cegraph::VertexBuffers::Map(Handles::VertexBuffer a_handle) {
-	CR_ASSERT(m_used.contains(a_handle), "Mapping VertexBuffers that doesn't exist");
+	CR_ASSERT(m_handlePool.isValid(a_handle), "Mapping VertexBuffers that doesn't exist");
 
 	return m_buffers[a_handle];
 }
 
 void cegraph::VertexBuffers::Bind(Handles::VertexBuffer a_buffer, VkCommandBuffer& a_cmdBuffer) {
-	CR_ASSERT(m_used.contains(a_buffer), "Binding VertexBuffers that doesn't exist");
+	CR_ASSERT(m_handlePool.isValid(a_buffer), "Mapping VertexBuffers that doesn't exist");
 
 	VkDeviceSize vertOffset{};
 	vkCmdBindVertexBuffers(a_cmdBuffer, 0, 1, &m_buffers[a_buffer].Buffer, &vertOffset);

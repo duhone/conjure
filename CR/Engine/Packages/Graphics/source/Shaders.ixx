@@ -4,6 +4,8 @@ module;
 
 #include "flatbuffers/idl.h"
 
+#include "ankerl/unordered_dense.h"
+
 #include "core/Log.h"
 
 #include "Core.h"
@@ -43,7 +45,7 @@ using namespace std::literals;
 namespace {
 	constexpr std::string_view c_shaderCompileFolder = "conjure_shaders"sv;
 
-	std::unordered_map<uint64_t, VkShaderModule> m_shaderModules;
+	ankerl::unordered_dense::map<uint64_t, VkShaderModule> m_shaderModules;
 
 	ceplat::MemoryMappedFile CompileShader(const fs::path a_srcPath, const fs::path& a_workingFile) {
 		std::string cliArgs = std::format("{} -o {}", a_srcPath.string(), a_workingFile.string());

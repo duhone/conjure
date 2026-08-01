@@ -60,7 +60,7 @@ namespace {
 	};
 #pragma pack(pop)
 
-	cecore::BitSet<cegraph::Constants::c_maxSprites> m_used;
+	cecore::HandlePool<cegraph::Handles::Sprite, cegraph::Constants::c_maxSprites> m_handlePool;
 	std::array<cegraph::Handles::Texture, cegraph::Constants::c_maxSprites> m_textureHandles;
 	std::array<glm::vec2, cegraph::Constants::c_maxSprites> m_positions;
 	std::array<float, cegraph::Constants::c_maxSprites> m_rotations;
@@ -86,40 +86,30 @@ namespace {
 
 void cegraph::Sprites::Create(std::span<uint64_t> a_hashes, std::span<Handles::Sprite> handles) {
 	CR_ASSERT(a_hashes.size() == handles.size(), "bad arguments");
-	auto available = ~m_used;
-	cegraph::Handles::Sprite result{m_used.FindNotInSet()};
-	CR_ASSERT(available.size() >= a_hashes.size(), "ran out of Sprites");
+	CR_ASSERT(m_handlePool.available() >= a_hashes.size(), "ran out of Sprites");
 
-	auto nextAvailable = available.begin();
+	m_handlePool.acquire(handles);
 
 	for(uint32_t i = 0; i < a_hashes.size(); ++i) {
-		m_used.insert(*nextAvailable);
-		handles[i] = Handles::Sprite{*nextAvailable};
-
 		auto spriteTemplate = m_templateLookup.find(a_hashes[i]);
 		CR_ASSERT(spriteTemplate != m_templateLookup.end(), "Couldn't find sprite template");
 		uint64_t textureHash = m_templateTextureHashes[spriteTemplate->second];
 
 		auto textureHandle = cegraph::Textures::GetHandle(textureHash);
 		CR_ASSERT(textureHandle.isValid(), "couldn't find requested texture for sprite");
-		m_textureHandles[*nextAvailable] = textureHandle;
+		m_textureHandles[handles[i]] = textureHandle;
 
-		m_templateIndices[*nextAvailable] = spriteTemplate->second;
-		m_numFrames[*nextAvailable]       = ((uint16_t)cegraph::Textures::GetNumFrames(textureHandle) *
-		                                     cegraph::Constants::c_designRefreshRate) /
-		                                    m_templateFrameRates[spriteTemplate->second];
-		m_currentFrames[*nextAvailable]   = 0;
-		m_dimensions[*nextAvailable]      = Textures::GetDimensions(textureHandle);
-
-		++nextAvailable;
+		m_templateIndices[handles[i]] = spriteTemplate->second;
+		m_numFrames[handles[i]]       = ((uint16_t)cegraph::Textures::GetNumFrames(textureHandle) *
+		                                 cegraph::Constants::c_designRefreshRate) /
+		                                m_templateFrameRates[spriteTemplate->second];
+		m_currentFrames[handles[i]]   = 0;
+		m_dimensions[handles[i]]      = Textures::GetDimensions(textureHandle);
 	}
 }
 
 void cegraph::Sprites::Delete(std::span<Handles::Sprite> a_sprites) {
-	for(auto sprite : a_sprites) {
-		CR_ASSERT(m_used.contains(sprite), "tried to delete a sprite that doesn't exist");
-		m_used.erase(sprite);
-	}
+	m_handlePool.release(a_sprites);
 }
 
 void cegraph::Sprites::Initialize() {
@@ -178,7 +168,7 @@ void cegraph::Sprites::Initialize() {
 }
 
 void cegraph::Sprites::Shutdown() {
-	CR_ASSERT(m_used.empty(), "Sprites weren't all freed before shutdown");
+	CR_ASSERT(m_handlePool.full(), "Sprites weren't all freed before shutdown");
 
 	VertexBuffers::Release(m_vertBuffer);
 }
@@ -186,7 +176,7 @@ void cegraph::Sprites::Shutdown() {
 void cegraph::Sprites::SetPositions(std::span<Handles::Sprite> a_sprites, std::span<glm::vec2> a_positions) {
 	CR_ASSERT(a_sprites.size() == a_positions.size(), "Sprites SetPositions bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
-		CR_ASSERT(m_used.contains(a_sprites[i]), "Sprite doesn't exist");
+		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
 		m_positions[a_sprites[i]] = a_positions[i];
 	}
 }
@@ -194,7 +184,7 @@ void cegraph::Sprites::SetPositions(std::span<Handles::Sprite> a_sprites, std::s
 void cegraph::Sprites::SetRotations(std::span<Handles::Sprite> a_sprites, std::span<float> a_rotations) {
 	CR_ASSERT(a_sprites.size() == a_rotations.size(), "Sprites SetRotations bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
-		CR_ASSERT(m_used.contains(a_sprites[i]), "Sprite doesn't exist");
+		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
 		m_rotations[a_sprites[i]] = a_rotations[i];
 	}
 }
@@ -203,7 +193,7 @@ void cegraph::Sprites::Update() {
 	auto mapping        = VertexBuffers::Map(m_vertBuffer);
 	Vertex* spriteProps = (Vertex*)mapping.Data;
 
-	for(uint16_t sprite : m_used) {
+	for(uint16_t sprite : m_handlePool) {
 		m_currentFrames[sprite] += cegraph::GetContext().DisplayTicksPerFrame;
 		if(m_currentFrames[sprite] > m_numFrames[sprite]) { m_currentFrames[sprite] -= m_numFrames[sprite]; }
 		m_displayFrames[sprite] = m_currentFrames[sprite] / (cegraph::Constants::c_designRefreshRate /
@@ -228,7 +218,7 @@ void cegraph::Sprites::Render(VkCommandBuffer& a_cmdBuffer) {
 	Materials::Bind(m_material, a_cmdBuffer);
 	VertexBuffers::Bind(m_vertBuffer, a_cmdBuffer);
 
-	auto spriteCount = m_used.size();
+	auto spriteCount = m_handlePool.used();
 
 	auto drawMap  = MultiDrawBuffer::Map(spriteCount);
 	auto commands = drawMap.Data;

@@ -72,6 +72,17 @@ export namespace CR::Engine::Core {
 			return m_handles[avail];
 		}
 
+		constexpr void acquire(std::span<HandleType> a_handles) {
+			CR_ASSERT(m_used.size() + a_handles.size() <= c_poolSize, "ran out of handles");
+			uint16_t lastResult = 0;
+			for(auto& handle : a_handles) {
+				lastResult = m_used.FindNotInSet(lastResult);
+				m_used.insert(lastResult);
+				m_handles[lastResult].incGeneration();
+				handle = m_handles[lastResult];
+			}
+		}
+
 		// will mark passed in handle as invalid. You have to ask the pool about any other duplicate handles
 		// though.
 		constexpr void release(HandleType& a_handle) {
@@ -84,7 +95,19 @@ export namespace CR::Engine::Core {
 			a_handle = HandleType{};
 		}
 
-		// mark many handles as invalid at once, by id, so can't verify generation
+		constexpr void release(std::span<HandleType> a_handles) {
+			for(auto handle : a_handles) {
+				CR_ASSERT(handle.isValid(), "tried to release handle that isn't valid");
+				CR_ASSERT(m_used.contains(handle), "tried to release handle that is no longer valid");
+				CR_ASSERT(handle.getGeneration() == m_handles[handle].getGeneration(),
+				          "tried to release handle that is no longer valid, incorrect generation");
+				m_used.erase(handle);
+				handle = HandleType{};
+			}
+		}
+
+		// mark many handles as invalid at once, by id, so can't verify generation, this is fastest way
+		// though, faster than span version.
 		constexpr void release(const BitSet<c_poolSize>& a_handles) { m_used = m_used & (~a_handles); }
 
 		constexpr HandleType tryGetHandle(uint16_t index) {
@@ -101,7 +124,13 @@ export namespace CR::Engine::Core {
 			return m_handles[a_handle] == a_handle;
 		}
 
+		// no handles left
 		constexpr bool exhausted() const { return m_used.size() == c_poolSize; }
+		// all handles are available, none are in use.
+		constexpr bool full() const { return m_used.empty(); }
+
+		constexpr uint32_t used() const { return m_used.size(); }
+		constexpr uint32_t available() const { return c_poolSize - m_used.size(); }
 
 		template<typename Callable>
 		void iterate(Callable&& callable) {
@@ -109,6 +138,11 @@ export namespace CR::Engine::Core {
 				if(!callable(m_handles[index])) { break; }
 			}
 		}
+
+		auto begin() { return m_used.begin(); }
+		auto end() { return m_used.end(); }
+		auto cbegin() const { return m_used.cbegin(); }
+		auto cend() const { return m_used.cend(); }
 
 	  private:
 		BitSet<c_poolSize> m_used{};

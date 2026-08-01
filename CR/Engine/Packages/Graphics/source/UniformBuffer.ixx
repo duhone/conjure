@@ -46,22 +46,15 @@ namespace {
 	// if need more, not a big deal to increase this.
 	constexpr uint64_t c_uniformBufferSize = 4_MB;
 
-	struct Data {
-		// one buffer per frame in flight.
-		VkBuffer Buffer;
-		VmaAllocation Allocation;
-		std::byte* DataPtr;
+	// one buffer per frame in flight.
+	VkBuffer m_buffer;
+	VmaAllocation m_allocation;
+	std::byte* m_dataPtr;
 
-		std::byte* CurrentData{};
-	};
-
-	Data* g_data = nullptr;
+	std::byte* m_currentData{};
 }    // namespace
 
 void cegraph::UniformBuffer::Initialize() {
-	CR_ASSERT(g_data == nullptr, "Textures are already initialized");
-	g_data = new Data{};
-
 	VkBufferCreateInfo bufferCreateInfo{};
 	ClearStruct(bufferCreateInfo);
 	bufferCreateInfo.size  = c_uniformBufferSize;
@@ -73,39 +66,31 @@ void cegraph::UniformBuffer::Initialize() {
 	    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
 	VmaAllocationInfo bufferAllocInfo{};
-	vmaCreateBuffer(GetContext().Allocator, &bufferCreateInfo, &bufferAllocCreateInfo, &g_data->Buffer,
-	                &g_data->Allocation, &bufferAllocInfo);
-	g_data->DataPtr = (std::byte*)bufferAllocInfo.pMappedData;
+	vmaCreateBuffer(GetContext().Allocator, &bufferCreateInfo, &bufferAllocCreateInfo, &m_buffer,
+	                &m_allocation, &bufferAllocInfo);
+	m_dataPtr = (std::byte*)bufferAllocInfo.pMappedData;
 }
 
 void cegraph::UniformBuffer::Shutdown() {
-	CR_ASSERT(g_data != nullptr, "UniformBuffer is already shutdown");
-
-	vmaDestroyBuffer(GetContext().Allocator, g_data->Buffer, g_data->Allocation);
-
-	delete g_data;
+	vmaDestroyBuffer(GetContext().Allocator, m_buffer, m_allocation);
 }
 
 void cegraph::UniformBuffer::Update() {
-	CR_ASSERT(g_data != nullptr, "UniformBuffer is not initialized");
-
-	g_data->CurrentData = g_data->DataPtr;
+	m_currentData = m_dataPtr;
 }
 
 cegraph::UniformBuffer::Mapping cegraph::UniformBuffer::Map(uint32_t a_size) {
-	CR_ASSERT(g_data != nullptr, "UniformBuffer is not initialized");
-
 	// always start at a 256 byte alignment
-	g_data->CurrentData =
-	    reinterpret_cast<std::byte*>((reinterpret_cast<uint64_t>(g_data->CurrentData) + 255ull) & (~255ull));
+	m_currentData =
+	    reinterpret_cast<std::byte*>((reinterpret_cast<uint64_t>(m_currentData) + 255ull) & (~255ull));
 
 	Mapping result{};
-	result.Buffer = g_data->Buffer;
-	result.Offset = uint32_t(g_data->CurrentData - g_data->DataPtr);
-	result.Data   = g_data->CurrentData;
+	result.Buffer = m_buffer;
+	result.Offset = uint32_t(m_currentData - m_dataPtr);
+	result.Data   = m_currentData;
 	result.Size   = a_size;
 
-	g_data->CurrentData += a_size;
+	m_currentData += a_size;
 
 	return result;
 }

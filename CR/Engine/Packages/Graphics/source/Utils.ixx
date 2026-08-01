@@ -14,14 +14,14 @@ import std.compat;
 
 ReflectMember(sType);
 
-namespace CR::Engine::Graphics {
-	export template<typename T>
+export namespace CR::Engine::Graphics {
+	template<typename T>
 	inline void ClearStruct(T& value) {
 		memset(&value, 0, sizeof(T));
 		if constexpr(HasMembersType_v<T>) { value.sType = vku::GetSType<T>(); }
 	}
 
-	export template<typename T, int SIZE>
+	template<typename T, int SIZE>
 	inline void ClearStruct(T a_values[SIZE]) {
 		for(const T& val : a_values) { ClearStruct(val); }
 	}

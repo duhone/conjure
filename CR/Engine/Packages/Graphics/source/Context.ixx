@@ -6,8 +6,8 @@ module;
 
 export module CR.Engine.Graphics.Context;
 
-namespace CR::Engine::Graphics {
-	export struct Context {
+export namespace CR::Engine::Graphics {
+	struct Context {
 		VkPhysicalDevice PhysicalDevice;
 		VkDevice Device;
 		VmaAllocator Allocator;
@@ -19,8 +19,8 @@ namespace CR::Engine::Graphics {
 		uint32_t DisplayTicksPerFrame{1};
 	};
 
-	export const Context& GetContext();
-	export void SetContext(const Context& a_context);
+	const Context& GetContext();
+	void SetContext(const Context& a_context);
 }    // namespace CR::Engine::Graphics
 
 module :private;
@@ -28,12 +28,12 @@ module :private;
 namespace cegraph = CR::Engine::Graphics;
 
 namespace {
-	cegraph::Context g_context;
+	cegraph::Context m_context;
 }
 
 const cegraph::Context& cegraph::GetContext() {
-	return g_context;
+	return m_context;
 }
 void cegraph::SetContext(const Context& a_context) {
-	g_context = a_context;
+	m_context = a_context;
 }
