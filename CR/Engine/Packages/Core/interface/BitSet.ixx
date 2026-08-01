@@ -30,6 +30,7 @@ export namespace CR::Engine::Core {
 
 	  public:
 		constexpr BitSet()                         = default;
+		constexpr ~BitSet()                        = default;
 		constexpr BitSet(const BitSet&)            = default;
 		constexpr BitSet(BitSet&&)                 = default;
 		constexpr BitSet& operator=(const BitSet&) = default;
@@ -105,7 +106,7 @@ export namespace CR::Engine::Core {
 		// Find an integer not in the set. Will be the smallest one starting at a_start. a_start is mostly for
 		// perf when pulling more than one at once. pass result of previous call since you know first can't be
 		// before that.
-		constexpr std::uint16_t FindNotInSet(uint16_t a_start = 0) const noexcept {
+		[[nodiscard]] constexpr std::uint16_t FindNotInSet(uint16_t a_start = 0) const noexcept {
 			CR_ASSERT(size() != capacity(), "bit set is full, undefined behavior");
 			std::int32_t i{a_start / 64};
 			std::uint64_t word{};
@@ -176,7 +177,7 @@ export namespace CR::Engine::Core {
 				while(m_word == 0 && m_wordIdx != c_endIDX) {
 					++m_wordIdx;
 					if(m_wordIdx != c_endIDX) {
-						m_word = m_bitset.m_words[m_wordIdx];
+						m_word = m_bitset->m_words[m_wordIdx];
 					} else {
 						m_word  = 0;
 						m_value = 0;
@@ -199,7 +200,7 @@ export namespace CR::Engine::Core {
 			}
 
 			bool operator==(const ConstIterator& a_other) const {
-				CR_ASSERT(&m_bitset == &a_other.m_bitset, "comparing iterators from different bitsets");
+				CR_ASSERT(m_bitset == a_other.m_bitset, "comparing iterators from different bitsets");
 				if(m_wordIdx != a_other.m_wordIdx) { return false; }
 				if(m_word != a_other.m_word) { return false; }
 				return true;
@@ -207,13 +208,13 @@ export namespace CR::Engine::Core {
 			bool operator!=(const ConstIterator& a_other) const = default;
 
 		  private:
-			ConstIterator(const BitSet& a_bitset) : m_bitset(a_bitset) {
-				m_word = m_bitset.m_words[m_wordIdx];
+			ConstIterator(const BitSet& a_bitset) : m_bitset(&a_bitset) {
+				m_word = m_bitset->m_words[m_wordIdx];
 				++(*this);
 			}
-			ConstIterator(const BitSet& a_bitset, bool) : m_bitset(a_bitset) { m_wordIdx = c_endIDX; }
+			ConstIterator(const BitSet& a_bitset, bool) : m_bitset(&a_bitset) { m_wordIdx = c_endIDX; }
 
-			const BitSet& m_bitset;
+			const BitSet* m_bitset;
 			std::uint64_t m_word{};
 			std::uint16_t m_wordIdx{};
 			std::uint16_t m_value{};
@@ -232,5 +233,3 @@ export namespace CR::Engine::Core {
 }    // namespace CR::Engine::Core
 
 module :private;
-
-namespace cecore = CR::Engine::Core;

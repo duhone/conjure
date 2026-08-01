@@ -122,17 +122,18 @@ function(settingsCR target)
 	# disable unit tests in profile and final builds
 	# target_compile_definitions(${target} PRIVATE $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<OR:$<CONFIG:Profile>,$<CONFIG:Final>>>:DOCTEST_CONFIG_DISABLE>)
 	
-	#set_target_properties(${target} PROPERTIES
-		#VS_GLOBAL_RunCodeAnalysis false
+#	set_target_properties(${target} PROPERTIES
+#		VS_GLOBAL_RunCodeAnalysis true
 
 		# Use visual studio core guidelines
-		# VS_GLOBAL_EnableMicrosoftCodeAnalysis false
+#		VS_GLOBAL_EnableMicrosoftCodeAnalysis false
 
 		# Use clangtidy
-		# VS_GLOBAL_EnableClangTidyCodeAnalysis true
-		# VS_GLOBAL_ClangTidyChecks "-checks=-*,modernize-*, -modernize-avoid-c-arrays, -modernize-use-trailing-return-type, \
-#bugprone-*, -bugprone-bool-pointer-implicit-conversion, cppcoreguidelines-*, -cppcoreguidelines-avoid-c-arrays, -cppcoreguidelines-pro-bounds-constant-array-index, misc-*, performance-*, readability-*, -readability-uppercase-literal-suffix"
-	#)
+#		VS_GLOBAL_EnableClangTidyCodeAnalysis true
+#		VS_GLOBAL_ClangTidyChecks "-checks=-*,modernize-*, -modernize-avoid-c-arrays, -modernize-use-trailing-return-type, \
+#bugprone-*, -bugprone-bool-pointer-implicit-conversion, cppcoreguidelines-*, -cppcoreguidelines-avoid-c-arrays, -cppcoreguidelines-pro-bounds-constant-array-index, \
+#-cppcoreguidelines-avoid-do-while, misc-*, performance-*, readability-*, -readability-uppercase-literal-suffix, -bugprone-easily-swappable-parameters"
+#	)
 endfunction()
 
 
