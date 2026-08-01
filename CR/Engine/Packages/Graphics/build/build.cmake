@@ -65,9 +65,6 @@ target_sources(graphics PRIVATE ${SHADER_FILES})
 
 source_group(TREE ${assets_root}/Graphics FILES ${SHADER_FILES})
 
-#microsoft bug see https://developercommunity.visualstudio.com/t/warning-C4005:-Outptr:-macro-redefinit/1546919
-target_compile_options(graphics PRIVATE /WX-)
-
 file(MAKE_DIRECTORY ${generated_root}/graphics)
 
 compileFlatbuffersSchema(graphics materials)

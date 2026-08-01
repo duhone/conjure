@@ -35,9 +35,6 @@ set(CR_GENERATED_FILES
 add_library(audio)
 settingsCR(audio)
 
-#microsoft bug see https://developercommunity.visualstudio.com/t/warning-C4005:-Outptr:-macro-redefinit/1546919
-target_compile_options(audio PRIVATE /WX-)
-
 file(MAKE_DIRECTORY ${generated_root}/audio)
 
 compileFlatbuffersSchema(audio music)

@@ -33,9 +33,6 @@ set(CR_BUILD_FILES
 add_library(platform)
 settingsCR(platform)
 
-#microsoft bug see https://developercommunity.visualstudio.com/t/warning-C4005:-Outptr:-macro-redefinit/1546919
-target_compile_options(platform PRIVATE /WX-)
-
 target_link_libraries(platform PUBLIC
     glm
 	core
