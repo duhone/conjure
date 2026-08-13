@@ -10,7 +10,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
 endif()
 
 set(conjure_root "${CMAKE_CURRENT_LIST_DIR}")
-set(assets_root "${CMAKE_CURRENT_LIST_DIR}/CR/Assets")
+set(conjure_assets_root "${CMAKE_CURRENT_LIST_DIR}/Assets")
 set(generated_root "${CMAKE_BINARY_DIR}/generated")
 
 # set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=cppcoreguidelines-*)

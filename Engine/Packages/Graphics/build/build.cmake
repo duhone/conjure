@@ -38,9 +38,9 @@ set(CR_BUILD_FILES
 )
 
 set(SHADER_FILES
-    ${assets_root}/Graphics/Shaders/sprite.comp
-    ${assets_root}/Graphics/Shaders/sprite.vert
-    ${assets_root}/Graphics/Shaders/sprite.frag
+    ${conjure_assets_root}/Graphics/Shaders/sprite.comp
+    ${conjure_assets_root}/Graphics/Shaders/sprite.vert
+    ${conjure_assets_root}/Graphics/Shaders/sprite.frag
 )
 
 set(CR_SCHEMA_FILES
@@ -63,7 +63,7 @@ add_library(graphics)
 settingsCR(graphics)
 target_sources(graphics PRIVATE ${SHADER_FILES})
 
-source_group(TREE ${assets_root}/Graphics FILES ${SHADER_FILES})
+source_group(TREE ${conjure_assets_root}/Graphics FILES ${SHADER_FILES})
 
 file(MAKE_DIRECTORY ${generated_root}/graphics)
 
