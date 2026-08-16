@@ -79,7 +79,6 @@ namespace {
 	std::array<uint64_t, cegraph::Constants::c_maxTextures> m_hashes;
 	std::array<uint64_t, cegraph::Constants::c_maxTextures> m_assetHashes;
 	std::array<std::string, cegraph::Constants::c_maxTextures> m_debugNames;
-	std::array<fs::path, cegraph::Constants::c_maxTextures> m_paths;
 	std::array<VkImage, cegraph::Constants::c_maxTextures> m_images;
 	std::array<VmaAllocation, cegraph::Constants::c_maxTextures> m_allocations;
 	std::array<VkImageView, cegraph::Constants::c_maxTextures> m_views;
@@ -116,8 +115,6 @@ namespace {
 void cegraph::Textures::Initialize() {
 	CR_ASSERT(m_stagingData[0] == nullptr, "Textures are already initialized");
 
-	const auto& rootPath = ceasset::GetRootPath();
-
 	flatbuffers::Parser parser =
 	    ceasset::GetData(cecore::C_Hash64("Graphics/textures.json"), SCHEMAS_TEXTURES);
 
@@ -129,7 +126,6 @@ void cegraph::Textures::Initialize() {
 		uint64_t hash = cecore::Hash64(textures[i]->name()->c_str());
 		Handles::Texture handle{i};
 		m_debugNames[i]      = textures[i]->name()->c_str();
-		m_paths[i]           = (rootPath / textures[i]->path()->c_str());
 		m_hashes[i]          = hash;
 		std::string hashPath = textures[i]->path()->c_str();
 		std::ranges::replace(hashPath, '\\', '/');

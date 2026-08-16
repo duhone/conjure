@@ -34,6 +34,8 @@ target_link_libraries(assets PUBLIC
 	platform
 )
 
+target_compile_definitions(assets PRIVATE ASSETS_FOLDER="${root}/../../../Assets")
+
 set_property(TARGET assets APPEND PROPERTY FOLDER Engine/Packages)
 
 endblock()

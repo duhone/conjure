@@ -11,19 +11,9 @@ import std;
 constexpr uint32_t c_maxFmtStringSize = 1024;
 
 inline void PreFormat(char* output, const char* fmt, const std::source_location& a_location) {
-	// print a condensed path, starting just below CR/
-	const char* start = strstr(a_location.file_name(), "CR");
-	assert(start != nullptr);
-	if(start == nullptr) {
-		// couldnt find CR, shouldnt be possible. files should never exists outside this folder.
-		assert(false);
-		start = a_location.file_name();
-	} else {
-		// skip past CR/
-		start += 3;
-	}
+	static const size_t c_rootLength = std::string_view(CR_PROJECT_ROOT_DIR).size() + 1;    // +1 to skip trailing separator
 	auto result =
-	    std::format_to_n(output, c_maxFmtStringSize - 1, "[{}:{}] - {}", start, a_location.line(), fmt);
+		std::format_to_n(output, c_maxFmtStringSize - 1, "[{}:{}] - {}", a_location.file_name() + c_rootLength, a_location.line(), fmt);
 	// fmt doesnt append a null terminator for some reason.
 	*result.out = '\0';
 }

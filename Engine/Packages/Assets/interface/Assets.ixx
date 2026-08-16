@@ -19,7 +19,7 @@ export namespace CR::Engine::Assets {
 		using Asset = CR::Engine::Core::Handle<class AssetHandleTag>;
 	}    // namespace Handles
 
-	void Initialize(const std::filesystem::path& a_assetsFolder);
+	void Initialize(const std::filesystem::path& a_gameAssetsFolder);
 	void Shutdown();
 
 	Handles::Asset GetHandle(uint64_t a_hash);
@@ -39,7 +39,11 @@ export namespace CR::Engine::Assets {
 	void Open(Handles::Asset a_handle);
 	void Close(Handles::Asset a_handle);
 
-	const std::filesystem::path& GetRootPath();
+	// These 2 only have meaning with loose assets. be careful in there use.
+	// Intended for things like a shader that needs to be compiled in loose asset mode, but would be
+	// pre-compiled in packed mode. So you would only need the full path in loose mode anyway.
+	const std::filesystem::path& GetEngineRootPath();
+	const std::filesystem::path& GetGameRootPath();
 
 }    // namespace CR::Engine::Assets
 
@@ -54,7 +58,7 @@ namespace fs = std::filesystem;
 namespace {
 	constexpr std::string_view c_bulkExtensions[] = {"flac", "jxl"};
 
-	std::filesystem::path m_assetsFolder;
+	std::filesystem::path m_gameAssetsFolder;
 
 	ankerl::unordered_dense::map<uint64_t, ceassets::Handles::Asset> m_handleLookup;
 
@@ -81,47 +85,57 @@ namespace {
 		return false;
 	}
 
+	void AddAssets(const std::filesystem::path& a_gameAssetsFolder) {
+		for(const auto& dirEntry : fs::recursive_directory_iterator(a_gameAssetsFolder)) {
+			auto relativePath = fs::relative(dirEntry.path(), a_gameAssetsFolder);
+			relativePath      = relativePath.lexically_normal();
+
+			if(dirEntry.is_regular_file()) {
+				ceassets::Handles::Asset handle{m_isBulk.size()};
+
+				m_fullPaths.emplace_back(dirEntry.path());
+				auto pathToHash = relativePath.string();
+				// we always use posix separators
+				std::ranges::replace(pathToHash, '\\', '/');
+				m_debugFiles.emplace_back(pathToHash);
+				m_openCount.emplace_back();
+
+				auto ext = relativePath.extension().string();
+				CR_ASSERT(ext.size() > 1, "missing extension: {}", ext);
+				ext.erase(begin(ext));    // remove leading .
+				bool isBulk = isBulkFile(ext);
+				m_isBulk.emplace_back(isBulk);
+
+				auto assetHash = cecore::Hash64(pathToHash);
+				CR_ASSERT(m_handleLookup.find(assetHash) == m_handleLookup.end(), "duplicate asset: {}",
+				          pathToHash);
+				m_handleLookup.emplace(assetHash, handle);
+			}
+		}
+	}
 }    // namespace
 
-void ceassets::Initialize(const std::filesystem::path& a_assetsFolder) {
-	m_assetsFolder = a_assetsFolder;
+void ceassets::Initialize(const std::filesystem::path& a_gameAssetsFolder) {
+	m_gameAssetsFolder = a_gameAssetsFolder;
+
+	AddAssets(GetEngineRootPath());
+	AddAssets(GetGameRootPath());
 
 	std::vector<std::pair<size_t, size_t>> spanOffsets;
-	for(const auto& dirEntry : fs::recursive_directory_iterator(a_assetsFolder)) {
-		auto relativePath = fs::relative(dirEntry.path(), a_assetsFolder);
-		relativePath      = relativePath.lexically_normal();
 
-		if(dirEntry.is_regular_file()) {
-			Handles::Asset handle{m_isBulk.size()};
+	for(uint32_t i = 0; i < m_isBulk.size(); ++i) {
+		if(m_isBulk[i]) {
+			// not much to do, just mark it an unavailable.
+			spanOffsets.emplace_back();
+		} else {
+			uint32_t fileSize = (uint32_t)fs::file_size(m_fullPaths[i]);
+			uint32_t oldSize  = m_looseData.size();
+			uint32_t newSize  = m_looseData.size() + fileSize;
+			m_looseData.resize(newSize);
 
-			m_fullPaths.emplace_back(dirEntry.path());
-			auto pathToHash = relativePath.string();
-			// we always use posix separators
-			std::ranges::replace(pathToHash, '\\', '/');
-			m_debugFiles.emplace_back(pathToHash);
-			m_openCount.emplace_back();
-
-			auto ext = relativePath.extension().string();
-			CR_ASSERT(ext.size() > 1, "missing extension: {}", ext);
-			ext.erase(begin(ext));    // remove leading .
-			bool isBulk = isBulkFile(ext);
-			m_isBulk.emplace_back(isBulk);
-
-			m_handleLookup.emplace(cecore::Hash64(pathToHash), handle);
-
-			if(isBulk) {
-				// not much to do, just mark it an unavailable.
-				spanOffsets.emplace_back();
-			} else {
-				uint32_t fileSize = (uint32_t)dirEntry.file_size();
-				uint32_t oldSize  = m_looseData.size();
-				uint32_t newSize  = m_looseData.size() + fileSize;
-				m_looseData.resize(newSize);
-
-				cecore::FileHandle fileHandle(dirEntry.path(), false);
-				fread(m_looseData.data() + oldSize, 1, fileSize, fileHandle.asFile());
-				spanOffsets.emplace_back(oldSize, fileSize);
-			}
+			cecore::FileHandle fileHandle(m_fullPaths[i], false);
+			fread(m_looseData.data() + oldSize, 1, fileSize, fileHandle.asFile());
+			spanOffsets.emplace_back(oldSize, fileSize);
 		}
 	}
 
@@ -201,6 +215,11 @@ void ceassets::Close(Handles::Asset a_handle) {
 	--m_openCount[a_handle];
 }
 
-const std::filesystem::path& ceassets::GetRootPath() {
-	return m_assetsFolder;
+const std::filesystem::path& ceassets::GetEngineRootPath() {
+	static std::filesystem::path engineRootPath = ASSETS_FOLDER;
+	return engineRootPath;
+}
+
+const std::filesystem::path& ceassets::GetGameRootPath() {
+	return m_gameAssetsFolder;
 }

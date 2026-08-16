@@ -29,10 +29,10 @@ namespace ceinput  = CR::Engine::Input;
 namespace ceaudio  = CR::Engine::Audio;
 namespace cegraph  = CR::Engine::Graphics;
 
-void CR::Engine::Initialize(GLFWwindow* a_window, const std::filesystem::path& a_assetsFolder) {
+void CR::Engine::Initialize(GLFWwindow* a_window, const std::filesystem::path& a_gameAssetsFolder) {
 	cecore::Internal::Initialize();
 	ceplat::Internal::Initialize();
-	ceassets::Initialize(a_assetsFolder);
+	ceassets::Initialize(a_gameAssetsFolder);
 	ceinput::Initialize(a_window);
 	ceaudio::Initialize();
 	cegraph::Initialize(a_window);

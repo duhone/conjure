@@ -71,7 +71,7 @@ void cegraph::Shaders::Initialize() {
 	// don't block on first wait call, as no previous task first time;
 	shaderModuleCreated.test_and_set();
 
-	const auto& rootPath = ceasset::GetRootPath();
+	const auto& rootPath = ceasset::GetEngineRootPath();
 
 	std::vector<fs::path> workingFiles;
 	auto getNextWorkingFile = [&] {

@@ -56,6 +56,8 @@ target_link_libraries(core PUBLIC
 
 target_include_directories(core SYSTEM PUBLIC "${root}/interface")
 
+target_compile_definitions(core PRIVATE CR_PROJECT_ROOT_DIR="${CMAKE_SOURCE_DIR}")
+
 set_property(TARGET core APPEND PROPERTY FOLDER Engine/Packages)
 	
 ###############################################
