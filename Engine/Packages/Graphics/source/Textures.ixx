@@ -7,8 +7,8 @@
 #include "core/Core.h"
 
 #include "ankerl/unordered_dense.h"
-#include "jxl/decode.h"
-#include "jxl/resizable_parallel_runner.h"
+#include "webp/decode.h"
+#include "webp/demux.h"
 
 #include "Core.h"
 
@@ -64,9 +64,6 @@ namespace {
 	//  128       128         1024
 	// TODO: when we support packed assets, make this 1/4 size when using packed.
 	constexpr uint64_t c_stagingBufferSize = 64_MB;
-	// TODO: should probably give it more cores, half maybe? only used with loose
-	// assets, which would only be used on a beefy machine not a phone.
-	constexpr uint32_t c_numJpegXlThreads = 4;
 
 	using TextureSet = cecore::BitSet<cegraph::Constants::c_maxTextures>;
 
@@ -96,9 +93,6 @@ namespace {
 
 	// lookups
 	ankerl::unordered_dense::map<uint64_t, cegraph::Handles::Texture> m_handleLookup;
-
-	JxlDecoder* m_decoder{nullptr};
-	void* m_parRunner{nullptr};
 
 	VkSampler m_sampler{};
 
@@ -151,14 +145,6 @@ void cegraph::Textures::Initialize() {
 		m_stagingData[i] = stagingAllocInfo.pMappedData;
 	}
 
-	m_decoder = JxlDecoderCreate(nullptr);
-	CR_ASSERT(m_decoder != nullptr, "Failed to initialize jpeg xl decoder");
-	m_parRunner = JxlResizableParallelRunnerCreate(nullptr);
-	CR_ASSERT(m_parRunner != nullptr, "Failed to initialize jpeg parallel runner");
-	JxlResizableParallelRunnerSetThreads(m_parRunner, c_numJpegXlThreads);
-	JxlDecoderStatus status = JxlDecoderSetParallelRunner(m_decoder, JxlResizableParallelRunner, m_parRunner);
-	CR_ASSERT(status == JXL_DEC_SUCCESS, "failed to set jpeg xl parallel runner");
-
 	// we only have 1 sampler for now. basic trilinear
 	VkSamplerCreateInfo samplerInfo;
 	ClearStruct(samplerInfo);
@@ -178,9 +164,6 @@ void cegraph::Textures::Shutdown() {
 	CR_ASSERT(m_stagingData[0] != nullptr, "Textures are already shutdown");
 
 	vkDestroySampler(GetContext().Device, m_sampler, nullptr);
-
-	JxlResizableParallelRunnerDestroy(m_parRunner);
-	JxlDecoderDestroy(m_decoder);
 
 	vmaDestroyBuffer(GetContext().Allocator, m_stagingBuffer[0], m_stagingMemory[0]);
 	vmaDestroyBuffer(GetContext().Allocator, m_stagingBuffer[1], m_stagingMemory[1]);
@@ -227,107 +210,76 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 		ceasset::Open(handle);
 		defer({ ceasset::Close(handle); });
 
-		auto jxlData = ceasset::GetData(handle);
-		CR_ASSERT(JxlSignatureCheck((uint8_t*)jxlData.data(), jxlData.size()) == JXL_SIG_CODESTREAM,
-		          "jpeg xl file {} invalid", m_debugNames[texture]);
+		auto webpRawData = ceasset::GetData(handle);
+
+		WebPData webpFileData;
+		webpFileData.bytes = (const uint8_t*)webpRawData.data();
+		webpFileData.size  = webpRawData.size();
+
+		WebPDemuxer* demux = WebPDemux(&webpFileData);
+		CR_ASSERT(demux != nullptr, "webp file {} invalid", m_debugNames[texture]);
+		defer({ WebPDemuxDelete(demux); });
+
+		uint32_t width      = WebPDemuxGetI(demux, WEBP_FF_CANVAS_WIDTH);
+		uint32_t height     = WebPDemuxGetI(demux, WEBP_FF_CANVAS_HEIGHT);
 
 		stagingBuffer = (stagingBuffer + 1) % 2;
-
-		JxlDecoderReset(m_decoder);
-		JxlDecoderStatus status = JxlDecoderSetCoalescing(m_decoder, JXL_FALSE);
-		CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to set coalescing on jpeg xl decoder");
-		status =
-		    JxlDecoderSubscribeEvents(m_decoder, JXL_DEC_BASIC_INFO | JXL_DEC_FRAME | JXL_DEC_FULL_IMAGE);
-		CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to subscribe to events on jpeg xl decoder");
-		status = JxlDecoderSetInput(m_decoder, (const uint8_t*)jxlData.data(), jxlData.size());
-		CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to set input on jpeg xl decoder");
-		JxlDecoderCloseInput(m_decoder);
-
-		JxlBasicInfo basicInfo{};
-		uint32_t width{};
-		uint32_t height{};
 
 		std::vector<VkBufferImageCopy> frameCopies;
 		VkDeviceSize bufferOffset{};
 		uint32_t nextLayer{};
-		JxlPixelFormat pixelFormat;
-		pixelFormat.num_channels = 4;
-		pixelFormat.data_type    = JXL_TYPE_UINT8;
-		pixelFormat.endianness   = JXL_LITTLE_ENDIAN;
-		pixelFormat.align        = 1;
 
 		loadComplete[stagingBuffer].wait(false);
 		loadComplete[stagingBuffer].clear();
 
-		JxlDecoderStatus loopStatus{};
-		size_t bufferSize{};
 		uint8_t* outputBuffer = (uint8_t*)m_stagingData[stagingBuffer];
+
+		WebPIterator iter;
+		CR_ASSERT(WebPDemuxGetFrame(demux, 1, &iter) != 0, "Failed to get first frame of webp {}",
+				  m_debugNames[texture]);
+		defer({ WebPDemuxReleaseIterator(&iter); });
 		do {
-			loopStatus = JxlDecoderProcessInput(m_decoder);
-			switch(loopStatus) {
-				case JXL_DEC_BASIC_INFO: {
-					status = JxlDecoderGetBasicInfo(m_decoder, &basicInfo);
-					CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to get basic info on jpeg xl decoder");
-					width  = basicInfo.xsize;
-					height = basicInfo.ysize;
-					CR_ASSERT(basicInfo.bits_per_sample == 8, "we only support 8bpc jpeg xl images");
-					CR_ASSERT(basicInfo.num_color_channels == 3, "we only support RGBA jpeg xl images");
-					CR_ASSERT(basicInfo.alpha_bits == 8, "we only support RGBA jpeg xl images");
-				} break;
-				case JXL_DEC_FRAME: {
-					JxlFrameHeader frameHeader;
-					status = JxlDecoderGetFrameHeader(m_decoder, &frameHeader);
-					CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to get frame header on jpeg xl decoder");
+			size_t frameSize = (size_t)width * height * 4;
+			CR_ASSERT((bufferOffset + frameSize) < c_stagingBufferSize,
+					  "Staging buffer too small to hold webp texture");
 
-					VkBufferImageCopy& copyInfo              = frameCopies.emplace_back();
-					copyInfo.bufferOffset                    = bufferOffset;
-					copyInfo.bufferRowLength                 = 0;
-					copyInfo.bufferImageHeight               = 0;
-					copyInfo.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-					copyInfo.imageSubresource.mipLevel       = 0;
-					copyInfo.imageSubresource.baseArrayLayer = nextLayer;
-					copyInfo.imageSubresource.layerCount     = 1;
-					copyInfo.imageOffset                     = {0, 0, 0};
-					copyInfo.imageExtent                     = {basicInfo.xsize, basicInfo.ysize, 1};
+			uint8_t* frameBuffer  = outputBuffer + bufferOffset;
+			uint8_t* decodeResult = WebPDecodeRGBAInto(iter.fragment.bytes, iter.fragment.size,
+													   frameBuffer, frameSize, (int)(width * 4));
+			CR_ASSERT(decodeResult != nullptr, "Failed to decode webp frame {} of {}", iter.frame_num,
+					  m_debugNames[texture]);
 
-					status = JxlDecoderImageOutBufferSize(m_decoder, &pixelFormat, &bufferSize);
-					CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to get frame byte size on jpeg xl decoder");
-					CR_ASSERT((bufferOffset + bufferSize) < c_stagingBufferSize,
-					          "Staging buffer too small to hold jpeg xl texture");
-					status = JxlDecoderSetImageOutBuffer(m_decoder, &pixelFormat, outputBuffer, bufferSize);
-					CR_ASSERT(status == JXL_DEC_SUCCESS, "Failed to set output buffer on jpeg xl decoder");
-				} break;
-				case JXL_DEC_FULL_IMAGE:
-					if(basicInfo.alpha_premultiplied == JXL_FALSE) {
-						// we want premultiplied alpha, if not stored that way, then have to do on load
+			// we want premultiplied alpha, WebP returns straight alpha so convert on load
+			for(uint32_t i = 0; i < width * height; ++i) {
+				uint32_t red   = frameBuffer[4 * i + 0];
+				uint32_t green = frameBuffer[4 * i + 1];
+				uint32_t blue  = frameBuffer[4 * i + 2];
+				uint32_t alpha = frameBuffer[4 * i + 3];
 
-						for(uint32_t i = 0; i < basicInfo.xsize * basicInfo.ysize; ++i) {
-							uint32_t red   = outputBuffer[4 * i + 0];
-							uint32_t green = outputBuffer[4 * i + 1];
-							uint32_t blue  = outputBuffer[4 * i + 2];
-							uint32_t alpha = outputBuffer[4 * i + 3];
+				red   = (red * alpha + 127) / 256;
+				green = (green * alpha + 127) / 256;
+				blue  = (blue * alpha + 127) / 256;
 
-							red   = (red * alpha + 127) / 256;
-							green = (green * alpha + 127) / 256;
-							blue  = (blue * alpha + 127) / 256;
-
-							outputBuffer[4 * i + 0] = (uint8_t)std::min<uint32_t>(red, 255);
-							outputBuffer[4 * i + 1] = (uint8_t)std::min<uint32_t>(green, 255);
-							outputBuffer[4 * i + 2] = (uint8_t)std::min<uint32_t>(blue, 255);
-							outputBuffer[4 * i + 3] = (uint8_t)std::min<uint32_t>(alpha, 255);
-						}
-					}
-
-					bufferOffset += bufferSize;
-					outputBuffer += bufferSize;
-					++nextLayer;
-					break;
-				default:
-					break;
+				frameBuffer[4 * i + 0] = (uint8_t)std::min<uint32_t>(red, 255);
+				frameBuffer[4 * i + 1] = (uint8_t)std::min<uint32_t>(green, 255);
+				frameBuffer[4 * i + 2] = (uint8_t)std::min<uint32_t>(blue, 255);
+				frameBuffer[4 * i + 3] = (uint8_t)std::min<uint32_t>(alpha, 255);
 			}
-		} while(loopStatus != JXL_DEC_SUCCESS);
 
-		JxlDecoderReleaseInput(m_decoder);
+			VkBufferImageCopy& copyInfo              = frameCopies.emplace_back();
+			copyInfo.bufferOffset                    = bufferOffset;
+			copyInfo.bufferRowLength                 = 0;
+			copyInfo.bufferImageHeight               = 0;
+			copyInfo.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+			copyInfo.imageSubresource.mipLevel       = 0;
+			copyInfo.imageSubresource.baseArrayLayer = nextLayer;
+			copyInfo.imageSubresource.layerCount     = 1;
+			copyInfo.imageOffset                     = {0, 0, 0};
+			copyInfo.imageExtent                     = {width, height, 1};
+
+			bufferOffset += frameSize;
+			++nextLayer;
+		} while(WebPDemuxNextFrame(&iter) != 0);
 
 		m_numFrames[texture]  = (uint16_t)frameCopies.size();
 		m_dimensions[texture] = glm::uvec2{width, height};

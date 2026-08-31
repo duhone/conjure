@@ -83,9 +83,7 @@ target_link_libraries(graphics PUBLIC
 	volk
     vulkan_utilities
     vulkan_vma
-    libjxl
-    highway
-    brotli
+    webp
 )
 
 set_property(TARGET graphics APPEND PROPERTY FOLDER Engine/Packages)

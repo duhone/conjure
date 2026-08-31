@@ -19,6 +19,7 @@ include (${root}/vulkan_headers/build/build.cmake)
 include (${root}/vulkan_utilities/build/build.cmake)
 include (${root}/vulkan_vma/build/build.cmake)
 include (${root}/volk/build/build.cmake)
+include (${root}/webp/build/build.cmake)
 include (${root}/zstd/build/build.cmake)
 
 endblock()
