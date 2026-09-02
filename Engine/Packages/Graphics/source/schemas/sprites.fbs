@@ -1,6 +1,6 @@
 namespace CR.Engine.Graphics.Flatbuffers;
 
-enum FrameRate : byte { FPS10 , FPS12, FPS15, FPS20, FPS30, FPS60 }
+enum FrameRate : byte { FPS0, FPS10 , FPS12, FPS15, FPS20, FPS30, FPS60 }
 
 table Sprite{
 	name:string;

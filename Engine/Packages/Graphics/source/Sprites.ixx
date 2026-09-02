@@ -34,6 +34,7 @@ export namespace CR::Engine::Graphics::Sprites {
 	extern "C++" void Delete(std::span<Handles::Sprite> a_sprites);
 	extern "C++" void SetPositions(std::span<Handles::Sprite> a_sprites, std::span<glm::vec2> a_positions);
 	extern "C++" void SetRotations(std::span<Handles::Sprite> a_sprites, std::span<float> a_rotations);
+	extern "C++" void SetFrame(std::span<Handles::Sprite> a_sprites, std::span<uint16_t> a_frames);
 
 	void Initialize();
 	void Shutdown();
@@ -103,8 +104,9 @@ void cegraph::Sprites::Create(std::span<uint64_t> a_hashes, std::span<Handles::S
 		m_numFrames[handles[i]]       = ((uint16_t)cegraph::Textures::GetNumFrames(textureHandle) *
 		                                 cegraph::Constants::c_designRefreshRate) /
 		                                m_templateFrameRates[spriteTemplate->second];
-		m_currentFrames[handles[i]]   = 0;
-		m_dimensions[handles[i]]      = Textures::GetDimensions(textureHandle);
+
+		m_currentFrames[handles[i]] = 0;
+		m_dimensions[handles[i]]    = Textures::GetDimensions(textureHandle);
 	}
 }
 
@@ -147,6 +149,9 @@ void cegraph::Sprites::Initialize() {
 			case cegraph::Flatbuffers::FrameRate::FPS10:
 				m_templateFrameRates.emplace_back(10);
 				break;
+			case cegraph::Flatbuffers::FrameRate::FPS0:
+				m_templateFrameRates.emplace_back(1);
+				break;
 			default:
 				CR_ASSERT(false, "Unknown sprite frame rate");
 				m_templateFrameRates.emplace_back(1);
@@ -188,14 +193,26 @@ void cegraph::Sprites::SetRotations(std::span<Handles::Sprite> a_sprites, std::s
 		m_rotations[a_sprites[i]] = a_rotations[i];
 	}
 }
+extern "C++" void cegraph::Sprites::SetFrame(std::span<Handles::Sprite> a_sprites,
+                                             std::span<uint16_t> a_frames) {
+	CR_ASSERT(a_sprites.size() == a_frames.size(), "Sprites SetFrame bad arguments");
+	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
+		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
+		m_currentFrames[a_sprites[i]] = a_frames[i] * cegraph::GetContext().DisplayTicksPerFrame;
+	}
+}
 
 void cegraph::Sprites::Update() {
 	auto mapping        = VertexBuffers::Map(m_vertBuffer);
 	Vertex* spriteProps = (Vertex*)mapping.Data;
 
 	for(uint16_t sprite : m_handlePool) {
-		m_currentFrames[sprite] += cegraph::GetContext().DisplayTicksPerFrame;
-		if(m_currentFrames[sprite] > m_numFrames[sprite]) { m_currentFrames[sprite] -= m_numFrames[sprite]; }
+		if(m_templateFrameRates[m_templateIndices[sprite]] != 1) {
+			m_currentFrames[sprite] += cegraph::GetContext().DisplayTicksPerFrame;
+			if(m_currentFrames[sprite] > m_numFrames[sprite]) {
+				m_currentFrames[sprite] -= m_numFrames[sprite];
+			}
+		}
 		m_displayFrames[sprite] = m_currentFrames[sprite] / (cegraph::Constants::c_designRefreshRate /
 		                                                     m_templateFrameRates[m_templateIndices[sprite]]);
 
