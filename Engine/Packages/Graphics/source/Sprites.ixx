@@ -34,7 +34,8 @@ export namespace CR::Engine::Graphics::Sprites {
 	extern "C++" void Delete(std::span<Handles::Sprite> a_sprites);
 	extern "C++" void SetPositions(std::span<Handles::Sprite> a_sprites, std::span<glm::vec2> a_positions);
 	extern "C++" void SetRotations(std::span<Handles::Sprite> a_sprites, std::span<float> a_rotations);
-	extern "C++" void SetFrame(std::span<Handles::Sprite> a_sprites, std::span<uint16_t> a_frames);
+	extern "C++" void SetFrames(std::span<Handles::Sprite> a_sprites, std::span<uint16_t> a_frames);
+	extern "C++" void SetColors(std::span<Handles::Sprite> a_sprites, std::span<glm::u8vec4> a_colors);
 
 	void Initialize();
 	void Shutdown();
@@ -72,6 +73,7 @@ namespace {
 	std::array<uint32_t, cegraph::Constants::c_maxSprites> m_displayFrames;
 	std::array<glm::uvec2, cegraph::Constants::c_maxSprites> m_dimensions;
 	std::array<uint16_t, cegraph::Constants::c_maxSprites> m_templateIndices;
+	std::array<glm::u8vec4, cegraph::Constants::c_maxSprites> m_colors;
 
 	// templates
 	std::vector<std::string> m_templateNames;
@@ -107,6 +109,7 @@ void cegraph::Sprites::Create(std::span<uint64_t> a_hashes, std::span<Handles::S
 
 		m_currentFrames[handles[i]] = 0;
 		m_dimensions[handles[i]]    = Textures::GetDimensions(textureHandle);
+		m_colors[handles[i]]        = glm::u8vec4{255, 255, 255, 255};
 	}
 }
 
@@ -193,12 +196,21 @@ void cegraph::Sprites::SetRotations(std::span<Handles::Sprite> a_sprites, std::s
 		m_rotations[a_sprites[i]] = a_rotations[i];
 	}
 }
-extern "C++" void cegraph::Sprites::SetFrame(std::span<Handles::Sprite> a_sprites,
-                                             std::span<uint16_t> a_frames) {
+extern "C++" void cegraph::Sprites::SetFrames(std::span<Handles::Sprite> a_sprites,
+                                              std::span<uint16_t> a_frames) {
 	CR_ASSERT(a_sprites.size() == a_frames.size(), "Sprites SetFrame bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
 		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
 		m_currentFrames[a_sprites[i]] = a_frames[i] * cegraph::GetContext().DisplayTicksPerFrame;
+	}
+}
+
+extern "C++" void cegraph::Sprites::SetColors(std::span<Handles::Sprite> a_sprites,
+                                              std::span<glm::u8vec4> a_colors) {
+	CR_ASSERT(a_sprites.size() == a_colors.size(), "Sprites SetColors bad arguments");
+	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
+		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
+		m_colors[a_sprites[i]] = a_colors[i];
 	}
 }
 
@@ -223,7 +235,7 @@ void cegraph::Sprites::Update() {
 
 		spriteProps->Offset       = m_positions[sprite];
 		spriteProps->TextureFrame = {m_textureHandles[sprite], m_displayFrames[sprite]};
-		spriteProps->Color        = glm::u8vec4{255, 255, 255, 255};
+		spriteProps->Color        = m_colors[sprite];
 		spriteProps->FrameSize    = m_dimensions[sprite];
 		spriteProps->Rotation     = rot;
 

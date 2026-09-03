@@ -54,9 +54,14 @@ export namespace CR::Engine::Graphics {
 			SetRotations(std::span<Handles::Sprite>(&a_sprite, 1), std::span<float>(&a_rotation, 1));
 		}
 
-		extern "C++" void SetFrame(std::span<Handles::Sprite> a_sprites, std::span<uint16_t> a_frames);
+		extern "C++" void SetFrames(std::span<Handles::Sprite> a_sprites, std::span<uint16_t> a_frames);
 		void SetFrame(Handles::Sprite a_sprite, uint16_t a_frame) {
-			SetFrame(std::span<Handles::Sprite>(&a_sprite, 1), std::span<uint16_t>(&a_frame, 1));
+			SetFrames(std::span<Handles::Sprite>(&a_sprite, 1), std::span<uint16_t>(&a_frame, 1));
+		}
+
+		extern "C++" void SetColors(std::span<Handles::Sprite> a_sprites, std::span<glm::u8vec4> a_colors);
+		void SetColor(Handles::Sprite a_sprite, glm::u8vec4 a_color) {
+			SetColors(std::span<Handles::Sprite>(&a_sprite, 1), std::span<glm::u8vec4>(&a_color, 1));
 		}
 	}    // namespace Sprites
 }    // namespace CR::Engine::Graphics
