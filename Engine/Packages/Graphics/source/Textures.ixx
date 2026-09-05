@@ -37,7 +37,7 @@ export namespace CR::Engine::Graphics::Textures {
 	void Shutdown();
 
 	Handles::Texture GetHandle(uint64_t hash);
-	Handles::TextureSet LoadTextureSet(std::span<uint64_t> hashes);
+	Handles::TextureSet LoadTextureSet(std::span<const uint64_t> hashes);
 	void ReleaseTextureSet(Handles::TextureSet set);
 
 	// can only get this for loaded textures
@@ -176,7 +176,7 @@ cegraph::Handles::Texture cegraph::Textures::GetHandle(uint64_t hash) {
 	return handleIter->second;
 }
 
-cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_t> hashes) {
+cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<const uint64_t> hashes) {
 	CR_ASSERT(m_stagingData[0] != nullptr, "Textures not initialized");
 
 	uint32_t result;
@@ -233,8 +233,6 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 
 		uint32_t width  = animInfo.canvas_width;
 		uint32_t height = animInfo.canvas_height;
-
-		stagingBuffer = (stagingBuffer + 1) % 2;
 
 		std::vector<VkBufferImageCopy> frameCopies;
 		VkDeviceSize bufferOffset{};

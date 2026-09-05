@@ -44,6 +44,7 @@ namespace {
 
 	GLFWwindow* m_window;
 	glm::ivec2 m_windowSize{0, 0};
+	glm::ivec2 m_designSize{0, 0};
 	VkInstance m_instance{};
 	VkSurfaceKHR m_primarySurface{};
 	VkSwapchainKHR m_primarySwapChain{};
@@ -598,9 +599,10 @@ namespace {
 
 }    // namespace
 
-void cegraph::Initialize(GLFWwindow* a_window) {
+void cegraph::Initialize(GLFWwindow* a_window, glm::uvec2 a_designSize) {
 	m_window      = a_window;
 	m_refreshRate = GetWindowRefreshRate(a_window);
+	m_designSize  = a_designSize;
 
 	cegraph::Context context;
 
@@ -796,8 +798,8 @@ bool cegraph::Render() {
 
 	auto uboMap              = UniformBuffer::Map(sizeof(GlobalUniformBuffer));
 	GlobalUniformBuffer* ubo = (GlobalUniformBuffer*)uboMap.Data;
-	ubo->InvScreenSize.x     = 1.0f / m_windowSize.x;
-	ubo->InvScreenSize.y     = 1.0f / m_windowSize.y;
+	ubo->InvScreenSize.x     = 1.0f / m_designSize.x;
+	ubo->InvScreenSize.y     = 1.0f / m_designSize.y;
 
 	VkDescriptorBufferInfo bufferInfo;
 	ClearStruct(bufferInfo);

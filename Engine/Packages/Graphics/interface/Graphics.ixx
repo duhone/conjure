@@ -12,7 +12,7 @@ import std.compat;
 
 export namespace CR::Engine::Graphics {
 	// will be called from engine.
-	void Initialize(GLFWwindow* a_window);
+	void Initialize(GLFWwindow* a_window, glm::uvec2 a_designSize);
 	void Update();
 	bool Render();
 	void Shutdown();
@@ -25,7 +25,7 @@ export namespace CR::Engine::Graphics {
 
 	namespace Textures {
 		extern "C++" Handles::Texture GetHandle(uint64_t hash);
-		extern "C++" Handles::TextureSet LoadTextureSet(std::span<uint64_t> hashes);
+		extern "C++" Handles::TextureSet LoadTextureSet(std::span<const uint64_t> hashes);
 		extern "C++" void ReleaseTextureSet(Handles::TextureSet set);
 	}    // namespace Textures
 

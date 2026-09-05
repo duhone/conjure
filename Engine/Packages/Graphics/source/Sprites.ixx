@@ -103,9 +103,14 @@ void cegraph::Sprites::Create(std::span<uint64_t> a_hashes, std::span<Handles::S
 		m_textureHandles[handles[i]] = textureHandle;
 
 		m_templateIndices[handles[i]] = spriteTemplate->second;
-		m_numFrames[handles[i]]       = ((uint16_t)cegraph::Textures::GetNumFrames(textureHandle) *
-		                                 cegraph::Constants::c_designRefreshRate) /
-		                                m_templateFrameRates[spriteTemplate->second];
+		if(m_templateFrameRates[spriteTemplate->second] == 0) {
+			m_numFrames[handles[i]] = ((uint16_t)cegraph::Textures::GetNumFrames(textureHandle) *
+			                           cegraph::Constants::c_designRefreshRate);
+		} else {
+			m_numFrames[handles[i]] = ((uint16_t)cegraph::Textures::GetNumFrames(textureHandle) *
+			                           cegraph::Constants::c_designRefreshRate) /
+			                          m_templateFrameRates[spriteTemplate->second];
+		}
 
 		m_currentFrames[handles[i]] = 0;
 		m_dimensions[handles[i]]    = Textures::GetDimensions(textureHandle);
@@ -153,11 +158,11 @@ void cegraph::Sprites::Initialize() {
 				m_templateFrameRates.emplace_back(10);
 				break;
 			case cegraph::Flatbuffers::FrameRate::FPS0:
-				m_templateFrameRates.emplace_back(1);
+				m_templateFrameRates.emplace_back(0);
 				break;
 			default:
 				CR_ASSERT(false, "Unknown sprite frame rate");
-				m_templateFrameRates.emplace_back(1);
+				m_templateFrameRates.emplace_back(0);
 				break;
 		}
 		m_templateTextureHashes.emplace_back(cecore::Hash64(sprites[i]->texture()->c_str()));
@@ -219,14 +224,17 @@ void cegraph::Sprites::Update() {
 	Vertex* spriteProps = (Vertex*)mapping.Data;
 
 	for(uint16_t sprite : m_handlePool) {
-		if(m_templateFrameRates[m_templateIndices[sprite]] != 1) {
+		if(m_templateFrameRates[m_templateIndices[sprite]] != 0) {
 			m_currentFrames[sprite] += cegraph::GetContext().DisplayTicksPerFrame;
-			if(m_currentFrames[sprite] > m_numFrames[sprite]) {
+			if(m_currentFrames[sprite] >= m_numFrames[sprite]) {
 				m_currentFrames[sprite] -= m_numFrames[sprite];
 			}
+			m_displayFrames[sprite] =
+			    m_currentFrames[sprite] /
+			    (cegraph::Constants::c_designRefreshRate / m_templateFrameRates[m_templateIndices[sprite]]);
+		} else {
+			m_displayFrames[sprite] = m_currentFrames[sprite] / cegraph::GetContext().DisplayTicksPerFrame;
 		}
-		m_displayFrames[sprite] = m_currentFrames[sprite] / (cegraph::Constants::c_designRefreshRate /
-		                                                     m_templateFrameRates[m_templateIndices[sprite]]);
 
 		float sinAngle = sin(m_rotations[sprite]);
 		float cosAngle = cos(m_rotations[sprite]);
