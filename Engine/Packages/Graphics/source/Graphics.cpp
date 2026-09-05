@@ -275,8 +275,8 @@ namespace {
 		VkPhysicalDeviceMemoryProperties memProps;
 		vkGetPhysicalDeviceMemoryProperties(context.PhysicalDevice, &memProps);
 		for(uint32_t i = 0; i < memProps.memoryHeapCount; ++i) {
-			auto heapSize   = memProps.memoryHeaps[i].size / 1024 / 1024;
-			auto& heapFlags = memProps.memoryHeaps[i].flags;
+			[[maybe_unused]] auto heapSize = memProps.memoryHeaps[i].size / 1024 / 1024;
+			auto& heapFlags                = memProps.memoryHeaps[i].flags;
 			if(heapFlags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
 				CR_LOG("Device Heap. Size {}MB", heapSize);
 			} else {
@@ -293,7 +293,7 @@ namespace {
 			if(heapFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) { CR_LOG("  Host visible"); }
 			if(heapFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) { CR_LOG("  Host cached"); }
 			if(heapFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) { CR_LOG("  Host coherent"); }
-			auto heapSize = (uint32_t)(memProps.memoryHeaps[heapIndex].size / 1024 / 1024);
+			[[maybe_unused]] auto heapSize = (uint32_t)(memProps.memoryHeaps[heapIndex].size / 1024 / 1024);
 			CR_LOG("  Heap Size: {}", heapSize);
 		}
 
@@ -432,7 +432,7 @@ namespace {
 		                                     surfaceFormats.data());
 
 		CR_LOG("Supported surface formats:");
-		for(const auto& format : surfaceFormats) {
+		for([[maybe_unused]] const auto& format : surfaceFormats) {
 			CR_LOG("    Format: {} ColorSpace {}", string_VkFormat(format.format),
 			       string_VkColorSpaceKHR(format.colorSpace));
 		}
@@ -446,7 +446,7 @@ namespace {
 		                                          presentModes.data());
 
 		CR_LOG("Presentation modes:");
-		for(const auto& mode : presentModes) {
+		for([[maybe_unused]] const auto& mode : presentModes) {
 			CR_LOG("    Presentation Mode: {}", string_VkPresentModeKHR(mode));
 		}
 
