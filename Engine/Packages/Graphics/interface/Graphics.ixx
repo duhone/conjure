@@ -42,6 +42,13 @@ export namespace CR::Engine::Graphics {
 			Delete(std::span<Handles::Sprite>(&a_sprite, 1));
 		}
 
+		extern "C++" void GetSizes(std::span<Handles::Sprite> a_sprites, std::span<glm::uvec2> a_sizes);
+		glm::uvec2 GetSize(Handles::Sprite a_sprite) {
+			glm::uvec2 a_size;
+			GetSizes(std::span<Handles::Sprite>(&a_sprite, 1), std::span<glm::uvec2>(&a_size, 1));
+			return a_size;
+		}
+
 		extern "C++" void SetPositions(std::span<Handles::Sprite> a_sprites,
 		                               std::span<glm::vec2> a_positions);
 		void SetPosition(Handles::Sprite a_sprite, glm::vec2 a_position) {

@@ -32,6 +32,7 @@ import std.compat;
 export namespace CR::Engine::Graphics::Sprites {
 	extern "C++" void Create(std::span<uint64_t> a_hashes, std::span<Handles::Sprite> handles);
 	extern "C++" void Delete(std::span<Handles::Sprite> a_sprites);
+	extern "C++" void GetSizes(std::span<Handles::Sprite> a_sprites, std::span<glm::uvec2> a_sizes);
 	extern "C++" void SetPositions(std::span<Handles::Sprite> a_sprites, std::span<glm::vec2> a_positions);
 	extern "C++" void SetRotations(std::span<Handles::Sprite> a_sprites, std::span<float> a_rotations);
 	extern "C++" void SetFrames(std::span<Handles::Sprite> a_sprites, std::span<uint16_t> a_frames);
@@ -267,4 +268,12 @@ void cegraph::Sprites::Render(VkCommandBuffer& a_cmdBuffer) {
 		++commands;
 	}
 	vkCmdDrawIndirect(a_cmdBuffer, drawMap.Buffer, 0, spriteCount, sizeof(VkDrawIndirectCommand));
+}
+
+void cegraph::Sprites::GetSizes(std::span<Handles::Sprite> a_sprites, std::span<glm::uvec2> a_sizes) {
+	CR_ASSERT(a_sprites.size() == a_sizes.size(), "Sprites GetSizes bad arguments");
+	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
+		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
+		a_sizes[i] = m_dimensions[a_sprites[i]];
+	}
 }
