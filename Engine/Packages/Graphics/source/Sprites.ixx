@@ -34,6 +34,7 @@ export namespace CR::Engine::Graphics::Sprites {
 	extern "C++" void Delete(std::span<Handles::Sprite> a_sprites);
 	extern "C++" void GetSizes(std::span<Handles::Sprite> a_sprites, std::span<glm::uvec2> a_sizes);
 	extern "C++" void SetPositions(std::span<Handles::Sprite> a_sprites, std::span<glm::vec2> a_positions);
+	extern "C++" void SetZOrders(std::span<Handles::Sprite> a_sprites, std::span<uint8_t> a_zOrders);
 	extern "C++" void SetRotations(std::span<Handles::Sprite> a_sprites, std::span<float> a_rotations);
 	extern "C++" void SetFrames(std::span<Handles::Sprite> a_sprites, std::span<uint16_t> a_frames);
 	extern "C++" void SetColors(std::span<Handles::Sprite> a_sprites, std::span<glm::u8vec4> a_colors);
@@ -76,6 +77,12 @@ namespace {
 	std::array<uint16_t, cegraph::Constants::c_maxSprites> m_templateIndices;
 	std::array<glm::u8vec4, cegraph::Constants::c_maxSprites> m_colors;
 
+	// for handling sorting. simple for now. 0 is back. will need something more complex once we need to sort
+	// with other systems together. perf probably so-so this way, but we don't have a ton of spritesfor now.
+	std::array<uint8_t, cegraph::Constants::c_maxSprites> m_zOrder{};
+	std::array<uint16_t, cegraph::Constants::c_maxSprites> m_zOrderIndices{};
+	uint32_t m_zOrderCount{};
+
 	// templates
 	std::vector<std::string> m_templateNames;
 	std::vector<uint64_t> m_templateHashes;
@@ -116,6 +123,7 @@ void cegraph::Sprites::Create(std::span<uint64_t> a_hashes, std::span<Handles::S
 		m_currentFrames[handles[i]] = 0;
 		m_dimensions[handles[i]]    = Textures::GetDimensions(textureHandle);
 		m_colors[handles[i]]        = glm::u8vec4{255, 255, 255, 255};
+		m_zOrder[handles[i]]        = 0;
 	}
 }
 
@@ -195,6 +203,14 @@ void cegraph::Sprites::SetPositions(std::span<Handles::Sprite> a_sprites, std::s
 	}
 }
 
+void cegraph::Sprites::SetZOrders(std::span<Handles::Sprite> a_sprites, std::span<uint8_t> a_zOrders) {
+	CR_ASSERT(a_sprites.size() == a_zOrders.size(), "Sprites SetZOrders bad arguments");
+	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
+		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
+		m_zOrder[a_sprites[i]] = a_zOrders[i];
+	}
+}
+
 void cegraph::Sprites::SetRotations(std::span<Handles::Sprite> a_sprites, std::span<float> a_rotations) {
 	CR_ASSERT(a_sprites.size() == a_rotations.size(), "Sprites SetRotations bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
@@ -224,7 +240,14 @@ void cegraph::Sprites::Update() {
 	auto mapping        = VertexBuffers::Map(m_vertBuffer);
 	Vertex* spriteProps = (Vertex*)mapping.Data;
 
-	for(uint16_t sprite : m_handlePool) {
+	// figure out our zorder. maybe switch to pdqsort in future. or don't sort maybe, do something else.
+	for(uint16_t sprite : m_handlePool) { m_zOrderIndices[sprite] = sprite; }
+	m_zOrderCount = m_handlePool.used();
+	std::sort(m_zOrderIndices.begin(), m_zOrderIndices.begin() + m_zOrderCount,
+	          [](uint16_t a, uint16_t b) { return m_zOrder[a] < m_zOrder[b]; });
+
+	for(uint16_t i = 0; i < m_zOrderCount; ++i) {
+		uint16_t sprite = m_zOrderIndices[i];
 		if(m_templateFrameRates[m_templateIndices[sprite]] != 0) {
 			m_currentFrames[sprite] += cegraph::GetContext().DisplayTicksPerFrame;
 			if(m_currentFrames[sprite] >= m_numFrames[sprite]) {
@@ -256,18 +279,16 @@ void cegraph::Sprites::Render(VkCommandBuffer& a_cmdBuffer) {
 	Materials::Bind(m_material, a_cmdBuffer);
 	VertexBuffers::Bind(m_vertBuffer, a_cmdBuffer);
 
-	auto spriteCount = m_handlePool.used();
-
-	auto drawMap  = MultiDrawBuffer::Map(spriteCount);
+	auto drawMap  = MultiDrawBuffer::Map(m_zOrderCount);
 	auto commands = drawMap.Data;
-	for(uint32_t i = 0; i < spriteCount; ++i) {
+	for(uint32_t i = 0; i < m_zOrderCount; ++i) {
 		commands->vertexCount   = 4;
 		commands->instanceCount = 1;
 		commands->firstVertex   = 0;
 		commands->firstInstance = i;
 		++commands;
 	}
-	vkCmdDrawIndirect(a_cmdBuffer, drawMap.Buffer, 0, spriteCount, sizeof(VkDrawIndirectCommand));
+	vkCmdDrawIndirect(a_cmdBuffer, drawMap.Buffer, 0, m_zOrderCount, sizeof(VkDrawIndirectCommand));
 }
 
 void cegraph::Sprites::GetSizes(std::span<Handles::Sprite> a_sprites, std::span<glm::uvec2> a_sizes) {

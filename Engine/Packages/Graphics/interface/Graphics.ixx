@@ -55,6 +55,11 @@ export namespace CR::Engine::Graphics {
 			SetPositions(std::span<Handles::Sprite>(&a_sprite, 1), std::span<glm::vec2>(&a_position, 1));
 		}
 
+		extern "C++" void SetZOrders(std::span<Handles::Sprite> a_sprites, std::span<uint8_t> a_zOrders);
+		void SetZOrder(Handles::Sprite a_sprite, uint8_t a_zOrder) {
+			SetZOrders(std::span<Handles::Sprite>(&a_sprite, 1), std::span<uint8_t>(&a_zOrder, 1));
+		}
+
 		// in radians
 		extern "C++" void SetRotations(std::span<Handles::Sprite> a_sprites, std::span<float> a_rotations);
 		void SetRotation(Handles::Sprite a_sprite, float a_rotation) {
