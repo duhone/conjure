@@ -75,5 +75,11 @@ export namespace CR::Engine::Graphics {
 		void SetColor(Handles::Sprite a_sprite, glm::u8vec4 a_color) {
 			SetColors(std::span<Handles::Sprite>(&a_sprite, 1), std::span<glm::u8vec4>(&a_color, 1));
 		}
+
+		extern "C++" void SetVisibilities(std::span<Handles::Sprite> a_sprites,
+		                                  std::span<bool> a_visibilities);
+		void SetVisibility(Handles::Sprite a_sprite, bool a_visible) {
+			SetVisibilities(std::span<Handles::Sprite>(&a_sprite, 1), std::span<bool>(&a_visible, 1));
+		}
 	}    // namespace Sprites
 }    // namespace CR::Engine::Graphics

@@ -38,6 +38,7 @@ export namespace CR::Engine::Graphics::Sprites {
 	extern "C++" void SetRotations(std::span<Handles::Sprite> a_sprites, std::span<float> a_rotations);
 	extern "C++" void SetFrames(std::span<Handles::Sprite> a_sprites, std::span<uint16_t> a_frames);
 	extern "C++" void SetColors(std::span<Handles::Sprite> a_sprites, std::span<glm::u8vec4> a_colors);
+	extern "C++" void SetVisibilities(std::span<Handles::Sprite> a_sprites, std::span<bool> a_visibilities);
 
 	void Initialize();
 	void Shutdown();
@@ -76,12 +77,14 @@ namespace {
 	std::array<glm::uvec2, cegraph::Constants::c_maxSprites> m_dimensions;
 	std::array<uint16_t, cegraph::Constants::c_maxSprites> m_templateIndices;
 	std::array<glm::u8vec4, cegraph::Constants::c_maxSprites> m_colors;
+	cecore::BitSet<cegraph::Constants::c_maxSprites> m_visibilities;
 
 	// for handling sorting. simple for now. 0 is back. will need something more complex once we need to sort
 	// with other systems together. perf probably so-so this way, but we don't have a ton of spritesfor now.
 	std::array<uint8_t, cegraph::Constants::c_maxSprites> m_zOrder{};
 	std::array<uint16_t, cegraph::Constants::c_maxSprites> m_zOrderIndices{};
 	uint32_t m_zOrderCount{};
+	uint32_t m_renderedSpriteCount{};
 
 	// templates
 	std::vector<std::string> m_templateNames;
@@ -124,6 +127,7 @@ void cegraph::Sprites::Create(std::span<uint64_t> a_hashes, std::span<Handles::S
 		m_dimensions[handles[i]]    = Textures::GetDimensions(textureHandle);
 		m_colors[handles[i]]        = glm::u8vec4{255, 255, 255, 255};
 		m_zOrder[handles[i]]        = 0;
+		m_visibilities.insert(handles[i]);
 	}
 }
 
@@ -235,6 +239,18 @@ extern "C++" void cegraph::Sprites::SetColors(std::span<Handles::Sprite> a_sprit
 		m_colors[a_sprites[i]] = a_colors[i];
 	}
 }
+extern "C++" void cegraph::Sprites::SetVisibilities(std::span<Handles::Sprite> a_sprites,
+                                                    std::span<bool> a_visibilities) {
+	CR_ASSERT(a_sprites.size() == a_visibilities.size(), "Sprites SetVisibilities bad arguments");
+	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
+		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
+		if(a_visibilities[i]) {
+			m_visibilities.insert(a_sprites[i]);
+		} else {
+			m_visibilities.erase(a_sprites[i]);
+		}
+	}
+}
 
 void cegraph::Sprites::Update() {
 	auto mapping        = VertexBuffers::Map(m_vertBuffer);
@@ -246,8 +262,11 @@ void cegraph::Sprites::Update() {
 	std::sort(m_zOrderIndices.begin(), m_zOrderIndices.begin() + m_zOrderCount,
 	          [](uint16_t a, uint16_t b) { return m_zOrder[a] < m_zOrder[b]; });
 
+	m_renderedSpriteCount = 0;
 	for(uint16_t i = 0; i < m_zOrderCount; ++i) {
 		uint16_t sprite = m_zOrderIndices[i];
+		if(!m_visibilities.contains(sprite)) { continue; }
+		++m_renderedSpriteCount;
 		if(m_templateFrameRates[m_templateIndices[sprite]] != 0) {
 			m_currentFrames[sprite] += cegraph::GetContext().DisplayTicksPerFrame;
 			if(m_currentFrames[sprite] >= m_numFrames[sprite]) {
@@ -279,16 +298,16 @@ void cegraph::Sprites::Render(VkCommandBuffer& a_cmdBuffer) {
 	Materials::Bind(m_material, a_cmdBuffer);
 	VertexBuffers::Bind(m_vertBuffer, a_cmdBuffer);
 
-	auto drawMap  = MultiDrawBuffer::Map(m_zOrderCount);
+	auto drawMap  = MultiDrawBuffer::Map(m_renderedSpriteCount);
 	auto commands = drawMap.Data;
-	for(uint32_t i = 0; i < m_zOrderCount; ++i) {
+	for(uint32_t i = 0; i < m_renderedSpriteCount; ++i) {
 		commands->vertexCount   = 4;
 		commands->instanceCount = 1;
 		commands->firstVertex   = 0;
 		commands->firstInstance = i;
 		++commands;
 	}
-	vkCmdDrawIndirect(a_cmdBuffer, drawMap.Buffer, 0, m_zOrderCount, sizeof(VkDrawIndirectCommand));
+	vkCmdDrawIndirect(a_cmdBuffer, drawMap.Buffer, 0, m_renderedSpriteCount, sizeof(VkDrawIndirectCommand));
 }
 
 void cegraph::Sprites::GetSizes(std::span<Handles::Sprite> a_sprites, std::span<glm::uvec2> a_sizes) {
