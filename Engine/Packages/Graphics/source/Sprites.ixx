@@ -32,8 +32,13 @@ import std.compat;
 export namespace CR::Engine::Graphics::Sprites {
 	extern "C++" void Create(std::span<uint64_t> a_hashes, std::span<Handles::Sprite> handles);
 	extern "C++" void Delete(std::span<Handles::Sprite> a_sprites);
+	extern "C++" void GetSizes(std::span<Handles::Sprite> a_sprites, std::span<glm::uvec2> a_sizes);
 	extern "C++" void SetPositions(std::span<Handles::Sprite> a_sprites, std::span<glm::vec2> a_positions);
+	extern "C++" void SetZOrders(std::span<Handles::Sprite> a_sprites, std::span<uint8_t> a_zOrders);
 	extern "C++" void SetRotations(std::span<Handles::Sprite> a_sprites, std::span<float> a_rotations);
+	extern "C++" void SetFrames(std::span<Handles::Sprite> a_sprites, std::span<uint16_t> a_frames);
+	extern "C++" void SetColors(std::span<Handles::Sprite> a_sprites, std::span<glm::u8vec4> a_colors);
+	extern "C++" void SetVisibilities(std::span<Handles::Sprite> a_sprites, std::span<bool> a_visibilities);
 
 	void Initialize();
 	void Shutdown();
@@ -71,6 +76,15 @@ namespace {
 	std::array<uint32_t, cegraph::Constants::c_maxSprites> m_displayFrames;
 	std::array<glm::uvec2, cegraph::Constants::c_maxSprites> m_dimensions;
 	std::array<uint16_t, cegraph::Constants::c_maxSprites> m_templateIndices;
+	std::array<glm::u8vec4, cegraph::Constants::c_maxSprites> m_colors;
+	cecore::BitSet<cegraph::Constants::c_maxSprites> m_visibilities;
+
+	// for handling sorting. simple for now. 0 is back. will need something more complex once we need to sort
+	// with other systems together. perf probably so-so this way, but we don't have a ton of spritesfor now.
+	std::array<uint8_t, cegraph::Constants::c_maxSprites> m_zOrder{};
+	std::array<uint16_t, cegraph::Constants::c_maxSprites> m_zOrderIndices{};
+	uint32_t m_zOrderCount{};
+	uint32_t m_renderedSpriteCount{};
 
 	// templates
 	std::vector<std::string> m_templateNames;
@@ -100,11 +114,20 @@ void cegraph::Sprites::Create(std::span<uint64_t> a_hashes, std::span<Handles::S
 		m_textureHandles[handles[i]] = textureHandle;
 
 		m_templateIndices[handles[i]] = spriteTemplate->second;
-		m_numFrames[handles[i]]       = ((uint16_t)cegraph::Textures::GetNumFrames(textureHandle) *
-		                                 cegraph::Constants::c_designRefreshRate) /
-		                                m_templateFrameRates[spriteTemplate->second];
-		m_currentFrames[handles[i]]   = 0;
-		m_dimensions[handles[i]]      = Textures::GetDimensions(textureHandle);
+		if(m_templateFrameRates[spriteTemplate->second] == 0) {
+			m_numFrames[handles[i]] = ((uint16_t)cegraph::Textures::GetNumFrames(textureHandle) *
+			                           cegraph::Constants::c_designRefreshRate);
+		} else {
+			m_numFrames[handles[i]] = ((uint16_t)cegraph::Textures::GetNumFrames(textureHandle) *
+			                           cegraph::Constants::c_designRefreshRate) /
+			                          m_templateFrameRates[spriteTemplate->second];
+		}
+
+		m_currentFrames[handles[i]] = 0;
+		m_dimensions[handles[i]]    = Textures::GetDimensions(textureHandle);
+		m_colors[handles[i]]        = glm::u8vec4{255, 255, 255, 255};
+		m_zOrder[handles[i]]        = 0;
+		m_visibilities.insert(handles[i]);
 	}
 }
 
@@ -147,9 +170,12 @@ void cegraph::Sprites::Initialize() {
 			case cegraph::Flatbuffers::FrameRate::FPS10:
 				m_templateFrameRates.emplace_back(10);
 				break;
+			case cegraph::Flatbuffers::FrameRate::FPS0:
+				m_templateFrameRates.emplace_back(0);
+				break;
 			default:
 				CR_ASSERT(false, "Unknown sprite frame rate");
-				m_templateFrameRates.emplace_back(1);
+				m_templateFrameRates.emplace_back(0);
 				break;
 		}
 		m_templateTextureHashes.emplace_back(cecore::Hash64(sprites[i]->texture()->c_str()));
@@ -181,6 +207,14 @@ void cegraph::Sprites::SetPositions(std::span<Handles::Sprite> a_sprites, std::s
 	}
 }
 
+void cegraph::Sprites::SetZOrders(std::span<Handles::Sprite> a_sprites, std::span<uint8_t> a_zOrders) {
+	CR_ASSERT(a_sprites.size() == a_zOrders.size(), "Sprites SetZOrders bad arguments");
+	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
+		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
+		m_zOrder[a_sprites[i]] = a_zOrders[i];
+	}
+}
+
 void cegraph::Sprites::SetRotations(std::span<Handles::Sprite> a_sprites, std::span<float> a_rotations) {
 	CR_ASSERT(a_sprites.size() == a_rotations.size(), "Sprites SetRotations bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
@@ -188,16 +222,62 @@ void cegraph::Sprites::SetRotations(std::span<Handles::Sprite> a_sprites, std::s
 		m_rotations[a_sprites[i]] = a_rotations[i];
 	}
 }
+extern "C++" void cegraph::Sprites::SetFrames(std::span<Handles::Sprite> a_sprites,
+                                              std::span<uint16_t> a_frames) {
+	CR_ASSERT(a_sprites.size() == a_frames.size(), "Sprites SetFrame bad arguments");
+	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
+		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
+		m_currentFrames[a_sprites[i]] = a_frames[i] * cegraph::GetContext().DisplayTicksPerFrame;
+	}
+}
+
+extern "C++" void cegraph::Sprites::SetColors(std::span<Handles::Sprite> a_sprites,
+                                              std::span<glm::u8vec4> a_colors) {
+	CR_ASSERT(a_sprites.size() == a_colors.size(), "Sprites SetColors bad arguments");
+	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
+		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
+		m_colors[a_sprites[i]] = a_colors[i];
+	}
+}
+extern "C++" void cegraph::Sprites::SetVisibilities(std::span<Handles::Sprite> a_sprites,
+                                                    std::span<bool> a_visibilities) {
+	CR_ASSERT(a_sprites.size() == a_visibilities.size(), "Sprites SetVisibilities bad arguments");
+	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
+		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
+		if(a_visibilities[i]) {
+			m_visibilities.insert(a_sprites[i]);
+		} else {
+			m_visibilities.erase(a_sprites[i]);
+		}
+	}
+}
 
 void cegraph::Sprites::Update() {
 	auto mapping        = VertexBuffers::Map(m_vertBuffer);
 	Vertex* spriteProps = (Vertex*)mapping.Data;
 
-	for(uint16_t sprite : m_handlePool) {
-		m_currentFrames[sprite] += cegraph::GetContext().DisplayTicksPerFrame;
-		if(m_currentFrames[sprite] > m_numFrames[sprite]) { m_currentFrames[sprite] -= m_numFrames[sprite]; }
-		m_displayFrames[sprite] = m_currentFrames[sprite] / (cegraph::Constants::c_designRefreshRate /
-		                                                     m_templateFrameRates[m_templateIndices[sprite]]);
+	// figure out our zorder. maybe switch to pdqsort in future. or don't sort maybe, do something else.
+	for(uint16_t sprite : m_handlePool) { m_zOrderIndices[sprite] = sprite; }
+	m_zOrderCount = m_handlePool.used();
+	std::sort(m_zOrderIndices.begin(), m_zOrderIndices.begin() + m_zOrderCount,
+	          [](uint16_t a, uint16_t b) { return m_zOrder[a] < m_zOrder[b]; });
+
+	m_renderedSpriteCount = 0;
+	for(uint16_t i = 0; i < m_zOrderCount; ++i) {
+		uint16_t sprite = m_zOrderIndices[i];
+		if(!m_visibilities.contains(sprite)) { continue; }
+		++m_renderedSpriteCount;
+		if(m_templateFrameRates[m_templateIndices[sprite]] != 0) {
+			m_currentFrames[sprite] += cegraph::GetContext().DisplayTicksPerFrame;
+			if(m_currentFrames[sprite] >= m_numFrames[sprite]) {
+				m_currentFrames[sprite] -= m_numFrames[sprite];
+			}
+			m_displayFrames[sprite] =
+			    m_currentFrames[sprite] /
+			    (cegraph::Constants::c_designRefreshRate / m_templateFrameRates[m_templateIndices[sprite]]);
+		} else {
+			m_displayFrames[sprite] = m_currentFrames[sprite] / cegraph::GetContext().DisplayTicksPerFrame;
+		}
 
 		float sinAngle = sin(m_rotations[sprite]);
 		float cosAngle = cos(m_rotations[sprite]);
@@ -206,7 +286,7 @@ void cegraph::Sprites::Update() {
 
 		spriteProps->Offset       = m_positions[sprite];
 		spriteProps->TextureFrame = {m_textureHandles[sprite], m_displayFrames[sprite]};
-		spriteProps->Color        = glm::u8vec4{255, 255, 255, 255};
+		spriteProps->Color        = m_colors[sprite];
 		spriteProps->FrameSize    = m_dimensions[sprite];
 		spriteProps->Rotation     = rot;
 
@@ -218,16 +298,22 @@ void cegraph::Sprites::Render(VkCommandBuffer& a_cmdBuffer) {
 	Materials::Bind(m_material, a_cmdBuffer);
 	VertexBuffers::Bind(m_vertBuffer, a_cmdBuffer);
 
-	auto spriteCount = m_handlePool.used();
-
-	auto drawMap  = MultiDrawBuffer::Map(spriteCount);
+	auto drawMap  = MultiDrawBuffer::Map(m_renderedSpriteCount);
 	auto commands = drawMap.Data;
-	for(uint32_t i = 0; i < spriteCount; ++i) {
+	for(uint32_t i = 0; i < m_renderedSpriteCount; ++i) {
 		commands->vertexCount   = 4;
 		commands->instanceCount = 1;
 		commands->firstVertex   = 0;
 		commands->firstInstance = i;
 		++commands;
 	}
-	vkCmdDrawIndirect(a_cmdBuffer, drawMap.Buffer, 0, spriteCount, sizeof(VkDrawIndirectCommand));
+	vkCmdDrawIndirect(a_cmdBuffer, drawMap.Buffer, 0, m_renderedSpriteCount, sizeof(VkDrawIndirectCommand));
+}
+
+void cegraph::Sprites::GetSizes(std::span<Handles::Sprite> a_sprites, std::span<glm::uvec2> a_sizes) {
+	CR_ASSERT(a_sprites.size() == a_sizes.size(), "Sprites GetSizes bad arguments");
+	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
+		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
+		a_sizes[i] = m_dimensions[a_sprites[i]];
+	}
 }

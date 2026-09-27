@@ -37,7 +37,7 @@ export namespace CR::Engine::Graphics::Textures {
 	void Shutdown();
 
 	Handles::Texture GetHandle(uint64_t hash);
-	Handles::TextureSet LoadTextureSet(std::span<uint64_t> hashes);
+	Handles::TextureSet LoadTextureSet(std::span<const uint64_t> hashes);
 	void ReleaseTextureSet(Handles::TextureSet set);
 
 	// can only get this for loaded textures
@@ -176,7 +176,7 @@ cegraph::Handles::Texture cegraph::Textures::GetHandle(uint64_t hash) {
 	return handleIter->second;
 }
 
-cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_t> hashes) {
+cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<const uint64_t> hashes) {
 	CR_ASSERT(m_stagingData[0] != nullptr, "Textures not initialized");
 
 	uint32_t result;
@@ -212,18 +212,27 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 
 		auto webpRawData = ceasset::GetData(handle);
 
+		WebPAnimDecoderOptions decoderOptions;
+		WebPAnimDecoderOptionsInit(&decoderOptions);
+		decoderOptions.use_threads = true;
+		// we want premultiplied alpha, let libwebp take care of, thats what the lowercase rgb mean.
+		decoderOptions.color_mode = MODE_rgbA;
+
 		WebPData webpFileData;
+		WebPDataInit(&webpFileData);
 		webpFileData.bytes = (const uint8_t*)webpRawData.data();
 		webpFileData.size  = webpRawData.size();
 
-		WebPDemuxer* demux = WebPDemux(&webpFileData);
-		CR_ASSERT(demux != nullptr, "webp file {} invalid", m_debugNames[texture]);
-		defer({ WebPDemuxDelete(demux); });
+		WebPAnimDecoder* decoder = WebPAnimDecoderNew(&webpFileData, &decoderOptions);
+		CR_ASSERT(decoder != nullptr, "webp file {} invalid", m_debugNames[texture]);
+		defer({ WebPAnimDecoderDelete(decoder); });
 
-		uint32_t width      = WebPDemuxGetI(demux, WEBP_FF_CANVAS_WIDTH);
-		uint32_t height     = WebPDemuxGetI(demux, WEBP_FF_CANVAS_HEIGHT);
+		WebPAnimInfo animInfo;
+		auto webpResult = WebPAnimDecoderGetInfo(decoder, &animInfo);
+		CR_ASSERT(webpResult != 0, "webp file {} invalid", m_debugNames[texture]);
 
-		stagingBuffer = (stagingBuffer + 1) % 2;
+		uint32_t width  = animInfo.canvas_width;
+		uint32_t height = animInfo.canvas_height;
 
 		std::vector<VkBufferImageCopy> frameCopies;
 		VkDeviceSize bufferOffset{};
@@ -234,37 +243,21 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 
 		uint8_t* outputBuffer = (uint8_t*)m_stagingData[stagingBuffer];
 
-		WebPIterator iter;
-		CR_ASSERT(WebPDemuxGetFrame(demux, 1, &iter) != 0, "Failed to get first frame of webp {}",
-				  m_debugNames[texture]);
-		defer({ WebPDemuxReleaseIterator(&iter); });
-		do {
+		while(WebPAnimDecoderHasMoreFrames(decoder)) {
+			int timestamp{};
+			uint8_t* decodeBuffer{};
+			webpResult = WebPAnimDecoderGetNext(decoder, &decodeBuffer, &timestamp);
+			CR_ASSERT(webpResult != 0, "webp file {} invalid, failed to decode a frame",
+			          m_debugNames[texture]);
+
 			size_t frameSize = (size_t)width * height * 4;
 			CR_ASSERT((bufferOffset + frameSize) < c_stagingBufferSize,
-					  "Staging buffer too small to hold webp texture");
+			          "Staging buffer too small to hold webp texture");
 
-			uint8_t* frameBuffer  = outputBuffer + bufferOffset;
-			uint8_t* decodeResult = WebPDecodeRGBAInto(iter.fragment.bytes, iter.fragment.size,
-													   frameBuffer, frameSize, (int)(width * 4));
-			CR_ASSERT(decodeResult != nullptr, "Failed to decode webp frame {} of {}", iter.frame_num,
-					  m_debugNames[texture]);
-
-			// we want premultiplied alpha, WebP returns straight alpha so convert on load
-			for(uint32_t i = 0; i < width * height; ++i) {
-				uint32_t red   = frameBuffer[4 * i + 0];
-				uint32_t green = frameBuffer[4 * i + 1];
-				uint32_t blue  = frameBuffer[4 * i + 2];
-				uint32_t alpha = frameBuffer[4 * i + 3];
-
-				red   = (red * alpha + 127) / 256;
-				green = (green * alpha + 127) / 256;
-				blue  = (blue * alpha + 127) / 256;
-
-				frameBuffer[4 * i + 0] = (uint8_t)std::min<uint32_t>(red, 255);
-				frameBuffer[4 * i + 1] = (uint8_t)std::min<uint32_t>(green, 255);
-				frameBuffer[4 * i + 2] = (uint8_t)std::min<uint32_t>(blue, 255);
-				frameBuffer[4 * i + 3] = (uint8_t)std::min<uint32_t>(alpha, 255);
-			}
+			// TODO: we aren't zero copy. webp decodes into its own buffer, we then copy to our staging
+			// buffer. It would be nice to decode directly into the staging buffer. Lower level api's kind of
+			// allow that, but some issues there too.
+			memcpy(outputBuffer + bufferOffset, decodeBuffer, frameSize);
 
 			VkBufferImageCopy& copyInfo              = frameCopies.emplace_back();
 			copyInfo.bufferOffset                    = bufferOffset;
@@ -279,7 +272,7 @@ cegraph::Handles::TextureSet cegraph::Textures::LoadTextureSet(std::span<uint64_
 
 			bufferOffset += frameSize;
 			++nextLayer;
-		} while(WebPDemuxNextFrame(&iter) != 0);
+		}
 
 		m_numFrames[texture]  = (uint16_t)frameCopies.size();
 		m_dimensions[texture] = glm::uvec2{width, height};

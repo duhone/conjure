@@ -1,6 +1,7 @@
 module;
 
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 
 export module CR.Engine;
 
@@ -13,7 +14,8 @@ export import CR.Engine.Audio;
 export import CR.Engine.Graphics;
 
 export namespace CR::Engine {
-	void Initialize(GLFWwindow* a_window, const std::filesystem::path& a_assetsFolder);
+	void Initialize(GLFWwindow* a_window, glm::uvec2 a_designSize,
+	                const std::filesystem::path& a_assetsFolder);
 	void Update();
 	bool Render();
 	void Shutdown();
@@ -29,13 +31,14 @@ namespace ceinput  = CR::Engine::Input;
 namespace ceaudio  = CR::Engine::Audio;
 namespace cegraph  = CR::Engine::Graphics;
 
-void CR::Engine::Initialize(GLFWwindow* a_window, const std::filesystem::path& a_gameAssetsFolder) {
+void CR::Engine::Initialize(GLFWwindow* a_window, glm::uvec2 a_designSize,
+                            const std::filesystem::path& a_gameAssetsFolder) {
 	cecore::Internal::Initialize();
 	ceplat::Internal::Initialize();
 	ceassets::Initialize(a_gameAssetsFolder);
 	ceinput::Initialize(a_window);
 	ceaudio::Initialize();
-	cegraph::Initialize(a_window);
+	cegraph::Initialize(a_window, a_designSize);
 }
 
 void CR::Engine::Update() {

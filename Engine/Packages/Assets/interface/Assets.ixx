@@ -56,7 +56,7 @@ namespace ceassets = CR::Engine::Assets;
 namespace fs = std::filesystem;
 
 namespace {
-	constexpr std::string_view c_bulkExtensions[] = {"flac", "jxl"};
+	constexpr std::string_view c_bulkExtensions[] = {"flac", "jxl", "webp"};
 
 	std::filesystem::path m_gameAssetsFolder;
 

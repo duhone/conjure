@@ -34,6 +34,7 @@ set(CR_IMPLEMENTATION
     ${root}/libwebp/src/dsp/lossless.c
     ${root}/libwebp/src/dsp/lossless_sse2.c
     ${root}/libwebp/src/dsp/lossless_sse41.c
+    ${root}/libwebp/src/dsp/lossless_avx2.c
     ${root}/libwebp/src/dsp/rescaler.c
     ${root}/libwebp/src/dsp/rescaler_sse2.c
     ${root}/libwebp/src/dsp/upsampling.c

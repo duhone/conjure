@@ -44,6 +44,7 @@ namespace {
 
 	GLFWwindow* m_window;
 	glm::ivec2 m_windowSize{0, 0};
+	glm::ivec2 m_designSize{0, 0};
 	VkInstance m_instance{};
 	VkSurfaceKHR m_primarySurface{};
 	VkSwapchainKHR m_primarySwapChain{};
@@ -274,8 +275,8 @@ namespace {
 		VkPhysicalDeviceMemoryProperties memProps;
 		vkGetPhysicalDeviceMemoryProperties(context.PhysicalDevice, &memProps);
 		for(uint32_t i = 0; i < memProps.memoryHeapCount; ++i) {
-			auto heapSize   = memProps.memoryHeaps[i].size / 1024 / 1024;
-			auto& heapFlags = memProps.memoryHeaps[i].flags;
+			[[maybe_unused]] auto heapSize = memProps.memoryHeaps[i].size / 1024 / 1024;
+			auto& heapFlags                = memProps.memoryHeaps[i].flags;
 			if(heapFlags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
 				CR_LOG("Device Heap. Size {}MB", heapSize);
 			} else {
@@ -292,7 +293,7 @@ namespace {
 			if(heapFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) { CR_LOG("  Host visible"); }
 			if(heapFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) { CR_LOG("  Host cached"); }
 			if(heapFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) { CR_LOG("  Host coherent"); }
-			auto heapSize = (uint32_t)(memProps.memoryHeaps[heapIndex].size / 1024 / 1024);
+			[[maybe_unused]] auto heapSize = (uint32_t)(memProps.memoryHeaps[heapIndex].size / 1024 / 1024);
 			CR_LOG("  Heap Size: {}", heapSize);
 		}
 
@@ -431,7 +432,7 @@ namespace {
 		                                     surfaceFormats.data());
 
 		CR_LOG("Supported surface formats:");
-		for(const auto& format : surfaceFormats) {
+		for([[maybe_unused]] const auto& format : surfaceFormats) {
 			CR_LOG("    Format: {} ColorSpace {}", string_VkFormat(format.format),
 			       string_VkColorSpaceKHR(format.colorSpace));
 		}
@@ -445,7 +446,7 @@ namespace {
 		                                          presentModes.data());
 
 		CR_LOG("Presentation modes:");
-		for(const auto& mode : presentModes) {
+		for([[maybe_unused]] const auto& mode : presentModes) {
 			CR_LOG("    Presentation Mode: {}", string_VkPresentModeKHR(mode));
 		}
 
@@ -598,9 +599,10 @@ namespace {
 
 }    // namespace
 
-void cegraph::Initialize(GLFWwindow* a_window) {
+void cegraph::Initialize(GLFWwindow* a_window, glm::uvec2 a_designSize) {
 	m_window      = a_window;
 	m_refreshRate = GetWindowRefreshRate(a_window);
+	m_designSize  = a_designSize;
 
 	cegraph::Context context;
 
@@ -796,8 +798,8 @@ bool cegraph::Render() {
 
 	auto uboMap              = UniformBuffer::Map(sizeof(GlobalUniformBuffer));
 	GlobalUniformBuffer* ubo = (GlobalUniformBuffer*)uboMap.Data;
-	ubo->InvScreenSize.x     = 1.0f / m_windowSize.x;
-	ubo->InvScreenSize.y     = 1.0f / m_windowSize.y;
+	ubo->InvScreenSize.x     = 1.0f / m_designSize.x;
+	ubo->InvScreenSize.y     = 1.0f / m_designSize.y;
 
 	VkDescriptorBufferInfo bufferInfo;
 	ClearStruct(bufferInfo);

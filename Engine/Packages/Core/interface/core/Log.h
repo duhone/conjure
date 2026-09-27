@@ -39,7 +39,7 @@
 
 #define CR_USE_ASSERTS 0
 
-#define CR_ASSERT(condition, fmtString, ...) __assume(!(condition));
+#define CR_ASSERT(condition, fmtString, ...) __assume(condition);
 
 #endif
 

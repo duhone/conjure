@@ -24,4 +24,9 @@ export namespace CR::Engine::Input::Regions {
 	}    // namespace RegionStates
 
 	void getStates(std::span<Handles::Region> a_regions, std::span<uint32_t> a_states);
+	uint32_t getState(Handles::Region a_region) {
+		uint32_t result;
+		getStates(std::span<Handles::Region>(&a_region, 1), std::span<uint32_t>(&result, 1));
+		return result;
+	}
 }    // namespace CR::Engine::Input::Regions

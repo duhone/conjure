@@ -21,9 +21,13 @@ CR::Engine::Core::LogSystem::LogSystem() {
 	assert(!getAsyncLogger().get());
 
 	spdlog::init_thread_pool(8192, 1);
-	auto stdSink  = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 	auto msvcSink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
+#if !CR_FINAL
+	auto stdSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 	std::vector<spdlog::sink_ptr> sinks{stdSink, msvcSink};
+#else
+	std::vector<spdlog::sink_ptr> sinks{msvcSink};
+#endif
 
 	getAsyncLogger() =
 	    std::make_shared<spdlog::async_logger>("default_logger", sinks.begin(), sinks.end(),
