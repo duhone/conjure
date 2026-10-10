@@ -48,6 +48,13 @@ export namespace CR::Engine::Graphics {
 			GetSizes(std::span<Handles::Sprite>(&a_sprite, 1), std::span<glm::uvec2>(&a_size, 1));
 			return a_size;
 		}
+		// Can use this version to get size without creating a sprite, its a little bit slower though
+		extern "C++" void GetSizes(std::span<uint64_t> a_spriteHashes, std::span<glm::uvec2> a_sizes);
+		glm::uvec2 GetSize(uint64_t a_spriteHash) {
+			glm::uvec2 a_size;
+			GetSizes(std::span<uint64_t>(&a_spriteHash, 1), std::span<glm::uvec2>(&a_size, 1));
+			return a_size;
+		}
 
 		extern "C++" void SetPositions(std::span<Handles::Sprite> a_sprites,
 		                               std::span<glm::vec2> a_positions);

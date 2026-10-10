@@ -33,6 +33,7 @@ export namespace CR::Engine::Graphics::Sprites {
 	extern "C++" void Create(std::span<uint64_t> a_hashes, std::span<Handles::Sprite> handles);
 	extern "C++" void Delete(std::span<Handles::Sprite> a_sprites);
 	extern "C++" void GetSizes(std::span<Handles::Sprite> a_sprites, std::span<glm::uvec2> a_sizes);
+	extern "C++" void GetSizes(std::span<uint64_t> a_spriteHashes, std::span<glm::uvec2> a_sizes);
 	extern "C++" void SetPositions(std::span<Handles::Sprite> a_sprites, std::span<glm::vec2> a_positions);
 	extern "C++" void SetZOrders(std::span<Handles::Sprite> a_sprites, std::span<uint8_t> a_zOrders);
 	extern "C++" void SetRotations(std::span<Handles::Sprite> a_sprites, std::span<float> a_rotations);
@@ -315,5 +316,19 @@ void cegraph::Sprites::GetSizes(std::span<Handles::Sprite> a_sprites, std::span<
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
 		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
 		a_sizes[i] = m_dimensions[a_sprites[i]];
+	}
+}
+
+void cegraph::Sprites::GetSizes(std::span<uint64_t> a_spriteHashes, std::span<glm::uvec2> a_sizes) {
+	CR_ASSERT(a_spriteHashes.size() == a_sizes.size(), "Sprites GetSizes bad arguments");
+	for(uint32_t i = 0; i < a_spriteHashes.size(); ++i) {
+		auto spriteTemplate = m_templateLookup.find(a_spriteHashes[i]);
+		CR_ASSERT(spriteTemplate != m_templateLookup.end(), "Couldn't find sprite template");
+		uint64_t textureHash = m_templateTextureHashes[spriteTemplate->second];
+
+		auto textureHandle = cegraph::Textures::GetHandle(textureHash);
+		CR_ASSERT(textureHandle.isValid(), "couldn't find requested texture for sprite");
+
+		a_sizes[i] = cegraph::Textures::GetDimensions(textureHandle);
 	}
 }
