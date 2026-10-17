@@ -195,7 +195,12 @@ void cegraph::Sprites::Initialize() {
 }
 
 void cegraph::Sprites::Shutdown() {
-	CR_ASSERT(m_handlePool.full(), "Sprites weren't all freed before shutdown");
+	if(!m_handlePool.full()) {
+		for(auto handle : m_handlePool) {
+			CR_WARN("Sprite not freed: {}", m_templateNames[m_templateIndices[handle]].c_str());
+		}
+		CR_ERROR("Sprites weren't all freed before shutdown");
+	}
 
 	VertexBuffers::Release(m_vertBuffer);
 }
