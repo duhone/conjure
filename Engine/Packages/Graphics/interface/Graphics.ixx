@@ -88,5 +88,10 @@ export namespace CR::Engine::Graphics {
 		void SetVisibility(Handles::Sprite a_sprite, bool a_visible) {
 			SetVisibilities(std::span<Handles::Sprite>(&a_sprite, 1), std::span<bool>(&a_visible, 1));
 		}
+
+		extern "C++" void SetAnimationPauses(std::span<Handles::Sprite> a_sprites, std::span<bool> a_pauses);
+		void SetAnimationPaused(Handles::Sprite a_sprite, bool a_pause) {
+			SetAnimationPauses(std::span<Handles::Sprite>(&a_sprite, 1), std::span<bool>(&a_pause, 1));
+		}
 	}    // namespace Sprites
 }    // namespace CR::Engine::Graphics

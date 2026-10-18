@@ -40,6 +40,7 @@ export namespace CR::Engine::Graphics::Sprites {
 	extern "C++" void SetFrames(std::span<Handles::Sprite> a_sprites, std::span<uint16_t> a_frames);
 	extern "C++" void SetColors(std::span<Handles::Sprite> a_sprites, std::span<glm::u8vec4> a_colors);
 	extern "C++" void SetVisibilities(std::span<Handles::Sprite> a_sprites, std::span<bool> a_visibilities);
+	extern "C++" void SetAnimationPauses(std::span<Handles::Sprite> a_sprites, std::span<bool> a_pauses);
 
 	void Initialize();
 	void Shutdown();
@@ -79,6 +80,7 @@ namespace {
 	std::array<uint16_t, cegraph::Constants::c_maxSprites> m_templateIndices;
 	std::array<glm::u8vec4, cegraph::Constants::c_maxSprites> m_colors;
 	cecore::BitSet<cegraph::Constants::c_maxSprites> m_visibilities;
+	cecore::BitSet<cegraph::Constants::c_maxSprites> m_animationPauses;
 
 	// for handling sorting. simple for now. 0 is back. will need something more complex once we need to sort
 	// with other systems together. perf probably so-so this way, but we don't have a ton of spritesfor now.
@@ -245,6 +247,7 @@ extern "C++" void cegraph::Sprites::SetColors(std::span<Handles::Sprite> a_sprit
 		m_colors[a_sprites[i]] = a_colors[i];
 	}
 }
+
 extern "C++" void cegraph::Sprites::SetVisibilities(std::span<Handles::Sprite> a_sprites,
                                                     std::span<bool> a_visibilities) {
 	CR_ASSERT(a_sprites.size() == a_visibilities.size(), "Sprites SetVisibilities bad arguments");
@@ -254,6 +257,19 @@ extern "C++" void cegraph::Sprites::SetVisibilities(std::span<Handles::Sprite> a
 			m_visibilities.insert(a_sprites[i]);
 		} else {
 			m_visibilities.erase(a_sprites[i]);
+		}
+	}
+}
+
+extern "C++" void cegraph::Sprites::SetAnimationPauses(std::span<Handles::Sprite> a_sprites,
+                                                       std::span<bool> a_pauses) {
+	CR_ASSERT(a_sprites.size() == a_pauses.size(), "Sprites SetAnimationPause bad arguments");
+	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
+		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
+		if(a_pauses[i]) {
+			m_animationPauses.insert(a_sprites[i]);
+		} else {
+			m_animationPauses.erase(a_sprites[i]);
 		}
 	}
 }
@@ -274,9 +290,11 @@ void cegraph::Sprites::Update() {
 		if(!m_visibilities.contains(sprite)) { continue; }
 		++m_renderedSpriteCount;
 		if(m_templateFrameRates[m_templateIndices[sprite]] != 0) {
-			m_currentFrames[sprite] += cegraph::GetContext().DisplayTicksPerFrame;
-			if(m_currentFrames[sprite] >= m_numFrames[sprite]) {
-				m_currentFrames[sprite] -= m_numFrames[sprite];
+			if(!m_animationPauses.contains(sprite)) {
+				m_currentFrames[sprite] += cegraph::GetContext().DisplayTicksPerFrame;
+				if(m_currentFrames[sprite] >= m_numFrames[sprite]) {
+					m_currentFrames[sprite] -= m_numFrames[sprite];
+				}
 			}
 			m_displayFrames[sprite] =
 			    m_currentFrames[sprite] /
