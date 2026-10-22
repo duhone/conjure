@@ -57,6 +57,11 @@ cep::MemoryMappedFile::MemoryMappedFile(MemoryMappedFile&& a_other) noexcept {
 
 cep::MemoryMappedFile& cep::MemoryMappedFile::operator=(MemoryMappedFile&& a_other) noexcept {
 	if(this == &a_other) { return *this; }
+	if(m_fileData) {
+		UnmapViewOfFile(m_fileData->m_data);
+		CloseHandle(m_fileData->m_fileMapping);
+		CloseHandle(m_fileData->m_fileHandle);
+	}
 	m_fileData = std::move(a_other.m_fileData);
 	return *this;
 }

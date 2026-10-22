@@ -189,7 +189,7 @@ void cea::Music::Shutdown() {
 
 void cea::Music::Update() {
 	if(m_state == State::PlayNext) {
-		if(!m_current.isValid() || ma_sound_at_end(&m_currentSound)) {
+		if(!m_current.isValid() || !ma_sound_is_playing(&m_currentSound)) {
 			if(m_requested.isValid()) {
 				if(m_current.isValid()) {
 					ma_sound_uninit(&m_currentSound);
@@ -230,6 +230,7 @@ void cea::Music::Update() {
 				CR_ASSERT(result == MA_SUCCESS, "failed to play music");
 				m_current   = m_requested;
 				m_requested = cea::Handles::Music{};
+				m_state     = State::Playing;
 			} else {
 				m_state = State::Idle;
 			}
