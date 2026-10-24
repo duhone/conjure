@@ -93,5 +93,12 @@ export namespace CR::Engine::Graphics {
 		void SetAnimationPaused(Handles::Sprite a_sprite, bool a_pause) {
 			SetAnimationPauses(std::span<Handles::Sprite>(&a_sprite, 1), std::span<bool>(&a_pause, 1));
 		}
+
+		// will fail if any of the dest sprites aren't bassed on the same template as the source sprite.
+		extern "C++" void SyncAnimations(Handles::Sprite a_sourceSprite,
+		                                 std::span<Handles::Sprite> a_destSprites);
+		void SyncAnimation(Handles::Sprite a_sourceSprite, Handles::Sprite a_destSprite) {
+			SyncAnimations(a_sourceSprite, std::span<Handles::Sprite>(&a_destSprite, 1));
+		}
 	}    // namespace Sprites
 }    // namespace CR::Engine::Graphics

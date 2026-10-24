@@ -41,6 +41,8 @@ export namespace CR::Engine::Graphics::Sprites {
 	extern "C++" void SetColors(std::span<Handles::Sprite> a_sprites, std::span<glm::u8vec4> a_colors);
 	extern "C++" void SetVisibilities(std::span<Handles::Sprite> a_sprites, std::span<bool> a_visibilities);
 	extern "C++" void SetAnimationPauses(std::span<Handles::Sprite> a_sprites, std::span<bool> a_pauses);
+	extern "C++" void SyncAnimations(Handles::Sprite a_sourceSprite,
+	                                 std::span<Handles::Sprite> a_destSprites);
 
 	void Initialize();
 	void Shutdown();
@@ -353,5 +355,17 @@ void cegraph::Sprites::GetSizes(std::span<uint64_t> a_spriteHashes, std::span<gl
 		CR_ASSERT(textureHandle.isValid(), "couldn't find requested texture for sprite");
 
 		a_sizes[i] = cegraph::Textures::GetDimensions(textureHandle);
+	}
+}
+
+void cegraph::Sprites::SyncAnimations(Handles::Sprite a_sourceSprite,
+                                      std::span<Handles::Sprite> a_destSprites) {
+	CR_ASSERT(m_handlePool.isValid(a_sourceSprite), "Sprite doesn't exist");
+	for(uint32_t i = 0; i < a_destSprites.size(); ++i) {
+		CR_ASSERT(m_handlePool.isValid(a_destSprites[i]), "Sprite doesn't exist");
+		CR_ASSERT(m_templateIndices[a_sourceSprite] == m_templateIndices[a_destSprites[i]],
+		          "Can't sync animations between different sprite templates");
+		m_currentFrames[a_destSprites[i]] = m_currentFrames[a_sourceSprite];
+		m_displayFrames[a_destSprites[i]] = m_displayFrames[a_sourceSprite];
 	}
 }
