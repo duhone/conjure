@@ -1,5 +1,10 @@
 ﻿export module CR.Engine.Core.Literals;
 
+import CR.Engine.Core.Hash;
+
+import std;
+import std.compat;
+
 export namespace CR::Engine::Core::Literals {
 	constexpr unsigned long long operator""_KB(unsigned long long a_bytes) {
 		return a_bytes * 1024;

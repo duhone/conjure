@@ -70,4 +70,14 @@ export namespace CR::Engine::Core {
 	inline consteval uint64_t C_Hash64(std::string_view a_data) {
 		return Hash64(a_data);
 	}
+
+	namespace Literals {
+		consteval uint32_t operator""_hash32(const char* a_str, std::size_t a_len) {
+			return Hash32(std::string_view(a_str, a_len));
+		}
+
+		consteval uint64_t operator""_hash64(const char* a_str, std::size_t a_len) {
+			return Hash64(std::string_view(a_str, a_len));
+		}
+	}    // namespace Literals
 }    // namespace CR::Engine::Core
