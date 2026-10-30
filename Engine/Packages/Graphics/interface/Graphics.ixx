@@ -7,6 +7,8 @@ export module CR.Engine.Graphics;
 
 export import CR.Engine.Graphics.Handles;
 
+import CR.Engine.Core.Span;
+
 import std;
 import std.compat;
 
@@ -30,75 +32,60 @@ export namespace CR::Engine::Graphics {
 	}    // namespace Textures
 
 	namespace Sprites {
-		extern "C++" void Create(std::span<uint64_t> a_hashes, std::span<Handles::Sprite> handles);
+		// Everything here that takes SpanArg works on either a single value or a whole container/span, i.e.
+		//   SetPositions(sprite, glm::vec2{10, 20});
+		//   SetPositions(sprites, positions);
+		// Note braced lists need the type named for single values, i.e. glm::vec2{10, 20} not just {10, 20}
+
+		extern "C++" void Create(Core::SpanArg<const uint64_t> a_hashes, Core::SpanArg<Handles::Sprite> a_handles);
 		Handles::Sprite Create(uint64_t a_hash) {
 			Handles::Sprite handle;
-			Create(std::span<uint64_t>(&a_hash, 1), std::span<Handles::Sprite>(&handle, 1));
+			Create(a_hash, handle);
 			return handle;
 		}
 
-		extern "C++" void Delete(std::span<Handles::Sprite> a_sprites);
-		void Delete(Handles::Sprite a_sprite) {
-			Delete(std::span<Handles::Sprite>(&a_sprite, 1));
-		}
+		extern "C++" void Delete(Core::SpanArg<const Handles::Sprite> a_sprites);
 
-		extern "C++" void GetSizes(std::span<Handles::Sprite> a_sprites, std::span<glm::uvec2> a_sizes);
+		extern "C++" void GetSizes(Core::SpanArg<const Handles::Sprite> a_sprites,
+		                           Core::SpanArg<glm::uvec2> a_sizes);
 		glm::uvec2 GetSize(Handles::Sprite a_sprite) {
-			glm::uvec2 a_size;
-			GetSizes(std::span<Handles::Sprite>(&a_sprite, 1), std::span<glm::uvec2>(&a_size, 1));
-			return a_size;
+			glm::uvec2 size;
+			GetSizes(a_sprite, size);
+			return size;
 		}
 		// Can use this version to get size without creating a sprite, its a little bit slower though
-		extern "C++" void GetSizes(std::span<uint64_t> a_spriteHashes, std::span<glm::uvec2> a_sizes);
+		extern "C++" void GetSizes(Core::SpanArg<const uint64_t> a_spriteHashes,
+		                           Core::SpanArg<glm::uvec2> a_sizes);
 		glm::uvec2 GetSize(uint64_t a_spriteHash) {
-			glm::uvec2 a_size;
-			GetSizes(std::span<uint64_t>(&a_spriteHash, 1), std::span<glm::uvec2>(&a_size, 1));
-			return a_size;
+			glm::uvec2 size;
+			GetSizes(a_spriteHash, size);
+			return size;
 		}
 
-		extern "C++" void SetPositions(std::span<Handles::Sprite> a_sprites,
-		                               std::span<glm::vec2> a_positions);
-		void SetPosition(Handles::Sprite a_sprite, glm::vec2 a_position) {
-			SetPositions(std::span<Handles::Sprite>(&a_sprite, 1), std::span<glm::vec2>(&a_position, 1));
-		}
+		extern "C++" void SetPositions(Core::SpanArg<const Handles::Sprite> a_sprites,
+		                              Core::SpanArg<const glm::vec2> a_positions);
 
-		extern "C++" void SetZOrders(std::span<Handles::Sprite> a_sprites, std::span<uint8_t> a_zOrders);
-		void SetZOrder(Handles::Sprite a_sprite, uint8_t a_zOrder) {
-			SetZOrders(std::span<Handles::Sprite>(&a_sprite, 1), std::span<uint8_t>(&a_zOrder, 1));
-		}
+		extern "C++" void SetZOrders(Core::SpanArg<const Handles::Sprite> a_sprites,
+		                            Core::SpanArg<const uint8_t> a_zOrders);
 
 		// in radians
-		extern "C++" void SetRotations(std::span<Handles::Sprite> a_sprites, std::span<float> a_rotations);
-		void SetRotation(Handles::Sprite a_sprite, float a_rotation) {
-			SetRotations(std::span<Handles::Sprite>(&a_sprite, 1), std::span<float>(&a_rotation, 1));
-		}
+		extern "C++" void SetRotations(Core::SpanArg<const Handles::Sprite> a_sprites,
+		                              Core::SpanArg<const float> a_rotations);
 
-		extern "C++" void SetFrames(std::span<Handles::Sprite> a_sprites, std::span<uint16_t> a_frames);
-		void SetFrame(Handles::Sprite a_sprite, uint16_t a_frame) {
-			SetFrames(std::span<Handles::Sprite>(&a_sprite, 1), std::span<uint16_t>(&a_frame, 1));
-		}
+		extern "C++" void SetFrames(Core::SpanArg<const Handles::Sprite> a_sprites,
+		                           Core::SpanArg<const uint16_t> a_frames);
 
-		extern "C++" void SetColors(std::span<Handles::Sprite> a_sprites, std::span<glm::u8vec4> a_colors);
-		void SetColor(Handles::Sprite a_sprite, glm::u8vec4 a_color) {
-			SetColors(std::span<Handles::Sprite>(&a_sprite, 1), std::span<glm::u8vec4>(&a_color, 1));
-		}
+		extern "C++" void SetColors(Core::SpanArg<const Handles::Sprite> a_sprites,
+		                           Core::SpanArg<const glm::u8vec4> a_colors);
 
-		extern "C++" void SetVisibilities(std::span<Handles::Sprite> a_sprites,
-		                                  std::span<bool> a_visibilities);
-		void SetVisibility(Handles::Sprite a_sprite, bool a_visible) {
-			SetVisibilities(std::span<Handles::Sprite>(&a_sprite, 1), std::span<bool>(&a_visible, 1));
-		}
+		extern "C++" void SetVisibilities(Core::SpanArg<const Handles::Sprite> a_sprites,
+		                                Core::SpanArg<const bool> a_visibilities);
 
-		extern "C++" void SetAnimationPauses(std::span<Handles::Sprite> a_sprites, std::span<bool> a_pauses);
-		void SetAnimationPaused(Handles::Sprite a_sprite, bool a_pause) {
-			SetAnimationPauses(std::span<Handles::Sprite>(&a_sprite, 1), std::span<bool>(&a_pause, 1));
-		}
+		extern "C++" void SetAnimationPauses(Core::SpanArg<const Handles::Sprite> a_sprites,
+		                                     Core::SpanArg<const bool> a_pauses);
 
 		// will fail if any of the dest sprites aren't bassed on the same template as the source sprite.
 		extern "C++" void SyncAnimations(Handles::Sprite a_sourceSprite,
-		                                 std::span<Handles::Sprite> a_destSprites);
-		void SyncAnimation(Handles::Sprite a_sourceSprite, Handles::Sprite a_destSprite) {
-			SyncAnimations(a_sourceSprite, std::span<Handles::Sprite>(&a_destSprite, 1));
-		}
+		                                Core::SpanArg<const Handles::Sprite> a_destSprites);
 	}    // namespace Sprites
 }    // namespace CR::Engine::Graphics

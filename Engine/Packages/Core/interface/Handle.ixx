@@ -95,7 +95,7 @@ export namespace CR::Engine::Core {
 			a_handle = HandleType{};
 		}
 
-		constexpr void release(std::span<HandleType> a_handles) {
+		constexpr void release(std::span<const HandleType> a_handles) {
 			for(auto handle : a_handles) {
 				CR_ASSERT(handle.isValid(), "tried to release handle that isn't valid");
 				CR_ASSERT(m_used.contains(handle), "tried to release handle that is no longer valid");

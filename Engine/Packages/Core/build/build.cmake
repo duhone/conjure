@@ -28,6 +28,7 @@ set(CR_INTERFACE_MODULES
     ${root}/interface/Log.ixx
     ${root}/interface/Random.ixx
     ${root}/interface/Rect.ixx
+    ${root}/interface/Span.ixx
     ${root}/interface/Defer.ixx
     ${root}/interface/TypeTraits.ixx
 )
@@ -79,6 +80,7 @@ set(CR_IMPLEMENTATION
 	${root}/tests/Locked.cpp
     ${root}/tests/Log.cpp
 	${root}/tests/main.cpp
+	${root}/tests/Span.cpp
 	${root}/tests/TypeTraits.cpp
 )
 

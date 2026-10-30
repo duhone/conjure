@@ -30,19 +30,19 @@ import std;
 import std.compat;
 
 export namespace CR::Engine::Graphics::Sprites {
-	extern "C++" void Create(std::span<uint64_t> a_hashes, std::span<Handles::Sprite> handles);
-	extern "C++" void Delete(std::span<Handles::Sprite> a_sprites);
-	extern "C++" void GetSizes(std::span<Handles::Sprite> a_sprites, std::span<glm::uvec2> a_sizes);
-	extern "C++" void GetSizes(std::span<uint64_t> a_spriteHashes, std::span<glm::uvec2> a_sizes);
-	extern "C++" void SetPositions(std::span<Handles::Sprite> a_sprites, std::span<glm::vec2> a_positions);
-	extern "C++" void SetZOrders(std::span<Handles::Sprite> a_sprites, std::span<uint8_t> a_zOrders);
-	extern "C++" void SetRotations(std::span<Handles::Sprite> a_sprites, std::span<float> a_rotations);
-	extern "C++" void SetFrames(std::span<Handles::Sprite> a_sprites, std::span<uint16_t> a_frames);
-	extern "C++" void SetColors(std::span<Handles::Sprite> a_sprites, std::span<glm::u8vec4> a_colors);
-	extern "C++" void SetVisibilities(std::span<Handles::Sprite> a_sprites, std::span<bool> a_visibilities);
-	extern "C++" void SetAnimationPauses(std::span<Handles::Sprite> a_sprites, std::span<bool> a_pauses);
+	extern "C++" void Create(Core::SpanArg<const uint64_t> a_hashes, Core::SpanArg<Handles::Sprite> handles);
+	extern "C++" void Delete(Core::SpanArg<const Handles::Sprite> a_sprites);
+	extern "C++" void GetSizes(Core::SpanArg<const Handles::Sprite> a_sprites, Core::SpanArg<glm::uvec2> a_sizes);
+	extern "C++" void GetSizes(Core::SpanArg<const uint64_t> a_spriteHashes, Core::SpanArg<glm::uvec2> a_sizes);
+	extern "C++" void SetPositions(Core::SpanArg<const Handles::Sprite> a_sprites, Core::SpanArg<const glm::vec2> a_positions);
+	extern "C++" void SetZOrders(Core::SpanArg<const Handles::Sprite> a_sprites, Core::SpanArg<const uint8_t> a_zOrders);
+	extern "C++" void SetRotations(Core::SpanArg<const Handles::Sprite> a_sprites, Core::SpanArg<const float> a_rotations);
+	extern "C++" void SetFrames(Core::SpanArg<const Handles::Sprite> a_sprites, Core::SpanArg<const uint16_t> a_frames);
+	extern "C++" void SetColors(Core::SpanArg<const Handles::Sprite> a_sprites, Core::SpanArg<const glm::u8vec4> a_colors);
+	extern "C++" void SetVisibilities(Core::SpanArg<const Handles::Sprite> a_sprites, Core::SpanArg<const bool> a_visibilities);
+	extern "C++" void SetAnimationPauses(Core::SpanArg<const Handles::Sprite> a_sprites, Core::SpanArg<const bool> a_pauses);
 	extern "C++" void SyncAnimations(Handles::Sprite a_sourceSprite,
-	                                 std::span<Handles::Sprite> a_destSprites);
+	                                 Core::SpanArg<const Handles::Sprite> a_destSprites);
 
 	void Initialize();
 	void Shutdown();
@@ -103,7 +103,7 @@ namespace {
 	cegraph::Handles::Material m_material;
 }    // namespace
 
-void cegraph::Sprites::Create(std::span<uint64_t> a_hashes, std::span<Handles::Sprite> handles) {
+void cegraph::Sprites::Create(cecore::SpanArg<const uint64_t> a_hashes, cecore::SpanArg<Handles::Sprite> handles) {
 	CR_ASSERT(a_hashes.size() == handles.size(), "bad arguments");
 	CR_ASSERT(m_handlePool.available() >= a_hashes.size(), "ran out of Sprites");
 
@@ -136,7 +136,7 @@ void cegraph::Sprites::Create(std::span<uint64_t> a_hashes, std::span<Handles::S
 	}
 }
 
-void cegraph::Sprites::Delete(std::span<Handles::Sprite> a_sprites) {
+void cegraph::Sprites::Delete(cecore::SpanArg<const Handles::Sprite> a_sprites) {
 	m_handlePool.release(a_sprites);
 }
 
@@ -209,7 +209,7 @@ void cegraph::Sprites::Shutdown() {
 	VertexBuffers::Release(m_vertBuffer);
 }
 
-void cegraph::Sprites::SetPositions(std::span<Handles::Sprite> a_sprites, std::span<glm::vec2> a_positions) {
+void cegraph::Sprites::SetPositions(cecore::SpanArg<const Handles::Sprite> a_sprites, cecore::SpanArg<const glm::vec2> a_positions) {
 	CR_ASSERT(a_sprites.size() == a_positions.size(), "Sprites SetPositions bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
 		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
@@ -217,7 +217,7 @@ void cegraph::Sprites::SetPositions(std::span<Handles::Sprite> a_sprites, std::s
 	}
 }
 
-void cegraph::Sprites::SetZOrders(std::span<Handles::Sprite> a_sprites, std::span<uint8_t> a_zOrders) {
+void cegraph::Sprites::SetZOrders(cecore::SpanArg<const Handles::Sprite> a_sprites, cecore::SpanArg<const uint8_t> a_zOrders) {
 	CR_ASSERT(a_sprites.size() == a_zOrders.size(), "Sprites SetZOrders bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
 		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
@@ -225,15 +225,15 @@ void cegraph::Sprites::SetZOrders(std::span<Handles::Sprite> a_sprites, std::spa
 	}
 }
 
-void cegraph::Sprites::SetRotations(std::span<Handles::Sprite> a_sprites, std::span<float> a_rotations) {
+void cegraph::Sprites::SetRotations(cecore::SpanArg<const Handles::Sprite> a_sprites, cecore::SpanArg<const float> a_rotations) {
 	CR_ASSERT(a_sprites.size() == a_rotations.size(), "Sprites SetRotations bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
 		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
 		m_rotations[a_sprites[i]] = a_rotations[i];
 	}
 }
-extern "C++" void cegraph::Sprites::SetFrames(std::span<Handles::Sprite> a_sprites,
-                                              std::span<uint16_t> a_frames) {
+extern "C++" void cegraph::Sprites::SetFrames(cecore::SpanArg<const Handles::Sprite> a_sprites,
+                                              cecore::SpanArg<const uint16_t> a_frames) {
 	CR_ASSERT(a_sprites.size() == a_frames.size(), "Sprites SetFrame bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
 		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
@@ -241,8 +241,8 @@ extern "C++" void cegraph::Sprites::SetFrames(std::span<Handles::Sprite> a_sprit
 	}
 }
 
-extern "C++" void cegraph::Sprites::SetColors(std::span<Handles::Sprite> a_sprites,
-                                              std::span<glm::u8vec4> a_colors) {
+extern "C++" void cegraph::Sprites::SetColors(cecore::SpanArg<const Handles::Sprite> a_sprites,
+                                              cecore::SpanArg<const glm::u8vec4> a_colors) {
 	CR_ASSERT(a_sprites.size() == a_colors.size(), "Sprites SetColors bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
 		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
@@ -250,8 +250,8 @@ extern "C++" void cegraph::Sprites::SetColors(std::span<Handles::Sprite> a_sprit
 	}
 }
 
-extern "C++" void cegraph::Sprites::SetVisibilities(std::span<Handles::Sprite> a_sprites,
-                                                    std::span<bool> a_visibilities) {
+extern "C++" void cegraph::Sprites::SetVisibilities(cecore::SpanArg<const Handles::Sprite> a_sprites,
+                                                    cecore::SpanArg<const bool> a_visibilities) {
 	CR_ASSERT(a_sprites.size() == a_visibilities.size(), "Sprites SetVisibilities bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
 		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
@@ -263,8 +263,8 @@ extern "C++" void cegraph::Sprites::SetVisibilities(std::span<Handles::Sprite> a
 	}
 }
 
-extern "C++" void cegraph::Sprites::SetAnimationPauses(std::span<Handles::Sprite> a_sprites,
-                                                       std::span<bool> a_pauses) {
+extern "C++" void cegraph::Sprites::SetAnimationPauses(cecore::SpanArg<const Handles::Sprite> a_sprites,
+                                                       cecore::SpanArg<const bool> a_pauses) {
 	CR_ASSERT(a_sprites.size() == a_pauses.size(), "Sprites SetAnimationPause bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
 		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
@@ -336,7 +336,7 @@ void cegraph::Sprites::Render(VkCommandBuffer& a_cmdBuffer) {
 	vkCmdDrawIndirect(a_cmdBuffer, drawMap.Buffer, 0, m_renderedSpriteCount, sizeof(VkDrawIndirectCommand));
 }
 
-void cegraph::Sprites::GetSizes(std::span<Handles::Sprite> a_sprites, std::span<glm::uvec2> a_sizes) {
+void cegraph::Sprites::GetSizes(cecore::SpanArg<const Handles::Sprite> a_sprites, cecore::SpanArg<glm::uvec2> a_sizes) {
 	CR_ASSERT(a_sprites.size() == a_sizes.size(), "Sprites GetSizes bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
 		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
@@ -344,7 +344,7 @@ void cegraph::Sprites::GetSizes(std::span<Handles::Sprite> a_sprites, std::span<
 	}
 }
 
-void cegraph::Sprites::GetSizes(std::span<uint64_t> a_spriteHashes, std::span<glm::uvec2> a_sizes) {
+void cegraph::Sprites::GetSizes(cecore::SpanArg<const uint64_t> a_spriteHashes, cecore::SpanArg<glm::uvec2> a_sizes) {
 	CR_ASSERT(a_spriteHashes.size() == a_sizes.size(), "Sprites GetSizes bad arguments");
 	for(uint32_t i = 0; i < a_spriteHashes.size(); ++i) {
 		auto spriteTemplate = m_templateLookup.find(a_spriteHashes[i]);
@@ -359,7 +359,7 @@ void cegraph::Sprites::GetSizes(std::span<uint64_t> a_spriteHashes, std::span<gl
 }
 
 void cegraph::Sprites::SyncAnimations(Handles::Sprite a_sourceSprite,
-                                      std::span<Handles::Sprite> a_destSprites) {
+                                      cecore::SpanArg<const Handles::Sprite> a_destSprites) {
 	CR_ASSERT(m_handlePool.isValid(a_sourceSprite), "Sprite doesn't exist");
 	for(uint32_t i = 0; i < a_destSprites.size(); ++i) {
 		CR_ASSERT(m_handlePool.isValid(a_destSprites[i]), "Sprite doesn't exist");

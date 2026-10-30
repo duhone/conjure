@@ -19,6 +19,7 @@ export import CR.Engine.Core.Locked;
 export import CR.Engine.Core.Log;
 export import CR.Engine.Core.Random;
 export import CR.Engine.Core.Rect;
+export import CR.Engine.Core.Span;
 export import CR.Engine.Core.TypeTraits;
 
 export namespace CR::Engine::Core { namespace Internal {

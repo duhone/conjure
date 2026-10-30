@@ -84,7 +84,7 @@ void ceinput::Regions::update() {
 	}
 }
 
-void ceinput::Regions::getStates(std::span<Handles::Region> a_regions, std::span<uint32_t> a_states) {
+void ceinput::Regions::getStates(cecore::SpanArg<const Handles::Region> a_regions, cecore::SpanArg<uint32_t> a_states) {
 	CR_ASSERT(a_regions.size() == a_states.size(), "regions and states not the same size");
 
 	for(uint32_t i = 0; i < a_regions.size(); ++i) {
