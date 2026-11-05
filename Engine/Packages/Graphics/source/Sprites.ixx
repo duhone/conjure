@@ -32,17 +32,32 @@ import std.compat;
 export namespace CR::Engine::Graphics::Sprites {
 	extern "C++" void Create(Core::SpanArg<const uint64_t> a_hashes, Core::SpanArg<Handles::Sprite> handles);
 	extern "C++" void Delete(Core::SpanArg<const Handles::Sprite> a_sprites);
-	extern "C++" void GetSizes(Core::SpanArg<const Handles::Sprite> a_sprites, Core::SpanArg<glm::uvec2> a_sizes);
-	extern "C++" void GetSizes(Core::SpanArg<const uint64_t> a_spriteHashes, Core::SpanArg<glm::uvec2> a_sizes);
-	extern "C++" void SetPositions(Core::SpanArg<const Handles::Sprite> a_sprites, Core::SpanArg<const glm::vec2> a_positions);
-	extern "C++" void SetZOrders(Core::SpanArg<const Handles::Sprite> a_sprites, Core::SpanArg<const uint8_t> a_zOrders);
-	extern "C++" void SetRotations(Core::SpanArg<const Handles::Sprite> a_sprites, Core::SpanArg<const float> a_rotations);
-	extern "C++" void SetFrames(Core::SpanArg<const Handles::Sprite> a_sprites, Core::SpanArg<const uint16_t> a_frames);
-	extern "C++" void SetColors(Core::SpanArg<const Handles::Sprite> a_sprites, Core::SpanArg<const glm::u8vec4> a_colors);
-	extern "C++" void SetVisibilities(Core::SpanArg<const Handles::Sprite> a_sprites, Core::SpanArg<const bool> a_visibilities);
-	extern "C++" void SetAnimationPauses(Core::SpanArg<const Handles::Sprite> a_sprites, Core::SpanArg<const bool> a_pauses);
+	extern "C++" void GetSizes(Core::SpanArg<const Handles::Sprite> a_sprites,
+	                           Core::SpanArg<glm::uvec2> a_sizes);
+	extern "C++" void GetSizes(Core::SpanArg<const uint64_t> a_spriteHashes,
+	                           Core::SpanArg<glm::uvec2> a_sizes);
+	extern "C++" void GetCurrentFrames(Core::SpanArg<const Handles::Sprite> a_sprites,
+	                                   Core::SpanArg<uint16_t> a_frames);
+	extern "C++" void AreAnimationsDone(Core::SpanArg<const Handles::Sprite> a_sprites,
+	                                    Core::SpanArg<bool> a_done);
+
+	extern "C++" void SetPositions(Core::SpanArg<const Handles::Sprite> a_sprites,
+	                               Core::SpanArg<const glm::vec2> a_positions);
+	extern "C++" void SetZOrders(Core::SpanArg<const Handles::Sprite> a_sprites,
+	                             Core::SpanArg<const uint8_t> a_zOrders);
+	extern "C++" void SetRotations(Core::SpanArg<const Handles::Sprite> a_sprites,
+	                               Core::SpanArg<const float> a_rotations);
+	extern "C++" void SetFrames(Core::SpanArg<const Handles::Sprite> a_sprites,
+	                            Core::SpanArg<const uint16_t> a_frames);
+	extern "C++" void SetColors(Core::SpanArg<const Handles::Sprite> a_sprites,
+	                            Core::SpanArg<const glm::u8vec4> a_colors);
+	extern "C++" void SetVisibilities(Core::SpanArg<const Handles::Sprite> a_sprites,
+	                                  Core::SpanArg<const bool> a_visibilities);
+	extern "C++" void SetAnimationPauses(Core::SpanArg<const Handles::Sprite> a_sprites,
+	                                     Core::SpanArg<const bool> a_pauses);
 	extern "C++" void SyncAnimations(Handles::Sprite a_sourceSprite,
 	                                 Core::SpanArg<const Handles::Sprite> a_destSprites);
+	extern "C++" void StartAnimations(Core::SpanArg<const Handles::Sprite> a_sprites);
 
 	void Initialize();
 	void Shutdown();
@@ -96,6 +111,7 @@ namespace {
 	std::vector<uint64_t> m_templateHashes;
 	std::vector<uint8_t> m_templateFrameRates;
 	std::vector<uint64_t> m_templateTextureHashes;
+	std::vector<bool> m_templateLooping;
 	ankerl::unordered_dense::map<uint64_t, uint16_t> m_templateLookup;
 
 	// GPU
@@ -103,7 +119,8 @@ namespace {
 	cegraph::Handles::Material m_material;
 }    // namespace
 
-void cegraph::Sprites::Create(cecore::SpanArg<const uint64_t> a_hashes, cecore::SpanArg<Handles::Sprite> handles) {
+void cegraph::Sprites::Create(cecore::SpanArg<const uint64_t> a_hashes,
+                              cecore::SpanArg<Handles::Sprite> handles) {
 	CR_ASSERT(a_hashes.size() == handles.size(), "bad arguments");
 	CR_ASSERT(m_handlePool.available() >= a_hashes.size(), "ran out of Sprites");
 
@@ -152,6 +169,7 @@ void cegraph::Sprites::Initialize() {
 	m_templateNames.reserve(sprites.size());
 	m_templateHashes.reserve(sprites.size());
 	m_templateFrameRates.reserve(sprites.size());
+	m_templateLooping.reserve(sprites.size());
 	for(uint16_t i = 0; i < sprites.size(); ++i) {
 		m_templateNames.emplace_back(sprites[i]->name()->c_str());
 		uint64_t hash = cecore::Hash64(sprites[i]->name()->c_str());
@@ -184,7 +202,7 @@ void cegraph::Sprites::Initialize() {
 				break;
 		}
 		m_templateTextureHashes.emplace_back(cecore::Hash64(sprites[i]->texture()->c_str()));
-
+		m_templateLooping.emplace_back(sprites[i]->looping());
 		m_templateLookup[hash] = i;
 	}
 
@@ -209,7 +227,8 @@ void cegraph::Sprites::Shutdown() {
 	VertexBuffers::Release(m_vertBuffer);
 }
 
-void cegraph::Sprites::SetPositions(cecore::SpanArg<const Handles::Sprite> a_sprites, cecore::SpanArg<const glm::vec2> a_positions) {
+void cegraph::Sprites::SetPositions(cecore::SpanArg<const Handles::Sprite> a_sprites,
+                                    cecore::SpanArg<const glm::vec2> a_positions) {
 	CR_ASSERT(a_sprites.size() == a_positions.size(), "Sprites SetPositions bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
 		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
@@ -217,7 +236,8 @@ void cegraph::Sprites::SetPositions(cecore::SpanArg<const Handles::Sprite> a_spr
 	}
 }
 
-void cegraph::Sprites::SetZOrders(cecore::SpanArg<const Handles::Sprite> a_sprites, cecore::SpanArg<const uint8_t> a_zOrders) {
+void cegraph::Sprites::SetZOrders(cecore::SpanArg<const Handles::Sprite> a_sprites,
+                                  cecore::SpanArg<const uint8_t> a_zOrders) {
 	CR_ASSERT(a_sprites.size() == a_zOrders.size(), "Sprites SetZOrders bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
 		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
@@ -225,7 +245,8 @@ void cegraph::Sprites::SetZOrders(cecore::SpanArg<const Handles::Sprite> a_sprit
 	}
 }
 
-void cegraph::Sprites::SetRotations(cecore::SpanArg<const Handles::Sprite> a_sprites, cecore::SpanArg<const float> a_rotations) {
+void cegraph::Sprites::SetRotations(cecore::SpanArg<const Handles::Sprite> a_sprites,
+                                    cecore::SpanArg<const float> a_rotations) {
 	CR_ASSERT(a_sprites.size() == a_rotations.size(), "Sprites SetRotations bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
 		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
@@ -295,7 +316,11 @@ void cegraph::Sprites::Update() {
 			if(!m_animationPauses.contains(sprite)) {
 				m_currentFrames[sprite] += cegraph::GetContext().DisplayTicksPerFrame;
 				if(m_currentFrames[sprite] >= m_numFrames[sprite]) {
-					m_currentFrames[sprite] -= m_numFrames[sprite];
+					if(m_templateLooping[m_templateIndices[sprite]]) {
+						m_currentFrames[sprite] -= m_numFrames[sprite];
+					} else {
+						m_currentFrames[sprite] = m_numFrames[sprite] - 1;
+					}
 				}
 			}
 			m_displayFrames[sprite] =
@@ -336,7 +361,8 @@ void cegraph::Sprites::Render(VkCommandBuffer& a_cmdBuffer) {
 	vkCmdDrawIndirect(a_cmdBuffer, drawMap.Buffer, 0, m_renderedSpriteCount, sizeof(VkDrawIndirectCommand));
 }
 
-void cegraph::Sprites::GetSizes(cecore::SpanArg<const Handles::Sprite> a_sprites, cecore::SpanArg<glm::uvec2> a_sizes) {
+void cegraph::Sprites::GetSizes(cecore::SpanArg<const Handles::Sprite> a_sprites,
+                                cecore::SpanArg<glm::uvec2> a_sizes) {
 	CR_ASSERT(a_sprites.size() == a_sizes.size(), "Sprites GetSizes bad arguments");
 	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
 		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
@@ -344,7 +370,8 @@ void cegraph::Sprites::GetSizes(cecore::SpanArg<const Handles::Sprite> a_sprites
 	}
 }
 
-void cegraph::Sprites::GetSizes(cecore::SpanArg<const uint64_t> a_spriteHashes, cecore::SpanArg<glm::uvec2> a_sizes) {
+void cegraph::Sprites::GetSizes(cecore::SpanArg<const uint64_t> a_spriteHashes,
+                                cecore::SpanArg<glm::uvec2> a_sizes) {
 	CR_ASSERT(a_spriteHashes.size() == a_sizes.size(), "Sprites GetSizes bad arguments");
 	for(uint32_t i = 0; i < a_spriteHashes.size(); ++i) {
 		auto spriteTemplate = m_templateLookup.find(a_spriteHashes[i]);
@@ -367,5 +394,41 @@ void cegraph::Sprites::SyncAnimations(Handles::Sprite a_sourceSprite,
 		          "Can't sync animations between different sprite templates");
 		m_currentFrames[a_destSprites[i]] = m_currentFrames[a_sourceSprite];
 		m_displayFrames[a_destSprites[i]] = m_displayFrames[a_sourceSprite];
+	}
+}
+
+void cegraph::Sprites::StartAnimations(cecore::SpanArg<const Handles::Sprite> a_sprites) {
+	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
+		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
+		auto templateIndex = m_templateIndices[a_sprites[i]];
+		if(m_templateLooping[templateIndex]) {
+			CR_WARN("StartAnimations called on looping sprite, ignoring");
+			continue;
+		}
+		m_currentFrames[a_sprites[i]] = 0;
+		m_displayFrames[a_sprites[i]] = 0;
+	}
+}
+
+void cegraph::Sprites::GetCurrentFrames(cecore::SpanArg<const Handles::Sprite> a_sprites,
+                                        cecore::SpanArg<uint16_t> a_frames) {
+	CR_ASSERT(a_sprites.size() == a_frames.size(), "Sprites GetCurrentFrames bad arguments");
+	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
+		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
+		a_frames[i] = (uint16_t)m_displayFrames[a_sprites[i]];
+	}
+}
+
+void cegraph::Sprites::AreAnimationsDone(Core::SpanArg<const Handles::Sprite> a_sprites,
+                                         Core::SpanArg<bool> a_done) {
+	CR_ASSERT(a_sprites.size() == a_done.size(), "Sprites AreAnimationsDone bad arguments");
+	for(uint32_t i = 0; i < a_sprites.size(); ++i) {
+		CR_ASSERT(m_handlePool.isValid(a_sprites[i]), "Sprite doesn't exist");
+		auto templateIndex = m_templateIndices[a_sprites[i]];
+		if(m_templateLooping[templateIndex]) {
+			a_done[i] = false;
+		} else {
+			a_done[i] = m_currentFrames[a_sprites[i]] >= m_numFrames[a_sprites[i]];
+		}
 	}
 }
