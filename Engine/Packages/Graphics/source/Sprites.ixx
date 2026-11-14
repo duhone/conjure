@@ -428,7 +428,7 @@ void cegraph::Sprites::AreAnimationsDone(Core::SpanArg<const Handles::Sprite> a_
 		if(m_templateLooping[templateIndex]) {
 			a_done[i] = false;
 		} else {
-			a_done[i] = m_currentFrames[a_sprites[i]] >= m_numFrames[a_sprites[i]];
+			a_done[i] = m_currentFrames[a_sprites[i]] >= (m_numFrames[a_sprites[i]] - 1);
 		}
 	}
 }
