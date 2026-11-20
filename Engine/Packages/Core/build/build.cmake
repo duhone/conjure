@@ -94,5 +94,6 @@ target_link_libraries(core_tests
 )		
 
 set_property(TARGET core_tests APPEND PROPERTY FOLDER Engine/Tests)
+addUnitTest(core_tests)
 
 endblock()

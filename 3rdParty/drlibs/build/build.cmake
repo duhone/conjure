@@ -20,7 +20,7 @@ set(CR_BUILD_FILES
 add_library(drlibs)
 settings3rdParty(drlibs)
 
-set_property(TARGET drlibs APPEND PROPERTY LINKER_LANGUAGE CPP)
+set_property(TARGET drlibs APPEND PROPERTY LINKER_LANGUAGE CXX)
 
 target_compile_definitions(drlibs PUBLIC DR_FLAC_NO_STDIO)
 

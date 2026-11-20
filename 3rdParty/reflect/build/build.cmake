@@ -20,7 +20,7 @@ set(CR_BUILD_FILES
 add_library(reflect)
 settings3rdParty(reflect)
 
-set_property(TARGET reflect APPEND PROPERTY LINKER_LANGUAGE CPP)
+set_property(TARGET reflect APPEND PROPERTY LINKER_LANGUAGE CXX)
 
 target_include_directories(reflect SYSTEM PUBLIC "${root}/reflect")
 

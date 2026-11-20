@@ -19,7 +19,7 @@ set(CR_BUILD_FILES
 add_library(doctest OBJECT)
 settings3rdParty(doctest)
 
-set_property(TARGET doctest APPEND PROPERTY LINKER_LANGUAGE CPP)
+set_property(TARGET doctest APPEND PROPERTY LINKER_LANGUAGE CXX)
 
 target_include_directories(doctest SYSTEM PUBLIC "${root}/doctest")
 target_compile_definitions(doctest PUBLIC 

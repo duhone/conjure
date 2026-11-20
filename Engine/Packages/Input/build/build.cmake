@@ -9,12 +9,12 @@ set(CR_INTERFACE_MODULES
     ${root}/interface/Handles.ixx
     ${root}/interface/Input.ixx
     ${root}/interface/Regions.ixx
+    ${root}/source/Regions.ixx
+    ${root}/source/Context.ixx
 )
 
 set(CR_IMPLEMENTATION
     ${root}/source/Input.cpp
-    ${root}/source/Regions.ixx
-    ${root}/source/Context.ixx
 )
 
 set(CR_BUILD_FILES

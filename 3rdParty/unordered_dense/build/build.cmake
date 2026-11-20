@@ -19,7 +19,7 @@ set(CR_BUILD_FILES
 add_library(unordered_dense OBJECT)
 settings3rdParty(unordered_dense)
 
-set_property(TARGET unordered_dense APPEND PROPERTY LINKER_LANGUAGE CPP)
+set_property(TARGET unordered_dense APPEND PROPERTY LINKER_LANGUAGE CXX)
 
 target_include_directories(unordered_dense SYSTEM PUBLIC "${root}/unordered_dense/include")
 

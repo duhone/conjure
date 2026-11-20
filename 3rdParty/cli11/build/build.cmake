@@ -19,7 +19,7 @@ set(CR_BUILD_FILES
 add_library(cli11 OBJECT)
 settings3rdParty(cli11)
 
-set_property(TARGET cli11 APPEND PROPERTY LINKER_LANGUAGE CPP)
+set_property(TARGET cli11 APPEND PROPERTY LINKER_LANGUAGE CXX)
 
 target_include_directories(cli11 SYSTEM PUBLIC "${root}")
 

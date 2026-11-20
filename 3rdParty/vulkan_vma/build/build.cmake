@@ -19,7 +19,7 @@ set(CR_BUILD_FILES
 add_library(vulkan_vma OBJECT)
 settings3rdParty(vulkan_vma)
 
-set_property(TARGET vulkan_vma APPEND PROPERTY LINKER_LANGUAGE CPP)
+set_property(TARGET vulkan_vma APPEND PROPERTY LINKER_LANGUAGE CXX)
 
 target_include_directories(vulkan_vma SYSTEM PUBLIC "${root}/VulkanMemoryAllocator/include")
 

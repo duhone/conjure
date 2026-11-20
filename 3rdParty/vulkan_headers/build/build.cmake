@@ -20,7 +20,7 @@ set(CR_BUILD_FILES
 add_library(vulkan_headers OBJECT)
 settings3rdParty(vulkan_headers)
 
-set_property(TARGET vulkan_headers APPEND PROPERTY LINKER_LANGUAGE CPP)
+set_property(TARGET vulkan_headers APPEND PROPERTY LINKER_LANGUAGE CXX)
 
 target_include_directories(vulkan_headers SYSTEM PUBLIC "${root}/vulkan_headers/include")
 

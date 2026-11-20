@@ -3,7 +3,24 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
-#set(CMAKE_CXX_MODULE_STD ON) //doesnt work with VS, but also doesn't seem to be needed
+
+# CMake builds the std module from the global flags, and MSVC warns (C5050, an error with /WX)
+# if a module's flags differ from the importing target. Keep these in sync with addCommon.
+# Config-conditional options also need to be global flags, generator expressions on targets don't carry over to std.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+	string(REGEX REPLACE "(^| )/GR-?( |$)" "\\1\\2" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+	string(APPEND CMAKE_CXX_FLAGS " /GR- /Zc:preprocessor /arch:AVX /fp:fast /fp:except- /D_CRT_SECURE_NO_WARNINGS")
+
+	foreach(lang C CXX)
+		foreach(config RELWITHDEBINFO PROFILE FINAL)
+			string(REGEX REPLACE "/O[a-z0-9]+ ?" "" CMAKE_${lang}_FLAGS_${config} "${CMAKE_${lang}_FLAGS_${config}}")
+			string(APPEND CMAKE_${lang}_FLAGS_${config} " /O2 /Oi /Ot /Ob2")
+		endforeach()
+		foreach(config PROFILE FINAL)
+			string(APPEND CMAKE_${lang}_FLAGS_${config} " /DNDEBUG")
+		endforeach()
+	endforeach()
+endif()
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     message(FATAL_ERROR "Do not build in-source.")
@@ -14,6 +31,13 @@ set(conjure_assets_root "${CMAKE_CURRENT_LIST_DIR}/Assets")
 set(generated_root "${CMAKE_BINARY_DIR}/generated")
 
 # set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=cppcoreguidelines-*)
+
+enable_testing()
+
+# Registers a doctest executable with CTest. Tests load their data files from next to the exe.
+function(addUnitTest target)
+	add_test(NAME ${target} COMMAND ${target} WORKING_DIRECTORY $<TARGET_FILE_DIR:${target}>)
+endfunction()
 
 function(addCommon target)
 	# using rtti for service locator, not using service locator though, so disable.
@@ -33,11 +57,7 @@ function(addCommon target)
 	target_compile_options(${target} PRIVATE $<$<CXX_COMPILER_ID:Clang>:-ffast-math>)
 
 	target_compile_options(${target} PRIVATE $<$<CXX_COMPILER_ID:GNU>:-ffast-math>)
-		
-	target_compile_options(${target} PRIVATE $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<OR:$<CONFIG:RelWithDebInfo>,$<CONFIG:Profile>,$<CONFIG:Final>>>:/O2>)
-	target_compile_options(${target} PRIVATE $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<OR:$<CONFIG:RelWithDebInfo>,$<CONFIG:Profile>,$<CONFIG:Final>>>:/Oi>)
-	target_compile_options(${target} PRIVATE $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<OR:$<CONFIG:RelWithDebInfo>,$<CONFIG:Profile>,$<CONFIG:Final>>>:/Ot>)
-	target_compile_options(${target} PRIVATE $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<OR:$<CONFIG:RelWithDebInfo>,$<CONFIG:Profile>,$<CONFIG:Final>>>:/Ob2>)
+
 	target_compile_options(${target} PRIVATE /sdl-)
 		
 	target_compile_definitions(${target} PRIVATE $<$<CONFIG:Debug>:CR_DEBUG=1>)
@@ -48,7 +68,6 @@ function(addCommon target)
 	target_compile_definitions(${target} PRIVATE $<$<NOT:$<CONFIG:Profile>>:CR_PROFILE=0>)
 	target_compile_definitions(${target} PRIVATE $<$<CONFIG:Final>:CR_FINAL=1>)
 	target_compile_definitions(${target} PRIVATE $<$<NOT:$<CONFIG:Final>>:CR_FINAL=0>)
-	target_compile_definitions(${target} PRIVATE $<$<AND:$<CXX_COMPILER_ID:MSVC>,$<OR:$<CONFIG:Profile>,$<CONFIG:Final>>>:NDEBUG>)
 	
 	# generator expressions aren't working with INTERPROCEDURAL_OPTIMIZATION_PROFILE
 	set_target_properties(${target} PROPERTIES INTERPROCEDURAL_OPTIMIZATION_PROFILE TRUE)
@@ -63,7 +82,9 @@ function(settings3rdParty target)
 	
 	target_sources(${target} PRIVATE ${CR_IMPLEMENTATION})
 	target_sources(${target} PUBLIC FILE_SET HEADERS FILES ${CR_INTERFACE_HEADERS})
-	target_sources(${target} PUBLIC FILE_SET CXX_MODULES FILES ${CR_INTERFACE_MODULES})
+	if(CR_INTERFACE_MODULES)
+		target_sources(${target} PUBLIC FILE_SET CXX_MODULES FILES ${CR_INTERFACE_MODULES})
+	endif()
 	target_sources(${target} PRIVATE ${CR_BUILD_FILES})
 	target_sources(${target} PRIVATE ${CR_TEST_FILES})
 
@@ -81,10 +102,20 @@ endfunction()
 
 function(settingsCR target)	
 	addCommon(${target})
-	
-	target_sources(${target} PRIVATE ${CR_IMPLEMENTATION})
+
+	# files that provide a module (.ixx) must be in a CXX_MODULES file set
+	set(implModules ${CR_IMPLEMENTATION})
+	list(FILTER implModules INCLUDE REGEX "\\.(ixx|cppm)$")
+	set(implSources ${CR_IMPLEMENTATION})
+	list(FILTER implSources EXCLUDE REGEX "\\.(ixx|cppm)$")
+	target_sources(${target} PRIVATE ${implSources})
+	if(implModules)
+		target_sources(${target} PRIVATE FILE_SET internalModules TYPE CXX_MODULES BASE_DIRS ${root} FILES ${implModules})
+	endif()
 	target_sources(${target} PUBLIC FILE_SET HEADERS FILES ${CR_INTERFACE_HEADERS})
-	target_sources(${target} PUBLIC FILE_SET CXX_MODULES FILES ${CR_INTERFACE_MODULES})
+	if(CR_INTERFACE_MODULES)
+		target_sources(${target} PUBLIC FILE_SET CXX_MODULES FILES ${CR_INTERFACE_MODULES})
+	endif()
 	target_sources(${target} PRIVATE ${CR_SCHEMA_FILES})
 	target_sources(${target} PRIVATE ${CR_GENERATED_FILES})
 	target_sources(${target} PRIVATE ${CR_BUILD_FILES})

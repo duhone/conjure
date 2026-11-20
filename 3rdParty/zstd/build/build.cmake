@@ -51,7 +51,7 @@ settings3rdParty(zstd)
 target_compile_definitions(zstd PRIVATE XXH_NAMESPACE=ZSTD_)
 target_compile_definitions(zstd PRIVATE ZSTD_LEGACY_SUPPORT=0)
 
-set_property(TARGET zstd APPEND PROPERTY LINKER_LANGUAGE CPP)
+set_property(TARGET zstd APPEND PROPERTY LINKER_LANGUAGE CXX)
 
 target_include_directories(zstd SYSTEM PRIVATE "${root}/zstd/lib/common")
 target_include_directories(zstd SYSTEM PUBLIC "${root}/zstd/lib")

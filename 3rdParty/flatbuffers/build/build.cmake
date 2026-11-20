@@ -23,7 +23,7 @@ set(CR_BUILD_FILES
 add_library(flatbuffers)
 settings3rdParty(flatbuffers)
 
-set_property(TARGET flatbuffers APPEND PROPERTY LINKER_LANGUAGE CPP)
+set_property(TARGET flatbuffers APPEND PROPERTY LINKER_LANGUAGE CXX)
 
 target_include_directories(flatbuffers SYSTEM PUBLIC "${root}/flatbuffers/include")
 target_compile_definitions(flatbuffers PUBLIC FLATC_PATH=${FLATC})

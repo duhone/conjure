@@ -147,6 +147,8 @@ void cegraph::Sprites::Create(cecore::SpanArg<const uint64_t> a_hashes,
 
 		m_currentFrames[handles[i]] = 0;
 		m_dimensions[handles[i]]    = Textures::GetDimensions(textureHandle);
+		m_rotations[handles[i]]     = 0.0f;
+		m_positions[handles[i]]     = glm::vec2{0.0f, 0.0f};
 		m_colors[handles[i]]        = glm::u8vec4{255, 255, 255, 255};
 		m_zOrder[handles[i]]        = 0;
 		m_visibilities.insert(handles[i]);

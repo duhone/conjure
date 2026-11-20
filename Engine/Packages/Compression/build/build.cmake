@@ -66,6 +66,7 @@ target_link_libraries(compression_tests
 )		
 
 set_property(TARGET compression_tests APPEND PROPERTY FOLDER Engine/Tests)
+addUnitTest(compression_tests)
 
 set(TEST_DATA 
 	"${root}/tests/content/alice29.txt"

@@ -20,7 +20,7 @@ set(CR_BUILD_FILES
 add_library(glm OBJECT)
 settings3rdParty(glm)
 
-set_property(TARGET glm APPEND PROPERTY LINKER_LANGUAGE CPP)
+set_property(TARGET glm APPEND PROPERTY LINKER_LANGUAGE CXX)
 
 target_include_directories(glm SYSTEM PUBLIC "${root}/glm")
 

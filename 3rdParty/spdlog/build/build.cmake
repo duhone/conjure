@@ -33,7 +33,7 @@ set(CR_BUILD_FILES
 add_library(spdlog)
 settings3rdParty(spdlog)
 
-set_property(TARGET spdlog APPEND PROPERTY LINKER_LANGUAGE CPP)
+set_property(TARGET spdlog APPEND PROPERTY LINKER_LANGUAGE CXX)
 
 target_compile_definitions(spdlog PUBLIC SPDLOG_COMPILED_LIB)
 target_compile_definitions(spdlog PUBLIC SPDLOG_USE_STD_FORMAT)

@@ -65,6 +65,7 @@ target_link_libraries(platform_tests
 )		
 
 set_property(TARGET platform_tests APPEND PROPERTY FOLDER Engine/Tests)
+addUnitTest(platform_tests)
 
 set(TEST_DATA 
 	"${root}/tests/content/testdll.dll"
