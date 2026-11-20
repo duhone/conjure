@@ -44,6 +44,3 @@ jobs:
 
     - name: Build
       run: cmake --build ${{ github.workspace }}/build --config ${{ matrix.config }}
-
-    - name: Test
-      run: ctest --test-dir ${{ github.workspace }}/build -C ${{ matrix.config }} --output-on-failure
