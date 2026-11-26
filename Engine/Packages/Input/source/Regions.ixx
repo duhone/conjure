@@ -2,6 +2,8 @@ module;
 
 #include "core/Core.h"
 
+#include <glm/glm.hpp>
+
 export module CR.Engine.Input.Regions;
 
 export import :Public;
@@ -31,6 +33,7 @@ namespace {
 
 	cecore::HandlePool<ceinput::Handles::Region, c_maxRegions> m_handlePool;
 	std::array<cecore::Rect2D<int32_t>, c_maxRegions> m_regions;
+	std::array<glm::ivec2, c_maxRegions> m_cursorOffsets;
 	std::array<uint32_t, c_maxRegions> m_states;
 	ceinput::Handles::Region m_activeRegion{};
 }    // namespace
@@ -71,6 +74,7 @@ void ceinput::Regions::update() {
 	Handles::Region oldActiveRegion = m_activeRegion;
 	Handles::Region newActiveRegion{};
 	m_handlePool.iterate([&](const auto& handle) {
+		m_cursorOffsets[handle] = glm::ivec2(context.CursorPos) - m_regions[handle].Position;
 		if(m_regions[handle].Contains(context.CursorPos)) {
 			m_activeRegion   = handle;
 			m_states[handle] = RegionStates::Hover;
@@ -98,5 +102,14 @@ void ceinput::Regions::getStates(cecore::SpanArg<const Handles::Region> a_region
 	for(uint32_t i = 0; i < a_regions.size(); ++i) {
 		CR_ASSERT(m_handlePool.isValid(a_regions[i]), "requested state for region that doesn't exist");
 		a_states[i] = m_states[a_regions[i]];
+	}
+}
+
+void ceinput::Regions::getCursorOffsets(cecore::SpanArg<const Handles::Region> a_regions,
+                                        cecore::SpanArg<glm::ivec2> a_offsets) {
+	CR_ASSERT(a_regions.size() == a_offsets.size(), "regions and offsets not the same size");
+	for(uint32_t i = 0; i < a_regions.size(); ++i) {
+		CR_ASSERT(m_handlePool.isValid(a_regions[i]), "requested offset for region that doesn't exist");
+		a_offsets[i] = m_cursorOffsets[a_regions[i]];
 	}
 }

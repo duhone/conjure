@@ -1,3 +1,7 @@
+module;
+
+#include <glm/glm.hpp>
+
 export module CR.Engine.Input.Regions:Public;
 
 import CR.Engine.Core;
@@ -24,5 +28,8 @@ export namespace CR::Engine::Input::Regions {
 	}    // namespace RegionStates
 
 	extern "C++" void getStates(Core::SpanArg<const Handles::Region> a_regions,
-	                           Core::SpanArg<uint32_t> a_states);
+	                            Core::SpanArg<uint32_t> a_states);
+	extern "C++" void getCursorOffsets(Core::SpanArg<const Handles::Region> a_regions,
+	                                   Core::SpanArg<glm::ivec2> a_offsets);
+
 }    // namespace CR::Engine::Input::Regions
